@@ -1,0 +1,105 @@
+{
+  "GTAVOnline": {
+    "Content": "GTA V Online",
+    "Tab": "GTA V Online",
+    "order": 1,
+    "appid": "3240220",
+    "Description": "Grand Theft Auto V Enhanced / GTA Online on Nobara via Steam + Proton — Steam AppID 3240220 (the old 'GTA V Legacy' is 271590; set \"appid\" to that if you run the legacy copy). GTA Online is driven by BattlEye anti-cheat, so the prefix has to carry the Proton BattlEye Runtime and a recent GE-Proton. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted. This mirrors README “GTA V Online → Route A”.",
+    "steps": [
+      {
+        "id": "steam",
+        "title": "1 · Install Steam (native)",
+        "desc": "Native RPM Steam (RPM Fusion) — the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
+        "check": "rpm -q steam >/dev/null 2>&1",
+        "run": "dnf install -y steam"
+      },
+      {
+        "id": "tools",
+        "title": "2 · Install GameMode, MangoHud, vkBasalt, gamescope",
+        "desc": "Per-game performance profile (GameMode), the FPS/frametime overlay (MangoHud + GOverlay to configure it), post-process layer (vkBasalt) and the gamescope micro-compositor. Also adds you to the gamemode group.",
+        "check": "rpm -q gamemode mangohud vkBasalt gamescope goverlay >/dev/null 2>&1",
+        "run": "dnf install -y gamemode mangohud vkBasalt gamescope goverlay && usermod -aG gamemode {USER}"
+      },
+      {
+        "id": "protontricks",
+        "title": "3 · Install Protontricks",
+        "desc": "winetricks for Steam/Proton prefixes — used later to drop vcrun2019 / d3dcompiler_47 / corefonts into GTA V's prefix and to flip the prefix to Windows 10 if the Rockstar / Social Club sign-in loops.",
+        "check": "rpm -q protontricks >/dev/null 2>&1 || sudo -u {USER} flatpak info com.github.Matoking.protontricks >/dev/null 2>&1",
+        "run": "dnf install -y protontricks"
+      },
+      {
+        "id": "protonup",
+        "title": "4 · Install ProtonUp-Qt",
+        "desc": "GUI to manage GE-Proton / wine-GE versions per launcher. Installed as a Flatpak for {USER}. You can use it instead of step 5 if you prefer clicking.",
+        "check": "flatpak info net.davidotek.pupgui2 >/dev/null 2>&1 || sudo -u {USER} flatpak info net.davidotek.pupgui2 >/dev/null 2>&1",
+        "run": "dnf install -y flatpak && flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo && sudo -u {USER} flatpak install -y --noninteractive flathub net.davidotek.pupgui2"
+      },
+      {
+        "id": "geproton",
+        "title": "5 · Install the latest GE-Proton",
+        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub and unpacks it into Steam's compatibilitytools.d for {USER}. Restart Steam afterwards so it shows up under Compatibility.",
+        "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
+        "run": "su - {USER} -c 'set -e; d=\"$HOME/.local/share/Steam/compatibilitytools.d\"; [ -d \"$HOME/.steam/root\" ] && d=\"$HOME/.steam/root/compatibilitytools.d\"; mkdir -p \"$d\"; url=$(curl -fsSL https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep -oP \"https://[^\\x22]+GE-Proton[^\\x22]+tar[.]gz\" | head -1); test -n \"$url\"; echo \"Downloading $url\"; curl -fL \"$url\" -o /tmp/geproton.tar.gz; tar -xzf /tmp/geproton.tar.gz -C \"$d\"; rm -f /tmp/geproton.tar.gz; echo \"compatibilitytools.d now holds:\"; ls -1 \"$d\"'"
+      },
+      {
+        "id": "prefixfs",
+        "title": "5b · Keep the Proton prefix off NTFS / exFAT",
+        "desc": "If GTA V lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there — creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
+        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
+      },
+      {
+        "id": "battleye",
+        "title": "6 · Install the Proton BattlEye Runtime",
+        "desc": "GTA Online's BattlEye only loads if this Steam tool (app 1161040) is present. This triggers the install; Steam will open. If it doesn't take, install “Proton BattlEye Runtime” from your Steam Library → Tools list by hand.",
+        "check": "test -d \"/home/{USER}/.steam/steam/steamapps/common/Proton BattlEye Runtime\" -o -d \"/home/{USER}/.local/share/Steam/steamapps/common/Proton BattlEye Runtime\"",
+        "run": "su - {USER} -c 'timeout 45 steam steam://install/1161040 >/dev/null 2>&1 || true'"
+      },
+      {
+        "id": "sysctl",
+        "title": "7 · Raise vm.max_map_count",
+        "desc": "Modern Proton titles (and GTA V with mods) can exhaust the default mmap limit and crash on load. Writes a persistent /etc/sysctl.d/80-gtav.conf and applies it now. Nobara often sets this already — the step is a no-op then.",
+        "check": "[ \"$(cat /proc/sys/vm/max_map_count 2>/dev/null || echo 0)\" -ge 1048576 ]",
+        "run": "printf 'vm.max_map_count=2147483642\\n' > /etc/sysctl.d/80-gtav.conf && sysctl -p /etc/sysctl.d/80-gtav.conf"
+      },
+      {
+        "id": "nettweaks",
+        "title": "8 · Apply the network-latency tweaks",
+        "desc": "GTA Online is sensitive to Wi-Fi latency spikes. Applies WifiPowersaveOff (kills the Wi-Fi power-save that causes stutter), NetLatencySysctl (TCP/qdisc tuning) and GamingResourceLimits (higher file-descriptor / RT limits) via apply_tweak.py.",
+        "run": "for t in WifiPowersaveOff NetLatencySysctl GamingResourceLimits; do echo \"### apply_tweak $t\"; python3 {TOOLKIT_DIR}/apply_tweak.py \"$t\" || true; done"
+      },
+      {
+        "id": "steamplay",
+        "title": "9 · Enable Steam Play for all titles  (manual)",
+        "desc": "In Steam: Settings → Compatibility → turn on “Enable Steam Play for all other titles” and pick the GE-Proton from step 5. Restart Steam when it asks. This can't be scripted safely while Steam is running.",
+        "manual": true
+      },
+      {
+        "id": "compat",
+        "title": "10 · Force GE-Proton on GTA V  (manual)",
+        "desc": "Steam Library → right-click Grand Theft Auto V → Properties → Compatibility → tick “Force the use of a specific Steam Play compatibility tool” → choose the GE-Proton from step 5.",
+        "manual": true
+      },
+      {
+        "id": "launchopts",
+        "title": "11 · Set the launch options  (manual)",
+        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). BattlEye installs itself into the prefix on the first launch — let it finish, then start the game again.",
+        "manual": true,
+        "copy": "DXVK_ASYNC=1 gamemoderun mangohud %command%"
+      },
+      {
+        "id": "prefixdeps",
+        "title": "12 · Rockstar launcher / Social Club deps  (manual)",
+        "desc": "Only needed if the Rockstar Games Launcher or Social Club sign-in is black, blank or loops. Launch GTA V once first so Proton creates the prefix, quit, then run the command below (Copy) — it drops vcrun2019, d3dcompiler_47 and corefonts into AppID {APPID}'s prefix non-interactively. Use `protontricks {APPID} --gui` instead if you also need to flip the prefix to Windows 10.",
+        "manual": true,
+        "copy": "su - {USER} -c 'protontricks --no-bwrap {APPID} -q vcrun2019 d3dcompiler_47 corefonts'"
+      },
+      {
+        "id": "firstrun",
+        "title": "13 · First launch  (manual)",
+        "desc": "Start GTA V from Steam. First launch pulls in BattlEye and the Rockstar Games Launcher inside the prefix — let it finish, then start the game again. If Social Club still misbehaves, do step 12; if a window stays black, try a different GE-Proton version (step 5 / ProtonUp-Qt).",
+        "manual": true
+      }
+    ]
+  }
+}

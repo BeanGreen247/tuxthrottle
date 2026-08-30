@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: pip install pytest
+
+      - name: Byte-compile every module
+        run: python -m compileall -q *.py
+
+      - name: Validate JSON config
+        run: |
+          for f in config/*.json; do python -c "import json,sys; json.load(open('$f')); print('ok', '$f')"; done
+
+      - name: Shell syntax
+        run: bash -n install.sh uninstall.sh verify-install.sh purge-legacy-dellg15.sh
+
+      - name: Unit tests
+        run: python -m pytest tests/ -q

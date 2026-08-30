@@ -1,0 +1,419 @@
+{
+  "NvidiaDriver": {
+    "Content": "NVIDIA Driver (akmod-nvidia)",
+    "Description": "Proprietary driver for the RTX 3050 Ti Mobile (GA107). Skip if you're on a Nobara -NV image, it's already there. Needs a reboot after first install for the akmod to build.",
+    "category": "GPU",
+    "manager": "dnf",
+    "requires_vendor": "nvidia",
+    "check": "rpm -qa 2>/dev/null | grep -qE '^(akmod-nvidia|nvidia-driver)-' || lsmod | grep -q '^nvidia '",
+    "install": [
+      "dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda"
+    ],
+    "recommended": true
+  },
+  "EnvyControl": {
+    "Content": "EnvyControl (GPU mode switching)",
+    "Description": "Switches between integrated/nvidia/hybrid GPU modes. Used instead of prime-select since this is AMD iGPU + NVIDIA dGPU, which prime-select's on-demand mode doesn't handle. Use: sudo envycontrol -s hybrid",
+    "category": "GPU",
+    "manager": "shell",
+    "requires_vendor": "nvidia",
+    "check": "command -v envycontrol >/dev/null",
+    "install": [
+      "dnf install -y python3-pip",
+      "pip3 install --break-system-packages envycontrol"
+    ]
+  },
+  "CoreCtrl": {
+    "Content": "CoreCtrl",
+    "Description": "GUI for AMD iGPU power profiles / fan curves.",
+    "category": "GPU",
+    "manager": "dnf",
+    "package": "corectrl",
+    "requires_vendor": "amd",
+    "check": "rpm -q corectrl >/dev/null 2>&1",
+    "binary": "corectrl",
+    "provides": [
+      "flatpak info org.corectrl.corectrl >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info org.corectrl.corectrl >/dev/null 2>&1"
+    ]
+  },
+  "I8kutils": {
+    "Content": "i8kutils (fan control)",
+    "Description": "DAMX's fan-control-tab equivalent \u2014 Dell's dell-smm-hwmon kernel driver plus i8kutils/i8kmon for manual or auto fan speed. Not confirmed supported on the G15 5515 specifically (dell-smm-hwmon uses a per-model whitelist, may need the 'force=1' module option) \u2014 best-effort like the RGB item.",
+    "category": "Power",
+    "manager": "shell",
+    "check": "test -f /etc/modprobe.d/tuxthrottle-fan.conf",
+    "install": [
+      "dnf install -y i8kutils",
+      "printf 'options dell-smm-hwmon force=1\\n' > /etc/modprobe.d/tuxthrottle-fan.conf",
+      "modprobe -r dell-smm-hwmon 2>/dev/null || true",
+      "modprobe dell-smm-hwmon force=1 || true"
+    ]
+  },
+  "AutoCpufreq": {
+    "Content": "auto-cpufreq",
+    "Description": "Dynamic CPU governor switching for the 5800H. Pick this OR the TLP tweak, not both \u2014 they fight over the governor.",
+    "category": "Power",
+    "manager": "shell",
+    "check": "command -v auto-cpufreq >/dev/null",
+    "install": [
+      "dnf install -y git",
+      "rm -rf /tmp/auto-cpufreq && git clone --depth 1 https://github.com/AdnanHodzic/auto-cpufreq /tmp/auto-cpufreq",
+      "cd /tmp/auto-cpufreq && ./auto-cpufreq-installer"
+    ]
+  },
+  "RyzenAdj": {
+    "Content": "ryzenadj",
+    "Description": "CPU undervolt tool for the 5800H \u2014 worth trying against the freeze issue as an alternative to the C-state fix. Needs manual per-boot tuning afterward; start conservative.",
+    "category": "GPU",
+    "manager": "shell",
+    "check": "command -v ryzenadj >/dev/null",
+    "install": [
+      "dnf install -y cmake pciutils-devel git gcc-c++ make",
+      "rm -rf /tmp/ryzenadj && git clone --depth 1 https://github.com/FlyGoat/RyzenAdj /tmp/ryzenadj",
+      "cd /tmp/ryzenadj && mkdir -p build && cd build && cmake .. && make -j$(nproc) && make install"
+    ]
+  },
+  "Steam": {
+    "Content": "Steam",
+    "Description": "Valve's PC game store and launcher.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "steam",
+    "check": "rpm -q steam >/dev/null 2>&1",
+    "binary": "steam",
+    "note": "Native RPM (RPM Fusion) \u2014 the SteamOS-style approach: Steam itself then manages Proton and the Steam Linux Runtime containers. A Flatpak Steam is deliberately NOT treated as satisfying this; its sandbox complicates controller access, external game drives, mods and LD_PRELOAD layers (MangoHud / gamescope / vkBasalt)."
+  },
+  "Lutris": {
+    "Content": "Lutris",
+    "Description": "Battle.net, GOG, emulators, non-Steam installers.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "lutris",
+    "check": "rpm -q lutris >/dev/null 2>&1",
+    "binary": "lutris",
+    "provides": [
+      "flatpak info net.lutris.Lutris >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info net.lutris.Lutris >/dev/null 2>&1"
+    ]
+  },
+  "Heroic": {
+    "Content": "Heroic Games Launcher",
+    "Description": "Epic Games Store / GOG launcher.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "heroic-games-launcher",
+    "check": "rpm -q heroic-games-launcher >/dev/null 2>&1",
+    "binary": "heroic",
+    "provides": [
+      "flatpak info com.heroicgameslauncher.hgl >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info com.heroicgameslauncher.hgl >/dev/null 2>&1"
+    ],
+    "flatpak_id": "com.heroicgameslauncher.hgl"
+  },
+  "GameModeMangoHud": {
+    "Content": "GameMode + MangoHud",
+    "Description": "Per-game CPU/GPU perf profile + FPS/frametime overlay. Launch with: gamemoderun mangohud %command%",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "gamemode mangohud",
+    "check": "rpm -q gamemode mangohud >/dev/null 2>&1",
+    "install": [
+      "dnf install -y gamemode mangohud",
+      "usermod -aG gamemode {USER}"
+    ]
+  },
+  "GOverlay": {
+    "Content": "GOverlay",
+    "Description": "GUI config editor for MangoHud.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "goverlay",
+    "check": "rpm -q goverlay >/dev/null 2>&1",
+    "binary": "goverlay",
+    "provides": [
+      "flatpak info io.github.benjamimgois.goverlay >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info io.github.benjamimgois.goverlay >/dev/null 2>&1"
+    ]
+  },
+  "Gamescope": {
+    "Content": "gamescope",
+    "Description": "Valve's micro-compositor \u2014 resolution scaling / HDR / borderless-fullscreen fixes.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "gamescope",
+    "check": "rpm -q gamescope >/dev/null 2>&1",
+    "binary": "gamescope"
+  },
+  "OpenRGB": {
+    "Content": "OpenRGB",
+    "Description": "Vendor-agnostic RGB control. Best-effort for the AW-ELC per-key keyboard controller \u2014 not guaranteed to work on this model.",
+    "category": "RGB",
+    "manager": "dnf",
+    "package": "openrgb",
+    "check": "rpm -q openrgb >/dev/null 2>&1",
+    "binary": "openrgb"
+  },
+  "Btop": {
+    "Content": "btop",
+    "Description": "Terminal system resource monitor.",
+    "category": "Monitoring",
+    "manager": "dnf",
+    "package": "btop",
+    "check": "rpm -q btop >/dev/null 2>&1",
+    "binary": "btop"
+  },
+  "Nvtop": {
+    "Content": "nvtop",
+    "Description": "Terminal GPU monitor (works for both the NVIDIA dGPU and AMD iGPU).",
+    "category": "Monitoring",
+    "manager": "dnf",
+    "package": "nvtop",
+    "check": "rpm -q nvtop >/dev/null 2>&1",
+    "binary": "nvtop"
+  },
+  "LmSensors": {
+    "Content": "lm_sensors",
+    "Description": "Fan/thermal sensor readout, needed by btop/GOverlay for real data.",
+    "category": "Monitoring",
+    "manager": "shell",
+    "check": "rpm -q lm_sensors >/dev/null 2>&1",
+    "install": [
+      "dnf install -y lm_sensors",
+      "yes | sensors-detect --auto >/dev/null 2>&1 || true"
+    ]
+  },
+  "Fastfetch": {
+    "Content": "fastfetch",
+    "Description": "Quick system/hardware summary on terminal open.",
+    "category": "Monitoring",
+    "manager": "dnf",
+    "package": "fastfetch",
+    "check": "rpm -q fastfetch >/dev/null 2>&1",
+    "binary": "fastfetch"
+  },
+  "Discord": {
+    "Content": "Discord",
+    "Description": "Voice/text chat.",
+    "category": "Streaming",
+    "manager": "dnf",
+    "package": "discord",
+    "check": "rpm -q discord >/dev/null 2>&1",
+    "binary": "discord",
+    "provides": [
+      "flatpak info com.discordapp.Discord >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info com.discordapp.Discord >/dev/null 2>&1"
+    ],
+    "flatpak_id": "com.discordapp.Discord"
+  },
+  "OBSStudio": {
+    "Content": "OBS Studio",
+    "Description": "Recording/streaming gameplay.",
+    "category": "Streaming",
+    "manager": "dnf",
+    "package": "obs-studio",
+    "check": "rpm -q obs-studio >/dev/null 2>&1",
+    "binary": "obs",
+    "provides": [
+      "flatpak info com.obsproject.Studio >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info com.obsproject.Studio >/dev/null 2>&1"
+    ]
+  },
+  "Sunshine": {
+    "Content": "Sunshine",
+    "Description": "Self-hosted game-streaming host, pairs with Moonlight on a Steam Deck/tablet/other PC.",
+    "category": "Streaming",
+    "manager": "dnf",
+    "package": "sunshine",
+    "check": "rpm -q sunshine >/dev/null 2>&1",
+    "binary": "sunshine",
+    "provides": [
+      "flatpak info dev.lizardbyte.sunshine >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info dev.lizardbyte.sunshine >/dev/null 2>&1",
+      "rpm -q Sunshine >/dev/null 2>&1"
+    ],
+    "flatpak_id": "dev.lizardbyte.sunshine"
+  },
+  "Moonlight": {
+    "Content": "Moonlight",
+    "Description": "Game-streaming client \u2014 stream FROM another PC/host TO this laptop.",
+    "category": "Streaming",
+    "manager": "flatpak",
+    "package": "com.moonlight_stream.Moonlight",
+    "check": "flatpak list 2>/dev/null | grep -q com.moonlight_stream.Moonlight",
+    "binary": "moonlight-qt",
+    "provides": [
+      "rpm -q moonlight-qt >/dev/null 2>&1"
+    ]
+  },
+  "ProtonUpQt": {
+    "Content": "ProtonUp-Qt",
+    "Description": "One-click installer/manager for GE-Proton, Wine-GE and Luxtorpeda into Steam and Lutris. The easy way to get a current custom Proton for GTA V. See the 'GTA V Online' section of the README for the full recipe.",
+    "category": "Gaming",
+    "manager": "flatpak",
+    "package": "net.davidotek.pupgui2",
+    "check": "flatpak list 2>/dev/null | grep -q net.davidotek.pupgui2",
+    "binary": "protonup-qt",
+    "provides": [
+      "rpm -q protonup-qt >/dev/null 2>&1"
+    ]
+  },
+  "Protontricks": {
+    "Content": "Protontricks",
+    "Description": "winetricks for Steam/Proton prefixes \u2014 install DLLs/fonts (vcrun2019, d3dcompiler_47, corefonts\u2026) into a specific game's Proton prefix. Needed for the Rockstar launcher / Social Club under Proton.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "protontricks",
+    "check": "rpm -q protontricks >/dev/null 2>&1",
+    "binary": "protontricks",
+    "provides": [
+      "flatpak info com.github.Matoking.protontricks >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info com.github.Matoking.protontricks >/dev/null 2>&1",
+      "rpm -q python3-protontricks >/dev/null 2>&1"
+    ],
+    "flatpak_id": "com.github.Matoking.protontricks"
+  },
+  "Bottles": {
+    "Content": "Bottles",
+    "Description": "Isolated Wine-prefix manager with bundled Wine-GE/Soda runners and a dependency installer \u2014 the non-Steam path for the Rockstar Games Launcher + GTA V. See the README's 'GTA V Online' section.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "bottles",
+    "check": "rpm -q bottles >/dev/null 2>&1",
+    "binary": "bottles",
+    "flatpak_id": "com.usebottles.bottles",
+    "provides": [
+      "flatpak info com.usebottles.bottles >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info com.usebottles.bottles >/dev/null 2>&1"
+    ]
+  },
+  "ProtonBattlEyeRuntime": {
+    "Content": "Steam: Proton BattlEye Runtime",
+    "Description": "GTA Online uses BattlEye anti-cheat; Proton needs this runtime tool (Steam app 1161040) for it to load. Triggers a Steam install of it \u2014 Steam must be installed and will open. If it doesn't take, install 'Proton BattlEye Runtime' from your Steam library's Tools section manually.",
+    "category": "Gaming",
+    "manager": "shell",
+    "check": "test -d /home/{USER}/.steam/steam/steamapps/common/'Proton BattlEye Runtime' -o -d /home/{USER}/.local/share/Steam/steamapps/common/'Proton BattlEye Runtime'",
+    "install": [
+      "su - {USER} -c 'timeout 30 steam steam://install/1161040 >/dev/null 2>&1 || true'"
+    ]
+  },
+  "ProtonEacRuntime": {
+    "Content": "Steam: Proton EasyAntiCheat Runtime",
+    "Description": "Some Rockstar/other titles use EasyAntiCheat; this is the Proton runtime tool for it (Steam app 1826330). Same behaviour as the BattlEye runtime entry \u2014 opens Steam to install it.",
+    "category": "Gaming",
+    "manager": "shell",
+    "check": "test -d /home/{USER}/.steam/steam/steamapps/common/'Proton EasyAntiCheat Runtime' -o -d /home/{USER}/.local/share/Steam/steamapps/common/'Proton EasyAntiCheat Runtime'",
+    "install": [
+      "su - {USER} -c 'timeout 30 steam steam://install/1826330 >/dev/null 2>&1 || true'"
+    ]
+  },
+  "VkBasalt": {
+    "Content": "vkBasalt",
+    "Description": "Vulkan post-processing layer (CAS sharpening, FXAA, SMAA) \u2014 cheap image-quality boost for games, toggle in-game with a hotkey.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "vkBasalt",
+    "check": "rpm -q vkBasalt >/dev/null 2>&1",
+    "provides": [
+      "ls /usr/lib64/libvkbasalt.so* >/dev/null 2>&1",
+      "rpm -q vkbasalt >/dev/null 2>&1"
+    ]
+  },
+  "PrismLauncher": {
+    "Content": "Prism Launcher",
+    "Description": "Open-source Minecraft launcher \u2014 manage multiple instances, mod loaders (Fabric/Forge/Quilt/NeoForge) and modpacks side by side. The recommended MC launcher.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "prismlauncher",
+    "check": "rpm -q prismlauncher >/dev/null 2>&1",
+    "binary": "prismlauncher",
+    "provides": [
+      "flatpak info org.prismlauncher.PrismLauncher >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info org.prismlauncher.PrismLauncher >/dev/null 2>&1"
+    ],
+    "flatpak_id": "org.prismlauncher.PrismLauncher"
+  },
+  "ModrinthApp": {
+    "Content": "Modrinth App",
+    "Description": "Modrinth's own Minecraft launcher \u2014 one-click modpack install and mod management from the Modrinth catalogue.",
+    "category": "Gaming",
+    "manager": "flatpak",
+    "package": "com.modrinth.ModrinthApp",
+    "check": "flatpak list 2>/dev/null | grep -q com.modrinth.ModrinthApp",
+    "binary": "modrinth-app"
+  },
+  "ATLauncher": {
+    "Content": "ATLauncher",
+    "Description": "Minecraft launcher with a big built-in modpack browser (FTB, Technic-style packs).",
+    "category": "Gaming",
+    "manager": "flatpak",
+    "package": "com.atlauncher.ATLauncher",
+    "check": "flatpak list 2>/dev/null | grep -q com.atlauncher.ATLauncher",
+    "binary": "atlauncher"
+  },
+  "ItchIo": {
+    "Content": "itch",
+    "Description": "The itch.io desktop app \u2014 install, update and launch indie games and jam builds.",
+    "category": "Gaming",
+    "manager": "flatpak",
+    "package": "io.itch.itch",
+    "check": "flatpak list 2>/dev/null | grep -q io.itch.itch",
+    "binary": "itch"
+  },
+  "Minigalaxy": {
+    "Content": "Minigalaxy",
+    "Description": "Lightweight GOG client \u2014 download and install your DRM-free GOG library without the Heroic/Lutris overhead.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "minigalaxy",
+    "check": "rpm -q minigalaxy >/dev/null 2>&1",
+    "binary": "minigalaxy",
+    "provides": [
+      "flatpak info io.github.sharkwouter.Minigalaxy >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info io.github.sharkwouter.Minigalaxy >/dev/null 2>&1"
+    ],
+    "flatpak_id": "io.github.sharkwouter.Minigalaxy"
+  },
+  "Cartridges": {
+    "Content": "Cartridges",
+    "Description": "Unified game library \u2014 auto-imports Steam, Heroic, Lutris, Bottles, itch and Flatpak games into one launcher grid.",
+    "category": "Gaming",
+    "manager": "flatpak",
+    "package": "page.kramo.Cartridges",
+    "check": "flatpak list 2>/dev/null | grep -q page.kramo.Cartridges",
+    "provides": [
+      "rpm -q cartridges >/dev/null 2>&1"
+    ]
+  },
+  "SteamRomManager": {
+    "Content": "Steam ROM Manager",
+    "Description": "Bulk-add non-Steam games and emulator ROMs to Steam with artwork from SteamGridDB \u2014 great for Big Picture / controller use.",
+    "category": "Gaming",
+    "manager": "flatpak",
+    "package": "com.steamgriddb.steam-rom-manager",
+    "check": "flatpak list 2>/dev/null | grep -q com.steamgriddb.steam-rom-manager",
+    "binary": "steam-rom-manager"
+  },
+  "Ludusavi": {
+    "Content": "Ludusavi",
+    "Description": "Game save-file backup/restore, with cloud sync via rclone. Knows save locations for thousands of titles.",
+    "category": "Gaming",
+    "manager": "flatpak",
+    "package": "com.github.mtkennerly.ludusavi",
+    "check": "flatpak list 2>/dev/null | grep -q com.github.mtkennerly.ludusavi",
+    "binary": "ludusavi",
+    "provides": [
+      "rpm -q ludusavi >/dev/null 2>&1"
+    ]
+  },
+  "NtfsSupport": {
+    "Content": "NTFS read/write support",
+    "Description": "Windows/dual-boot drives: the in-kernel ntfs3 driver (read/write) plus ntfs-3g (FUSE fallback) and ntfsprogs (mkfs.ntfs / ntfsfix). Nobara normally ships all of this already \u2014 this entry just confirms it and reinstalls if something's missing.",
+    "category": "Software",
+    "manager": "shell",
+    "check": "rpm -q ntfs-3g ntfsprogs >/dev/null 2>&1 && command -v mkfs.ntfs mount.ntfs-3g >/dev/null 2>&1",
+    "install": [
+      "dnf install -y ntfs-3g ntfsprogs"
+    ]
+  }
+}

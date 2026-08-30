@@ -1,0 +1,116 @@
+<svg viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- graphite "open source / terminal" plate -->
+    <linearGradient id="plate" x1="128" y1="14" x2="128" y2="242" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2c3540"/>
+      <stop offset="0.55" stop-color="#191f27"/>
+      <stop offset="1" stop-color="#0c0f13"/>
+    </linearGradient>
+    <radialGradient id="plateSheen" cx="90" cy="58" r="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="128" cy="150" r="130" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7a41d" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#f7a41d" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- amber boost flame (Tux palette only) -->
+    <linearGradient id="flameBack" x1="128" y1="210" x2="128" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c2410c"/>
+      <stop offset="0.55" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#ffd24d"/>
+    </linearGradient>
+    <linearGradient id="flameCore" x1="128" y1="196" x2="128" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fb923c"/>
+      <stop offset="1" stop-color="#fff3bf"/>
+    </linearGradient>
+
+    <linearGradient id="bezel" x1="46" y1="44" x2="210" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fcd34d"/>
+      <stop offset="0.5" stop-color="#f7a41d"/>
+      <stop offset="1" stop-color="#7c3a06"/>
+    </linearGradient>
+    <radialGradient id="face" cx="128" cy="122" r="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1a2230"/>
+      <stop offset="1" stop-color="#05070c"/>
+    </radialGradient>
+
+    <clipPath id="plateClip">
+      <rect x="14" y="14" width="228" height="228" rx="52"/>
+    </clipPath>
+  </defs>
+
+  <!-- rounded plate -->
+  <rect x="14" y="14" width="228" height="228" rx="52" fill="url(#plate)"/>
+
+  <g clip-path="url(#plateClip)">
+    <rect x="14" y="14" width="228" height="228" fill="url(#plateSheen)"/>
+    <circle cx="128" cy="150" r="130" fill="url(#glow)"/>
+
+    <!-- boost flame behind the gauge -->
+    <g transform="translate(128 128) scale(0.92) translate(-128 -128)">
+      <path fill="url(#flameBack)" d="M128 232c-52 0-86-36-86-82 0-36 20-52 27-82 4-19 0-30 5-46 9 12 11 23 13 39 7-14 9-30 7-51 14 14 23 30 25 51 3-12 4-25 2-41 12 12 21 30 23 51 4-11 5-21 5-35 11 16 16 35 16 58 0 7 5 12 11 19 7 11 11 23 11 35 0 46-39 85-104 85z"/>
+      <path fill="url(#flameCore)" d="M128 206c-24 0-40-18-40-42 0-18 9-27 13-43 3-11 0-16 3-25 5 7 5 14 7 23 3-8 4-16 2-27 7 8 12 18 13 29 2-7 2-13 1-21 6 8 10 18 11 30 2-6 2-11 3-18 5 9 8 18 8 30 0 24-15 42-45 42z"/>
+    </g>
+
+    <!-- throttle gauge ring -->
+    <circle cx="128" cy="122" r="84" fill="url(#bezel)"/>
+    <circle cx="128" cy="122" r="74" fill="url(#face)"/>
+    <circle cx="128" cy="122" r="74" fill="none" stroke="#000" stroke-opacity="0.4" stroke-width="2"/>
+
+    <!-- tick marks: cool sweep left, redline right -->
+    <g stroke-linecap="round" transform="translate(0 -6)">
+      <g stroke="#8b98a5" stroke-width="5">
+        <line x1="70.6" y1="171.4" x2="61.9" y2="180.1"/>
+        <line x1="62.9" y1="150.6" x2="51.4" y2="154.8"/>
+        <line x1="60.5" y1="128" x2="48" y2="128"/>
+        <line x1="62.9" y1="105.4" x2="51.4" y2="101.2"/>
+        <line x1="70.6" y1="84.6" x2="61.9" y2="75.9"/>
+        <line x1="86.3" y1="68.9" x2="79.2" y2="57.9"/>
+      </g>
+      <g stroke="#ffae00" stroke-width="7">
+        <line x1="128" y1="60.5" x2="128" y2="46"/>
+        <line x1="148.6" y1="62.9" x2="152.8" y2="49.7"/>
+        <line x1="169.4" y1="70.6" x2="178.1" y2="59.9"/>
+        <line x1="187.1" y1="86.3" x2="198.1" y2="77.6"/>
+        <line x1="197.1" y1="105.4" x2="209.6" y2="99"/>
+        <line x1="201.5" y1="128" x2="216" y2="128"/>
+      </g>
+    </g>
+
+    <!-- needle to the redline -->
+    <g transform="translate(0 -6)">
+      <g transform="rotate(66 128 128)">
+        <path d="M128 128 L120 52 L136 52 Z" fill="#ffd27a"/>
+        <path d="M120 52 L136 52 L128 44 Z" fill="#ff8a1f"/>
+      </g>
+    </g>
+
+    <!-- Tux: the hub -->
+    <g transform="translate(128 150)">
+      <!-- feet -->
+      <path fill="#f7a41d" d="M-30 44c-3-14 6-22 13-22 6 0 10 5 11 14 1 8-1 16-4 19-6 5-18 3-20-11z"/>
+      <path fill="#f7a41d" d="M30 44c3-14-6-22-13-22-6 0-10 5-11 14-1 8 1 16 4 19 6 5 18 3 20-11z"/>
+      <!-- body -->
+      <path fill="#12161c" d="M0-56c-26 0-40 22-40 56 0 30 4 46 14 56 7 7 16 10 26 10s19-3 26-10c10-10 14-26 14-56 0-34-14-56-40-56z"/>
+      <!-- flippers -->
+      <path fill="#12161c" d="M-38-8c-9 6-13 20-11 34 1 8 5 12 9 10 3-2 4-10 3-22-1-10 0-18 3-24 1-4-1-6-4-4z"/>
+      <path fill="#12161c" d="M38-8c9 6 13 20 11 34-1 8-5 12-9 10-3-2-4-10-3-22 1-10 0-18-3-24-1-4 1-6 4-4z"/>
+      <!-- belly -->
+      <path fill="#f4f6f8" d="M0-30c-17 0-27 16-27 43 0 21 3 33 10 41 5 5 11 7 17 7s12-2 17-7c7-8 10-20 10-41 0-27-10-43-27-43z"/>
+      <!-- face patches -->
+      <ellipse cx="-11" cy="-40" rx="9" ry="12" fill="#f4f6f8"/>
+      <ellipse cx="11" cy="-40" rx="9" ry="12" fill="#f4f6f8"/>
+      <!-- pupils -->
+      <ellipse cx="-8" cy="-38" rx="4" ry="5.5" fill="#12161c"/>
+      <ellipse cx="8" cy="-38" rx="4" ry="5.5" fill="#12161c"/>
+      <!-- beak -->
+      <path fill="#f7a41d" d="M0-30c-8 0-13 4-13 9 0 4 6 7 13 7s13-3 13-7c0-5-5-9-13-9z"/>
+      <path fill="#d97706" d="M-11-19c3 4 8 6 11 6s8-2 11-6c-4 3-8 4-11 4s-7-1-11-4z"/>
+    </g>
+  </g>
+
+  <!-- inner edge highlight -->
+  <rect x="14.75" y="14.75" width="226.5" height="226.5" rx="51.25" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="1.5"/>
+</svg>

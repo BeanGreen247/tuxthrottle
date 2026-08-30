@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=TuxThrottle
+GenericName=Hardware & Gaming Tweaks
+Comment=Tweaks, drivers, RGB keyboard and gaming setup for the Dell G15 5515 on Nobara
+Exec=python3 __TOOLKIT_DIR__/tuxthrottle.py
+Icon=__TOOLKIT_DIR__/assets/icon-256.png
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=tuxthrottle;tux;throttle;dell;g15;rgb;gamemode;performance;nvidia;tweak;
+StartupNotify=true
