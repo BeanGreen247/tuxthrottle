@@ -17,7 +17,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install deps
-        run: pip install pytest ruff
+        run: pip install pytest pytest-asyncio ruff textual rich
 
       - name: Byte-compile every module
         run: python -m compileall -q *.py tests/*.py
@@ -61,7 +61,10 @@ jobs:
             --disable-error-code=annotation-unchecked \
             sensors.py tuxthrottle_control.py tuxthrottle_modelgen.py \
             tuxthrottlectl.py tuxthrottle_profiles.py tuxthrottle_powerd.py \
-            tuxthrottle_btrfs.py tuxthrottle_watchdog.py
+            tuxthrottle_btrfs.py tuxthrottle_watchdog.py tuxthrottle_fixlog.py \
+            tuxthrottle_crashwatch.py tuxthrottle_protondb.py \
+            tuxthrottle_mangohud_status.py tuxthrottle_launchopts.py \
+            tuxthrottle_steamperf.py tuxthrottle_tui.py tuxthrottle_items.py
 
   gui-smoke:
     runs-on: ubuntu-latest
@@ -90,4 +93,32 @@ jobs:
           assert pages[-1] == "Report a Bug", pages[-1]
           print(f"GUI built OK — {len(pages)} nav pages, last = {pages[-1]!r}")
           r.destroy()
+          PY
+
+  tui-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python deps
+        run: pip install textual rich
+      - name: Build the TUI headless (Textual's own test harness — no tty needed)
+        run: |
+          python - <<'PY'
+          import asyncio
+          import tuxthrottle_tui as tt
+
+          async def main():
+              app = tt.TuxThrottleTUI()
+              async with app.run_test() as pilot:
+                  await pilot.pause()
+                  for box in (app.cpu_box, app.igpu_box, app.dgpu_box, app.gamemode_box):
+                      assert box.value, f"{box.id} never populated"
+                  await pilot.click("#btn_fan_0")
+                  await pilot.pause()
+              print("TUI built OK — stat boxes populated, a button click round-tripped")
+
+          asyncio.run(main())
           PY

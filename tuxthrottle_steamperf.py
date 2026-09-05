@@ -132,7 +132,7 @@ _PATCHED_MARK = ("-cef-disable-gpu", "MemoryHigh=")
 # by the block they live in; a key that's absent is inserted right after that
 # block's opening brace. All are Steam's own supported low-resource levers —
 # none break the client, none can OOM it.
-_VDF_KEYS = {
+_VDF_KEYS: dict[str, tuple[str, ...]] = {
     "friends": ("SignIntoFriends",      # don't auto-connect chat → no friends renderer
                 "AnimatedAvatars",       # static avatars in the friends list
                 "AnimatedGameArt"),      # static game art in chat
@@ -142,7 +142,7 @@ _VDF_KEYS = {
 }
 # Keys we no longer manage but may have set "0" in an earlier version — reset to
 # "1" on every run so an upgrade un-does them.
-_LEGACY_RESET = {"system": ("EnableGameOverlay",)}
+_LEGACY_RESET: dict[str, tuple[str, ...]] = {"system": ("EnableGameOverlay",)}
 # config.vdf: InstallConfigStore/Software/Valve/Steam/ShaderCacheManager/<key>.
 # Forced to 0 when low-resource is turned ON; left as-is on OFF (the user has a
 # dedicated toggle for it in the shader-cache box).

@@ -104,10 +104,19 @@ def _ctl(*args: str) -> tuple[bool, str]:
     return False, last or "tuxthrottlectl failed"
 
 try:
-    from PySide6.QtCore import QTimer, Qt
+    from PySide6.QtCore import Qt, QTimer
     from PySide6.QtGui import QAction, QIcon
-    from PySide6.QtWidgets import (QApplication, QMenu, QMessageBox, QSystemTrayIcon,
-                                   QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton)
+    from PySide6.QtWidgets import (
+        QApplication,
+        QHBoxLayout,
+        QLabel,
+        QMenu,
+        QMessageBox,
+        QPushButton,
+        QSystemTrayIcon,
+        QVBoxLayout,
+        QWidget,
+    )
 except ImportError:
     print("PySide6 not found. Install with: dnf install python3-pyside6")
     print("(or: pip install --user PySide6)")

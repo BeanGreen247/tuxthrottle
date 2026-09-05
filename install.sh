@@ -81,6 +81,12 @@ do_install() {
     fi
     python3 -c 'import ttkbootstrap' 2>/dev/null && c_ok "ttkbootstrap OK" || { c_err "ttkbootstrap still not importable"; exit 1; }
 
+    # textual + rich — the headless/SSH-friendly TUI (tuxthrottle_tui.py).
+    # Both are packaged for Fedora/Nobara, unlike ttkbootstrap.
+    python3 -c 'import textual, rich' 2>/dev/null \
+        || dnf install -y -q python3-textual python3-rich \
+        || c_warn "python3-textual/python3-rich not installed — the TUI (tuxthrottle --tui) won't run"
+
     # optional extras — a failure here is a warning, not a stop
     python3 -c 'import PySide6' 2>/dev/null || dnf install -y -q python3-pyside6 \
         || c_warn "python3-pyside6 not installed — the tray monitor (tray_monitor.py) won't run"

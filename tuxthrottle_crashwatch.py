@@ -25,13 +25,14 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 # Each signature: match against a coredump's EXE path and/or its full command
 # line (both substring, case-insensitive). First match wins, top to bottom —
 # put more specific rules first. `benign=True` entries are recognised and
 # logged but never raise a tray notification (they're normal operation that
 # only *looks* like a crash to a coredump/KCrash listener).
-SIGNATURES = [
+SIGNATURES: list[dict[str, Any]] = [
     {
         "id": "proton-bootstrap-quit",
         "match_exe": "wine-preloader",
@@ -61,7 +62,7 @@ SIGNATURES = [
 
 # Plain journal-message signatures (not coredumps) — checked separately since
 # an NTFS-dirty refusal or a stalled sched_ext scheduler never dumps core.
-JOURNAL_SIGNATURES = [
+JOURNAL_SIGNATURES: list[dict[str, Any]] = [
     {
         "id": "ntfs-dirty",
         "pattern": re.compile(r"ntfs3.*volume is dirty", re.I),
