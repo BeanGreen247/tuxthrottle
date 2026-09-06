@@ -468,6 +468,92 @@ class PowerDisplayTabMixin:
             "After applying, watch the Report a Bug log / dmesg for Xid errors; "
             "if the GPU misbehaves, hit “Unlock / reset”.")).pack(anchor="w", pady=(6, 0))
 
+        self._build_gpuoffset_section(lf)
+
+    def _build_gpuoffset_section(self, lf):
+        """Core/mem clock OFFSET (overclock) — RISKY, session-only, needs
+        Coolbits + an X session (usually absent on Wayland, so this commonly
+        just shows why it's unavailable)."""
+        tb.Separator(lf).pack(fill="x", pady=(10, 8))
+        off = sensors.nvidia_clock_offset_info()
+        head = tb.Frame(lf); head.pack(anchor="w")
+        tb.Label(head, text="Clock offset (overclock)", font=("Sans", 10, "bold")
+                 ).pack(side="left")
+        tb.Label(head, text="RISKY", bootstyle=(DANGER, "inverse"),
+                 font=("Sans", 7, "bold"), padding=(5, 1)).pack(side="left", padx=8)
+        if not off.get("available"):
+            tb.Label(lf, bootstyle=SECONDARY, wraplength=1000, justify="left",
+                     text=f"Not available: {off.get('reason') or 'unsupported'}. "
+                          "A GPU clock offset needs the NVIDIA 'Coolbits' option "
+                          "and a reachable X display — a muxless laptop dGPU on a "
+                          "Wayland session normally can't do this.").pack(anchor="w")
+            return
+        lo_r, hi_r = off.get("core_range") or (-200, 1000)
+        self._gpuoff_core = tk.IntVar(value=int(off.get("core") or 0))
+        self._gpuoff_mem = tk.IntVar(value=int(off.get("mem") or 0))
+        for label, var, a, b in (("Core MHz", self._gpuoff_core, lo_r, hi_r),
+                                 ("Mem MHz", self._gpuoff_mem, -500, 2000)):
+            r = tb.Frame(lf); r.pack(fill="x", pady=3)
+            tb.Label(r, text=label, width=20, anchor="w").pack(side="left")
+            tb.Scale(r, from_=a, to=b, variable=var, orient="horizontal",
+                     length=300).pack(side="left", fill="x", expand=True)
+            tb.Label(r, textvariable=var, width=6).pack(side="left")
+        br = tb.Frame(lf); br.pack(anchor="w", pady=(6, 0))
+        tb.Button(br, text="Apply offset", bootstyle=(DANGER, "outline"),
+                  command=self._gpuoff_apply).pack(side="left")
+        tb.Button(br, text="Zero / revert", bootstyle=(SECONDARY, "outline"),
+                  command=lambda: self._gpuoff_set(0, 0)).pack(side="left", padx=8)
+
+    def _gpuoff_set(self, core, mem):
+        if getattr(self, "_gpuoff_core", None) is not None:
+            self._gpuoff_core.set(core); self._gpuoff_mem.set(mem)
+
+        def work():
+            ok, msg = sensors.set_nvidia_clock_offset(core, mem)
+            self._log(f"[Power] GPU clock offset → {msg}"
+                      + ("" if ok else f"  FAILED: {msg}"))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _gpuoff_apply(self):
+        core, mem = int(self._gpuoff_core.get()), int(self._gpuoff_mem.get())
+        if core == 0 and mem == 0:
+            self._gpuoff_set(0, 0)
+            return
+        self._gpuoff_set(core, mem)
+        # session-only in-process keep/auto-revert guard (20 s)
+        dlg = tk.Toplevel(self.root)
+        dlg.title("Confirm GPU overclock")
+        dlg.transient(self.root); dlg.grab_set(); dlg.resizable(False, False)
+        left = {"n": 20}
+        msg = tk.StringVar()
+        tb.Label(dlg, padding=16, wraplength=380, justify="left", textvariable=msg
+                 ).pack()
+        row = tb.Frame(dlg, padding=(16, 0, 16, 16)); row.pack()
+
+        def revert():
+            dlg.destroy()
+            self._gpuoff_set(0, 0)
+
+        def keep():
+            dlg.destroy()
+            self._log("[Power] GPU clock offset kept by user")
+
+        tb.Button(row, text="Keep", bootstyle=SUCCESS, command=keep).pack(side="left", padx=6)
+        tb.Button(row, text="Revert now", bootstyle=DANGER, command=revert).pack(side="left", padx=6)
+
+        def tick():
+            if not dlg.winfo_exists():
+                return
+            msg.set(f"Applied core {core:+d} / mem {mem:+d} MHz.\n\nIf the screen "
+                    f"is stable, click Keep. Auto-reverts to 0 in {left['n']} s "
+                    f"(and always on app close).")
+            left["n"] -= 1
+            if left["n"] < 0:
+                revert()
+            else:
+                dlg.after(1000, tick)
+        tick()
+
     def _gpuclk_apply(self):
         hi = int(self._gpuclk_var.get())
         lo = int(getattr(self, "_gpuclk_min", 210))

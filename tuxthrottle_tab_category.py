@@ -56,6 +56,18 @@ class CategoryTabMixin:
         frame = self._scroll_body(outer, pad=14)
         tb.Label(frame, text="One click applies a curated bundle of tweaks + installs apps.", bootstyle=SECONDARY).pack(anchor="w", pady=(0, 12))
 
+        # before/after sensor deltas from the last preset apply (filled ~30 s
+        # after an apply by _preset_delta_watch)
+        dl = tb.Labelframe(frame, text="Last preset — sensor change (30 s after apply)",
+                           padding=12)
+        dl.pack(fill="x", pady=(0, 10))
+        prev = getattr(self, "_last_preset_delta", None)
+        self._preset_delta_lbl = tb.Label(
+            dl, bootstyle=SECONDARY, wraplength=1000, justify="left",
+            text=(f"{prev[0]} — " + "   ·   ".join(prev[1])) if prev
+            else "Apply a preset and this shows how temps / clocks / TDP moved.")
+        self._preset_delta_lbl.pack(anchor="w")
+
         recs = self._recommended_all()
         rb = tb.Labelframe(frame, text="Developer recommendations", padding=14)
         rb.pack(fill="x", pady=(0, 10))

@@ -1675,6 +1675,61 @@ class GamesTabMixin:
         tb.Button(lf, text="↻ Refresh", bootstyle=(SECONDARY, "outline"),
                   command=self._refresh_last_session).pack(anchor="w", pady=(6, 0))
         self._refresh_last_session()
+        self._build_session_history_card(parent)
+
+    def _build_session_history_card(self, parent):
+        lf = tb.Labelframe(parent, text="Session history", padding=10)
+        lf.pack(fill="x", pady=6)
+        tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left",
+                 text="Every game session the daemon logged (newest first, last "
+                      "50). Needs per-game auto-profiles on (Profiles tab).").pack(anchor="w")
+        self._sess_hist_box = tb.Frame(lf)
+        self._sess_hist_box.pack(fill="x", pady=(6, 0))
+        tb.Button(lf, text="↻ Refresh", bootstyle=(SECONDARY, "outline"),
+                  command=self._refresh_session_history).pack(anchor="w", pady=(6, 0))
+        self._refresh_session_history()
+
+    def _refresh_session_history(self):
+        import datetime
+        for w in self._sess_hist_box.winfo_children():
+            w.destroy()
+        try:
+            lines = self._power_state_path("sessions.jsonl").read_text().splitlines()
+        except OSError:
+            lines = []
+        rows = []
+        for ln in lines:
+            try:
+                rows.append(json.loads(ln))
+            except ValueError:
+                pass
+        if not rows:
+            tb.Label(self._sess_hist_box, bootstyle=SECONDARY,
+                     text="(nothing logged yet)").pack(anchor="w")
+            return
+        hdr = tb.Frame(self._sess_hist_box)
+        hdr.pack(fill="x")
+        for t, w in (("when", 14), ("game", 22), ("mins", 6), ("CPU°C", 7),
+                     ("GPU°C", 7), ("CPU GHz", 8), ("GPU MHz", 8), ("throttled", 10)):
+            tb.Label(hdr, text=t, width=w, anchor="w", bootstyle=SECONDARY,
+                     font=("Sans", 9, "bold")).pack(side="left")
+        for s in reversed(rows[-50:]):
+            r = tb.Frame(self._sess_hist_box)
+            r.pack(fill="x")
+            when = (datetime.datetime.fromtimestamp(s.get("ended", 0))
+                    .strftime("%b %d %H:%M") if s.get("ended") else "?")
+            cells = [
+                (when, 14), (str(s.get("game", "?"))[:21], 22),
+                (str(round(s.get("duration_s", 0) / 60)), 6),
+                (str(s.get("cpu_temp_max_c", "—")), 7),
+                (str(s.get("gpu_temp_max_c", "—")), 7),
+                (str(s.get("cpu_clock_avg_ghz", "—")), 8),
+                (str(s.get("gpu_clock_avg_mhz", "—")), 8),
+                (f"{s.get('throttle_pct', 0)}%", 10),
+            ]
+            for txt, w in cells:
+                tb.Label(r, text=txt, width=w, anchor="w",
+                         font=("Sans", 9)).pack(side="left")
 
     def _refresh_last_session(self):
         import datetime

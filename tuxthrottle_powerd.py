@@ -234,6 +234,16 @@ def _session_path(user) -> Path:
     return _config_path(user).with_name("last_session.json")
 
 
+def _append_session_history(hp: Path, summary: dict, keep: int = 50) -> None:
+    """Append one session summary to `hp` (jsonl), keeping the last `keep`."""
+    try:
+        old = hp.read_text().splitlines() if hp.exists() else []
+    except OSError:
+        old = []
+    old.append(json.dumps(summary, separators=(",", ":")))
+    hp.write_text("\n".join(old[-keep:]) + "\n")
+
+
 def _chown_user(path: Path, user: str | None) -> None:
     """Hand a root-written file in the user's config dir back to the user."""
     if not user:
@@ -362,9 +372,14 @@ class GameProfileController:
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(json.dumps(summary, indent=2))
             _chown_user(p, self._user)
+            # also append to a rolling history the GUI's Session-history view
+            # reads (keep the last 50)
+            hp = p.with_name("sessions.jsonl")
+            _append_session_history(hp, summary)
+            _chown_user(hp, self._user)
             log(f"session summary: {summary['game']} {summary['duration_s']}s, "
                 f"CPU max {summary['cpu_temp_max_c']}°C, throttled "
-                f"{summary['throttle_pct']}% -> {p.name}")
+                f"{summary['throttle_pct']}% -> {p.name} (+{hp.name})")
         except OSError as exc:
             log(f"  (session summary write failed: {exc})")
 

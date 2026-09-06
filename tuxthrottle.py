@@ -270,6 +270,13 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         self.dash_running = False
         self._fan_live = False
         self._power_live = False
+        # session-only GPU clock offset must not outlive the GUI
+        if getattr(self, "_gpuoff_core", None) is not None and (
+                self._gpuoff_core.get() or self._gpuoff_mem.get()):
+            try:
+                sensors.set_nvidia_clock_offset(0, 0)
+            except Exception:  # noqa: BLE001
+                pass
         self._close_csv_log()
         if self._pop_win is not None:
             try:
@@ -1408,7 +1415,53 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         self._begin_busy(f"Applying preset — {preset['Content']}", steps=max(1, n))
         threading.Thread(target=self._preset_worker, args=(ids, preset_id), daemon=True).start()
 
+    @staticmethod
+    def _fmt_snapshot_delta(before: dict, after: dict) -> list[str]:
+        """Human 'X → Y (Δ)' lines for the fields that moved between two
+        sensors.snapshot_light() readings."""
+        rows = [
+            ("CPU temp", "cpu_temp_c", "°C", 0),
+            ("CPU clock", "cpu_freq_ghz", " GHz", 2),
+            ("STAPM", "stapm_w", " W", 0),
+            ("dGPU temp", "dgpu_temp_c", "°C", 0),
+            ("dGPU clock", "dgpu_clock_mhz", " MHz", 0),
+            ("dGPU power", "dgpu_power_w", " W", 0),
+        ]
+        out = []
+        for label, key, unit, dp in rows:
+            b, a = before.get(key), after.get(key)
+            if b is None or a is None:
+                continue
+            try:
+                d = float(a) - float(b)
+            except (TypeError, ValueError):
+                continue
+            if abs(d) < (0.05 if dp else 1):
+                continue
+            sign = "+" if d >= 0 else "−"
+            out.append(f"{label} {float(b):.{dp}f}{unit} → {float(a):.{dp}f}{unit} "
+                       f"({sign}{abs(d):.{dp}f}{unit.strip()})")
+        fb = [r for r in (before.get("fan_rpm") or []) if r]
+        fa = [r for r in (after.get("fan_rpm") or []) if r]
+        if fb and fa and abs(sum(fa) / len(fa) - sum(fb) / len(fb)) >= 100:
+            out.append(f"fans ~{sum(fb) // len(fb)} → ~{sum(fa) // len(fa)} rpm avg")
+        return out or ["no significant sensor change"]
+
+    def _preset_delta_watch(self, before: dict, preset_id: str) -> None:
+        time.sleep(30)
+        after = sensors.snapshot_light()
+        lines = self._fmt_snapshot_delta(before, after)
+        self._last_preset_delta = (preset_id or "preset", lines, time.time())
+        self._log("[Preset delta, 30 s after apply] " + "  ·  ".join(lines))
+        if getattr(self, "_preset_delta_lbl", None) is not None:
+            try:
+                self._preset_delta_lbl.configure(
+                    text=f"{preset_id or 'preset'} — " + "   ·   ".join(lines))
+            except tk.TclError:
+                pass
+
     def _preset_worker(self, item_ids: list[str], preset_id: str = ""):
+        before = sensors.snapshot_light()
         self._pre_risky_snapshot(f"pre-preset-{preset_id}" if preset_id else "pre-preset")
         done = 0
         for item_id in item_ids:
@@ -1428,6 +1481,8 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         self._busy_queue.put("Preset done — refresh to confirm.")
         self._arm_watchdog_if_risky(item_ids)
         threading.Thread(target=self._refresh_all_status, daemon=True).start()
+        threading.Thread(target=self._preset_delta_watch,
+                         args=(before, preset_id), daemon=True).start()
 
 
 def cli_collect() -> int:

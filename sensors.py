@@ -1865,3 +1865,82 @@ def reset_nvidia_clocks() -> "tuple[bool, str]":
         return False, (r.stderr or r.stdout or "reset failed").strip()
     except (OSError, subprocess.SubprocessError) as exc:
         return False, str(exc)
+
+
+def nvidia_clock_offset_info() -> dict:
+    """Whether a core/mem *clock offset* (overclock) can be applied on this
+    box, plus the current offset if readable. Offsets go through
+    `nvidia-settings`, which needs Coolbits enabled AND a reachable X display
+    — usually absent on a Wayland-only session, so `available` is commonly
+    False here. Never raises."""
+    out = {"available": False, "reason": "", "core": None, "mem": None,
+           "core_range": None}
+    ns = which("nvidia-settings")
+    if not ns:
+        out["reason"] = "nvidia-settings not installed"
+        return out
+    disp = os.environ.get("DISPLAY")
+    if not disp:
+        out["reason"] = "no X DISPLAY (nvidia-settings can't run under pure Wayland)"
+        return out
+    try:
+        r = subprocess.run(
+            [ns, "-c", disp, "-q", "[gpu:0]/GPUGraphicsClockOffsetAllPerformanceLevels",
+             "-q", "[gpu:0]/GPUMemoryTransferRateOffsetAllPerformanceLevels"],
+            capture_output=True, text=True, timeout=8)
+        blob = (r.stdout or "") + (r.stderr or "")
+        if r.returncode != 0 or "ERROR" in blob or "Unable" in blob:
+            out["reason"] = "GPUGraphicsClockOffset not exposed (Coolbits not set?)"
+            return out
+        m = re.search(r"GraphicsClockOffsetAllPerformanceLevels'.*?\):\s*(-?\d+)", blob)
+        mm = re.search(r"MemoryTransferRateOffsetAllPerformanceLevels'.*?\):\s*(-?\d+)", blob)
+        rng = re.search(r"range (-?\d+) - (-?\d+)", blob)
+        out.update(available=True,
+                   core=int(m.group(1)) if m else 0,
+                   mem=int(mm.group(1)) if mm else 0,
+                   core_range=(int(rng.group(1)), int(rng.group(2))) if rng else (-200, 1000))
+        return out
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        out["reason"] = str(exc)
+        return out
+
+
+def set_nvidia_clock_offset(core_mhz: int, mem_mhz: int) -> "tuple[bool, str]":
+    """Apply a core / memory clock offset via nvidia-settings. Only call when
+    nvidia_clock_offset_info()['available'] is True. Needs root + the user's
+    X session."""
+    ns = which("nvidia-settings")
+    disp = os.environ.get("DISPLAY")
+    if not ns or not disp:
+        return False, "nvidia-settings / X display unavailable"
+    try:
+        r = subprocess.run(
+            [ns, "-c", disp,
+             "-a", f"[gpu:0]/GPUGraphicsClockOffsetAllPerformanceLevels={int(core_mhz)}",
+             "-a", f"[gpu:0]/GPUMemoryTransferRateOffsetAllPerformanceLevels={int(mem_mhz)}"],
+            capture_output=True, text=True, timeout=12)
+        blob = (r.stdout or "") + (r.stderr or "")
+        if r.returncode == 0 and "ERROR" not in blob:
+            return True, f"core {core_mhz:+d} / mem {mem_mhz:+d} MHz"
+        return False, (r.stderr or r.stdout or "offset apply failed").strip()
+    except (OSError, subprocess.SubprocessError) as exc:
+        return False, str(exc)
+
+
+def snapshot_light() -> dict:
+    """A cheap point-in-time reading for before/after deltas (preset apply,
+    profile apply). Every field may be None. No sudo, ~one syscall each plus
+    an optional nvidia-smi / ryzenadj hop."""
+    cpu_t = read_cpu_temp_c_value()
+    dclk, dtemp, dutil, dpow = read_dgpu_values()
+    ra = read_ryzenadj_info() or {}
+    fans = read_fans() or []
+    return {
+        "cpu_temp_c": cpu_t,
+        "cpu_freq_ghz": read_cpu_freq_ghz_value(),
+        "stapm_w": ra.get("stapm_limit_value") or ra.get("stapm_limit"),
+        "dgpu_temp_c": dtemp,
+        "dgpu_clock_mhz": dclk,
+        "dgpu_power_w": dpow,
+        "fan_rpm": [f.get("rpm") for f in fans],
+    }
