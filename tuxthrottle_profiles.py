@@ -432,6 +432,14 @@ def main() -> int:
 
     a = ap.parse_args()
     u = a.user
+    # let sensors' kscreen-doctor / KWin hops target this user's session
+    # (the boot service / sleep hook run as root with no SUDO_USER set)
+    if u:
+        try:
+            import sensors
+            sensors.set_session_user(u)
+        except Exception:  # noqa: BLE001
+            pass
 
     if a.cmd == "list":
         names = list_profiles(u)

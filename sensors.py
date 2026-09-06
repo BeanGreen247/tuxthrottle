@@ -1585,6 +1585,35 @@ def _real_user_uid() -> "tuple[str, int] | None":
     return None
 
 
+def _session_ready() -> bool:
+    """True only when the target user's KWin/Wayland session is actually up.
+    `kscreen-doctor` SIGABRTs (core-dumps, and DrKonqi then pops a crash
+    notification) if it's run before KWin — which is exactly what the boot /
+    resume `reassert` path was tripping every time. Callers that shell out to
+    kscreen-doctor gate on this."""
+    try:
+        if os.geteuid() != 0:
+            return True                       # we already are the session user
+    except AttributeError:
+        return True
+    ru = _real_user_uid()
+    if not ru:
+        return False
+    _name, uid = ru
+    if not any(os.path.exists(f"/run/user/{uid}/{s}")
+               for s in ("wayland-0", "wayland-1")) and \
+       not os.path.exists("/tmp/.X11-unix/X0"):
+        return False
+    for proc in ("kwin_wayland", "kwin_x11"):
+        try:
+            if subprocess.run(["pgrep", "-u", str(uid), "-x", proc],
+                              capture_output=True).returncode == 0:
+                return True
+        except OSError:
+            return False
+    return False
+
+
 def _session_cmd(argv: list) -> list:
     """Wrap argv so it runs in the real user's Wayland/D-Bus session when we
     are root; return argv unchanged when we already are that user."""
@@ -1613,8 +1642,8 @@ def _session_cmd(argv: list) -> list:
 def panel_modes() -> "dict | None":
     """{'output', 'current_id', 'current_hz', 'modes':[{id,w,h,hz}], 'rates':[hz]}.
     None if kscreen-doctor is missing or KScreen/KWin isn't reachable."""
-    if not which("kscreen-doctor"):
-        return None
+    if not which("kscreen-doctor") or not _session_ready():
+        return None                          # don't let kscreen-doctor abort
     try:
         r = subprocess.run(_session_cmd(["kscreen-doctor", "-j"]),
                            capture_output=True, text=True, timeout=6)

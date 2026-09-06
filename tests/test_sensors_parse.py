@@ -131,6 +131,28 @@ def test_panel_modes_none_without_kscreen(monkeypatch):
     assert sensors.panel_modes() is None
 
 
+def test_session_ready_true_when_not_root(monkeypatch):
+    monkeypatch.setattr(sensors.os, "geteuid", lambda: 1000)
+    assert sensors._session_ready() is True
+
+
+def test_session_ready_false_at_boot_no_kwin(monkeypatch):
+    # root, a resolvable user, but no wayland socket and no kwin process
+    monkeypatch.setattr(sensors.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(sensors, "_real_user_uid", lambda: ("bean", 1000))
+    monkeypatch.setattr(sensors.os.path, "exists", lambda p: False)
+    assert sensors._session_ready() is False
+
+
+def test_panel_modes_skips_kscreen_doctor_when_session_not_ready(monkeypatch):
+    monkeypatch.setattr(sensors, "which", lambda c: "/usr/bin/kscreen-doctor")
+    monkeypatch.setattr(sensors, "_session_ready", lambda: False)
+    called = []
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: called.append(a) or None)
+    assert sensors.panel_modes() is None
+    assert called == []          # kscreen-doctor never invoked → can't abort
+
+
 def test_set_panel_refresh_keeps_resolution(monkeypatch):
     monkeypatch.setattr(sensors, "which", lambda c: "/usr/bin/kscreen-doctor")
     monkeypatch.setattr(sensors, "_session_cmd", lambda a: a)
