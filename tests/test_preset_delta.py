@@ -36,6 +36,17 @@ def test_no_change_is_stated():
     assert fmt(s, dict(s)) == ["no significant sensor change"]
 
 
+def test_idle_jitter_below_deadband_is_ignored():
+    before = {"cpu_temp_c": 55, "cpu_freq_ghz": 2.50, "stapm_w": 65,
+              "dgpu_temp_c": 45, "dgpu_clock_mhz": 300, "dgpu_power_w": 7,
+              "fan_rpm": [1800, 1800]}
+    after = {"cpu_temp_c": 57, "cpu_freq_ghz": 2.60, "stapm_w": 66,
+             "dgpu_temp_c": 47, "dgpu_clock_mhz": 645, "dgpu_power_w": 9,
+             "fan_rpm": [1830, 1850]}   # dGPU clock +345 = ordinary boost jitter
+    # small temp/clock/power wobble under each deadband; dGPU clock not reported
+    assert fmt(before, after) == ["no significant sensor change"]
+
+
 def test_missing_fields_skipped():
     before = {"cpu_temp_c": None, "stapm_w": 65}
     after = {"cpu_temp_c": 70, "stapm_w": None}

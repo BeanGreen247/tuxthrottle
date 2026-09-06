@@ -235,13 +235,21 @@ def _session_path(user) -> Path:
 
 
 def _append_session_history(hp: Path, summary: dict, keep: int = 50) -> None:
-    """Append one session summary to `hp` (jsonl), keeping the last `keep`."""
-    try:
-        old = hp.read_text().splitlines() if hp.exists() else []
-    except OSError:
+    """Append one session summary to `hp` (jsonl), keeping the last `keep`.
+    Atomic (temp + os.replace) so a crash mid-write can't truncate history,
+    and a transient read error skips the append rather than clobbering it."""
+    if hp.exists():
+        try:
+            old = hp.read_text().splitlines()
+        except OSError:
+            log(f"  (session history unreadable, skipping append: {hp})")
+            return
+    else:
         old = []
     old.append(json.dumps(summary, separators=(",", ":")))
-    hp.write_text("\n".join(old[-keep:]) + "\n")
+    tmp = hp.with_suffix(hp.suffix + ".tmp")
+    tmp.write_text("\n".join(old[-keep:]) + "\n")
+    os.replace(tmp, hp)
 
 
 def _chown_user(path: Path, user: str | None) -> None:

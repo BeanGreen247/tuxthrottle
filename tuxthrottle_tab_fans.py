@@ -18,6 +18,7 @@ from ttkbootstrap.constants import DANGER, INFO, SECONDARY, SUCCESS, WARNING
 
 import sensors
 import tuxthrottle_fixlog as fixlog
+from tuxthrottle_gui_widgets import Segmented
 
 try:
     import tuxthrottle_kbd
@@ -79,13 +80,11 @@ class FanTabMixin:
         if choices:
             pf = tb.Labelframe(frame, text="Thermal profile", padding=12)
             pf.pack(fill="x", pady=6)
-            prow = tb.Frame(pf); prow.pack(anchor="w")
             self._fan_profile_var = tk.StringVar(value=sensors.get_platform_profile())
-            for c in choices:
-                tb.Radiobutton(prow, text=c.capitalize(), value=c,
-                               variable=self._fan_profile_var, bootstyle="toolbutton",
-                               command=lambda v=c: self._fan_set_profile(v)
-                               ).pack(side="left", padx=4)
+            Segmented(pf, self._fan_profile_var,
+                      [(c.capitalize(), c) for c in choices],
+                      command=lambda: self._fan_set_profile(self._fan_profile_var.get())
+                      ).pack(anchor="w")
             if tuxthrottle_kbd is not None:
                 tie_cfg = self._read_power_state("kbd_profile_tie.json") or {}
                 self._kbd_tie_var = tk.BooleanVar(value=bool(tie_cfg.get("enabled")))

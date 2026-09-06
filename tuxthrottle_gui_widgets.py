@@ -24,6 +24,14 @@ import ttkbootstrap as tb
 from tuxthrottle_items import resolve_real_user
 
 
+def _is_num(x) -> bool:
+    try:
+        float(x)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 def _human_bytes(n: float) -> str:
     for unit in ("B", "KiB", "MiB", "GiB"):
         if n < 1024:
@@ -416,13 +424,16 @@ class HistoryChart(tk.Canvas):
                          font=("Sans", 8))
         if len(vals) < 2:
             return
-        lo, hi = min(vals), max(vals)
-        # widen the range so an in-view threshold line stays visible
-        for tv, _c, _l in self._thresholds:
-            try:
-                lo, hi = min(lo, float(tv)), max(hi, float(tv))
-            except (TypeError, ValueError):
-                pass
+        dlo, dhi = min(vals), max(vals)
+        dspan = max(1e-6, dhi - dlo)
+        # A threshold only widens the y-range (and only then renders) once the
+        # trace gets within ~one span of it — otherwise a far-off 90°C throttle
+        # line would flatten an idle 45-55°C trace against the floor.
+        near = [(tv, tc, tl) for (tv, tc, tl) in self._thresholds
+                if _is_num(tv) and dlo - dspan <= float(tv) <= dhi + dspan]
+        lo, hi = dlo, dhi
+        for tv, _c, _l in near:
+            lo, hi = min(lo, float(tv)), max(hi, float(tv))
         if hi - lo < 1e-6:
             lo, hi = lo - 1, hi + 1
         span = (hi - lo) * 1.15
@@ -431,11 +442,8 @@ class HistoryChart(tk.Canvas):
         def _y(v):
             return h - pad - (v - base) / span * (h - 2 * pad - 10) - 2
 
-        for tv, tc, tl in self._thresholds:
-            try:
-                ty = _y(float(tv))
-            except (TypeError, ValueError):
-                continue
+        for tv, tc, tl in near:
+            ty = _y(float(tv))
             self.create_line(pad, ty, w - pad, ty, fill=tc, width=1,
                              dash=(3, 3))
             if tl and 14 < ty < h - 10:      # room, and clear of the caption row
@@ -467,10 +475,8 @@ FONT_BODY = ("Sans", 10)              # normal copy
 FONT_CAPTION = ("Sans", 9)            # secondary / hint text
 
 # monochrome glyph per card title — same visual language as SidebarNav._NAV_ICONS
-_CARD_ICONS = {
-    "CPU": "▤", "GPU": "◈", "Fans": "❄", "Battery": "⏻", "History": "∿",
-    "Power": "⚡", "Display": "▭", "Thermals": "🌡", "Memory": "▥",
-}
+_CARD_ICONS = {"CPU": "▤", "GPU": "◈", "Details": "≣", "History": "∿",
+               "Game Mode": "♞"}
 
 
 class Card(tb.Frame):
@@ -649,12 +655,23 @@ class SidebarNav(tb.Frame):
             return self._current
         key = str(frame)
         if key in self._lazy and key not in self._built:
-            self._built.add(key)
+            self._built.add(key)          # mark first so a hard failure can't loop
             try:
                 self._lazy[key](frame)
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
                 import traceback
                 traceback.print_exc()
+                # make the failure visible in the GUI, not just on stderr
+                try:
+                    for w in frame.winfo_children():
+                        w.destroy()
+                    tb.Label(frame, bootstyle="danger", justify="left",
+                             wraplength=900, padding=16,
+                             text=f"This tab failed to build:\n\n{exc}\n\n"
+                                  "See the Report a Bug log / stderr for the "
+                                  "traceback.").pack(anchor="w")
+                except tk.TclError:
+                    pass
         for text, f, b in self._pages:
             on = f is frame
             support = getattr(b, "_nav_kind", "normal") == "support"

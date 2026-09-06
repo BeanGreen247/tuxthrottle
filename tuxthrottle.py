@@ -270,13 +270,17 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         self.dash_running = False
         self._fan_live = False
         self._power_live = False
-        # session-only GPU clock offset must not outlive the GUI
-        if getattr(self, "_gpuoff_core", None) is not None and (
-                self._gpuoff_core.get() or self._gpuoff_mem.get()):
-            try:
-                sensors.set_nvidia_clock_offset(0, 0)
-            except Exception:  # noqa: BLE001
-                pass
+        # session-only GPU clock offset must not outlive the GUI. Reset off the
+        # Tk thread (the nvidia-settings call can block up to 12 s); a
+        # non-daemon thread keeps the interpreter alive until it returns.
+        try:
+            need_reset = getattr(self, "_gpuoff_core", None) is not None and (
+                self._gpuoff_core.get() or self._gpuoff_mem.get())
+        except tk.TclError:
+            need_reset = False
+        if need_reset:
+            threading.Thread(target=lambda: sensors.set_nvidia_clock_offset(0, 0),
+                             daemon=False).start()
         self._close_csv_log()
         if self._pop_win is not None:
             try:
@@ -1002,8 +1006,10 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         n_done = n_total = n_attention = 0
         for item in self.items.values():
             # count by item substance, not widget presence — category tabs are
-            # built lazily now, so status_label is often still None here
-            if item.hidden or not item.hw_supported or item.state == "unknown":
+            # built lazily now, so status_label is often still None here. A
+            # check that silently errored keeps state "unknown"; it must still
+            # count (it shows as 'available' + feeds n_attention if 'error').
+            if item.hidden or not item.hw_supported:
                 continue
             n_total += 1
             if item.done:
@@ -1419,16 +1425,19 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
     def _fmt_snapshot_delta(before: dict, after: dict) -> list[str]:
         """Human 'X → Y (Δ)' lines for the fields that moved between two
         sensors.snapshot_light() readings."""
+        # (label, key, unit, decimals, deadband) — deadband swallows ordinary
+        # idle jitter so only a preset-caused shift is reported. dGPU *clock*
+        # is deliberately omitted: it swings hundreds of MHz between any two
+        # reads on boost alone and no preset here touches it.
         rows = [
-            ("CPU temp", "cpu_temp_c", "°C", 0),
-            ("CPU clock", "cpu_freq_ghz", " GHz", 2),
-            ("STAPM", "stapm_w", " W", 0),
-            ("dGPU temp", "dgpu_temp_c", "°C", 0),
-            ("dGPU clock", "dgpu_clock_mhz", " MHz", 0),
-            ("dGPU power", "dgpu_power_w", " W", 0),
+            ("CPU temp", "cpu_temp_c", "°C", 0, 3),
+            ("CPU clock", "cpu_freq_ghz", " GHz", 2, 0.20),
+            ("STAPM", "stapm_w", " W", 0, 2),
+            ("dGPU temp", "dgpu_temp_c", "°C", 0, 3),
+            ("dGPU power", "dgpu_power_w", " W", 0, 4),
         ]
         out = []
-        for label, key, unit, dp in rows:
+        for label, key, unit, dp, deadband in rows:
             b, a = before.get(key), after.get(key)
             if b is None or a is None:
                 continue
@@ -1436,7 +1445,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                 d = float(a) - float(b)
             except (TypeError, ValueError):
                 continue
-            if abs(d) < (0.05 if dp else 1):
+            if abs(d) < deadband:
                 continue
             sign = "+" if d >= 0 else "−"
             out.append(f"{label} {float(b):.{dp}f}{unit} → {float(a):.{dp}f}{unit} "
@@ -1448,11 +1457,21 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         return out or ["no significant sensor change"]
 
     def _preset_delta_watch(self, before: dict, preset_id: str) -> None:
+        gen = self._preset_delta_gen = getattr(self, "_preset_delta_gen", 0) + 1
         time.sleep(30)
+        if gen != self._preset_delta_gen:      # a newer preset apply superseded us
+            return
         after = sensors.snapshot_light()
         lines = self._fmt_snapshot_delta(before, after)
         self._last_preset_delta = (preset_id or "preset", lines, time.time())
         self._log("[Preset delta, 30 s after apply] " + "  ·  ".join(lines))
+        # Tk is not thread-safe — hand the widget write back to the main loop
+        try:
+            self.root.after(0, lambda: self._preset_delta_apply(preset_id, lines))
+        except (RuntimeError, tk.TclError):
+            pass
+
+    def _preset_delta_apply(self, preset_id: str, lines: list[str]) -> None:
         if getattr(self, "_preset_delta_lbl", None) is not None:
             try:
                 self._preset_delta_lbl.configure(

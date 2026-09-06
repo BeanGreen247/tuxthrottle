@@ -472,33 +472,61 @@ class PowerDisplayTabMixin:
 
     def _build_gpuoffset_section(self, lf):
         """Core/mem clock OFFSET (overclock) — RISKY, session-only, needs
-        Coolbits + an X session (usually absent on Wayland, so this commonly
-        just shows why it's unavailable)."""
+        Coolbits + an X session (usually absent on Wayland). The capability
+        probe shells out to nvidia-settings (timeout 8 s), so it runs on a
+        worker on demand — never inline on this now-lazy tab build."""
         tb.Separator(lf).pack(fill="x", pady=(10, 8))
-        off = sensors.nvidia_clock_offset_info()
         head = tb.Frame(lf); head.pack(anchor="w")
         tb.Label(head, text="Clock offset (overclock)", font=("Sans", 10, "bold")
                  ).pack(side="left")
         tb.Label(head, text="RISKY", bootstyle=(DANGER, "inverse"),
                  font=("Sans", 7, "bold"), padding=(5, 1)).pack(side="left", padx=8)
+        self._gpuoff_body = tb.Frame(lf)
+        self._gpuoff_body.pack(fill="x", anchor="w")
+        self._gpuoff_note = tb.Label(
+            self._gpuoff_body, bootstyle=SECONDARY, wraplength=1000, justify="left",
+            text="A GPU clock offset needs the NVIDIA 'Coolbits' option and a "
+                 "reachable X display — a muxless laptop dGPU on Wayland normally "
+                 "can't. Check whether this box can:")
+        self._gpuoff_note.pack(anchor="w", pady=(0, 4))
+        self._gpuoff_check_btn = tb.Button(
+            self._gpuoff_body, text="Check availability", bootstyle=(INFO, "outline"),
+            command=self._gpuoff_check)
+        self._gpuoff_check_btn.pack(anchor="w")
+
+    def _gpuoff_check(self):
+        self._gpuoff_check_btn.configure(state="disabled", text="Checking…")
+
+        def work():
+            off = sensors.nvidia_clock_offset_info()
+            try:
+                self.root.after(0, lambda: self._gpuoff_render(off))
+            except (RuntimeError, tk.TclError):
+                pass
+        threading.Thread(target=work, daemon=True).start()
+
+    def _gpuoff_render(self, off: dict):
+        for w in self._gpuoff_body.winfo_children():
+            w.destroy()
         if not off.get("available"):
-            tb.Label(lf, bootstyle=SECONDARY, wraplength=1000, justify="left",
-                     text=f"Not available: {off.get('reason') or 'unsupported'}. "
-                          "A GPU clock offset needs the NVIDIA 'Coolbits' option "
-                          "and a reachable X display — a muxless laptop dGPU on a "
-                          "Wayland session normally can't do this.").pack(anchor="w")
+            tb.Label(self._gpuoff_body, bootstyle=SECONDARY, wraplength=1000,
+                     justify="left",
+                     text=f"Not available: {off.get('reason') or 'unsupported'}."
+                     ).pack(anchor="w")
+            tb.Button(self._gpuoff_body, text="Re-check", bootstyle=(INFO, "outline"),
+                      command=self._gpuoff_check).pack(anchor="w", pady=(4, 0))
             return
         lo_r, hi_r = off.get("core_range") or (-200, 1000)
         self._gpuoff_core = tk.IntVar(value=int(off.get("core") or 0))
         self._gpuoff_mem = tk.IntVar(value=int(off.get("mem") or 0))
         for label, var, a, b in (("Core MHz", self._gpuoff_core, lo_r, hi_r),
                                  ("Mem MHz", self._gpuoff_mem, -500, 2000)):
-            r = tb.Frame(lf); r.pack(fill="x", pady=3)
+            r = tb.Frame(self._gpuoff_body); r.pack(fill="x", pady=3)
             tb.Label(r, text=label, width=20, anchor="w").pack(side="left")
             tb.Scale(r, from_=a, to=b, variable=var, orient="horizontal",
                      length=300).pack(side="left", fill="x", expand=True)
             tb.Label(r, textvariable=var, width=6).pack(side="left")
-        br = tb.Frame(lf); br.pack(anchor="w", pady=(6, 0))
+        br = tb.Frame(self._gpuoff_body); br.pack(anchor="w", pady=(6, 0))
         tb.Button(br, text="Apply offset", bootstyle=(DANGER, "outline"),
                   command=self._gpuoff_apply).pack(side="left")
         tb.Button(br, text="Zero / revert", bootstyle=(SECONDARY, "outline"),
@@ -531,13 +559,16 @@ class PowerDisplayTabMixin:
         row = tb.Frame(dlg, padding=(16, 0, 16, 16)); row.pack()
 
         def revert():
-            dlg.destroy()
+            if dlg.winfo_exists():
+                dlg.destroy()
             self._gpuoff_set(0, 0)
 
         def keep():
             dlg.destroy()
             self._log("[Power] GPU clock offset kept by user")
 
+        # closing the dialog via the WM titlebar counts as "revert", not "keep"
+        dlg.protocol("WM_DELETE_WINDOW", revert)
         tb.Button(row, text="Keep", bootstyle=SUCCESS, command=keep).pack(side="left", padx=6)
         tb.Button(row, text="Revert now", bootstyle=DANGER, command=revert).pack(side="left", padx=6)
 
@@ -899,7 +930,7 @@ class PowerDisplayTabMixin:
         if token is None:
             self._power_tok = getattr(self, "_power_tok", 0) + 1
             token = self._power_tok
-        if not getattr(self, "_power_live", False) or self._power_tok != token:
+        if not getattr(self, "_power_live", False) or token != self._power_tok:
             return
         threading.Thread(target=self._power_poll_worker, daemon=True).start()
         self.root.after(3000, lambda: self._power_poll(token))

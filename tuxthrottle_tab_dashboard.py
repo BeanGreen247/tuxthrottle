@@ -290,9 +290,11 @@ class DashboardTabMixin:
                     ch = self._hist_charts.get(k)
                     if ch is not None and v is not None:
                         ch.push(v)
-                if stapm_limit and self._hist_charts.get("cpu_power"):
-                    self._hist_charts["cpu_power"].set_thresholds(
-                        [(stapm_limit, "#d29922", "STAPM cap")])
+                ch = self._hist_charts.get("cpu_power")
+                if ch is not None and stapm_limit != getattr(self, "_stapm_shown", None):
+                    self._stapm_shown = stapm_limit
+                    ch.set_thresholds([(stapm_limit, "#d29922", "STAPM cap")]
+                                      if stapm_limit else [])
                 if self._csv_writer is not None:
                     try:
                         self._csv_writer.writerow([
