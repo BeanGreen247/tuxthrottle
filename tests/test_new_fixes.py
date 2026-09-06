@@ -180,3 +180,21 @@ def test_diagnose_runs_without_steam_installed(monkeypatch, tmp_path):
     monkeypatch.setattr(sp, "_user_desktop", lambda: tmp_path / "shadow.desktop")
     results = sp.diagnose(user=None)
     assert all(s in ("ok", "bad") for s, _ in results)
+
+
+def test_flags_no_longer_suppress_steam_self_repair():
+    # -noverifyfiles / -nobootstrapupdate / -norepairfiles were dropped after
+    # they caused a steamclient.so SIGSEGV when a Steam client update landed.
+    for f in ("-noverifyfiles", "-nobootstrapupdate", "-norepairfiles"):
+        assert f not in sp.FLAGS
+    assert "-cef-disable-gpu" in sp.FLAGS   # the real low-resource lever stays
+
+
+def test_diagnose_flags_a_shadow_still_carrying_the_repair_suppression(monkeypatch, tmp_path):
+    monkeypatch.setattr(sp, "status_igpu", lambda: "on")
+    monkeypatch.setattr(sp, "_SYS_DESKTOP", str(tmp_path / "nope.desktop"))
+    shadow = tmp_path / "shadow.desktop"
+    shadow.write_text("[Desktop Entry]\nExec=/usr/bin/steam -silent -noverifyfiles %U\n")
+    monkeypatch.setattr(sp, "_user_desktop", lambda: shadow)
+    bad = [m for s, m in sp.diagnose(user=None) if s == "bad"]
+    assert any("noverifyfiles" in m for m in bad)

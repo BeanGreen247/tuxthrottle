@@ -13,20 +13,25 @@ levers — nothing that has been seen to break the client or get it OOM-killed:
     -cef-disable-gpu-compositing
     -cef-disable-breakpad         drop the web-UI crash reporter
     -cef-disable-extra-info-spew  quieter CEF logging (less log I/O)
-    -noverifyfiles               skip the client file-integrity scan at startup
-    -nobootstrapupdate           skip the bootstrap self-update check at startup
-    -norepairfiles               don't run the auto file-repair pass at startup
 
-The last three only cut the CPU/I-O spike each time Steam starts — Steam still
-re-verifies on demand if it detects corruption. `off` removes them all.
+`off` removes them all.
 
 Never used: a hard MemoryMax (that OOM-kills Steam), and the CEF process
 flags -cef-single-process / -no-cef-sandbox / -no-browser. Those three were
 an opt-in "--aggressive" tier until 2026-09-03, when they were confirmed to
 crash-loop steamwebhelper (SIGTRAP in libcef roughly every 10 s, no usable
-UI) on a current Steam build — the tier was removed. If Steam still looks
-broken after `on`, check that your Steam-library drive is actually mounted;
-an unmounted library looks identical (no games).
+UI) on a current Steam build — the tier was removed.
+
+Also dropped 2026-09-06: -noverifyfiles / -nobootstrapupdate / -norepairfiles.
+They only shaved a small startup CPU/I-O spike, but they suppress Steam's own
+client self-repair — so when a Steam client update lands (Steam updates its
+client constantly) the bootstrap is skipped, steamclient.so ends up out of
+sync with the rest of the client, and the ubuntu12_32/steam bootstrap
+SIGSEGVs on launch (`segfault … in steamclient.so`). Letting Steam verify /
+repair / bootstrap-update at startup is what *prevents* that crash.
+
+If Steam still looks broken after `on`, check that your Steam-library drive is
+actually mounted; an unmounted library looks identical (no games).
 
 …the patched launcher also wraps Steam in a systemd scope with a **soft**
 memory limit only (`systemd-run --user --scope -p MemoryHigh=1200M`):
@@ -88,8 +93,11 @@ from pathlib import Path
 MARKER = "X-TuxThrottle-LowResource"
 IGPU_MARKER = "X-TuxThrottle-SteamIgpu"
 FLAGS = ("-silent -cef-disable-gpu -cef-disable-gpu-compositing "
-         "-cef-disable-breakpad -cef-disable-extra-info-spew "
-         "-noverifyfiles -nobootstrapupdate -norepairfiles")
+         "-cef-disable-breakpad -cef-disable-extra-info-spew")
+# removed 2026-09-06 — suppressing client self-repair made steamclient.so
+# SIGSEGV on launch after a Steam client update. `link-check` flags a shadow
+# .desktop that still carries them so `on` gets re-run.
+_UNSAFE_FLAGS = ("-noverifyfiles", "-nobootstrapupdate", "-norepairfiles")
 
 # Nobara / Fedora ship /usr/share/applications/steam.desktop with
 #   PrefersNonDefaultGPU=true
@@ -615,14 +623,15 @@ def diagnose(user: str | None = None) -> list[tuple[str, str]]:
         shadow = dst.read_text() if dst.is_file() else ""
     except OSError:
         shadow = ""
-    stale = [f for f in _REMOVED_AGGRESSIVE_FLAGS if f in shadow]
+    stale = [f for f in (*_REMOVED_AGGRESSIVE_FLAGS, *_UNSAFE_FLAGS) if f in shadow]
     if stale:
         results.append(("bad",
-            f"Steam launcher still has removed/unsafe CEF flags set: {', '.join(stale)} "
-            "— these are known to crash-loop steamwebhelper. Fix: turn Steam low-resource "
-            "mode off then back on to regenerate the launcher without them."))
+            f"Steam launcher still has removed/unsafe flags set: {', '.join(stale)} "
+            "— these have been seen to crash-loop steamwebhelper or SIGSEGV "
+            "steamclient.so on launch. Fix: turn Steam low-resource mode off then "
+            "back on to regenerate the launcher without them."))
     else:
-        results.append(("ok", "No known-broken CEF flags in the Steam launcher."))
+        results.append(("ok", "No known-broken flags in the Steam launcher."))
 
     # 3) a declared Steam library folder that looks unmounted/missing
     home = Path(f"~{user}").expanduser() if user else Path.home()
