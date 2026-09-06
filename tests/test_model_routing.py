@@ -119,6 +119,37 @@ def test_gating_helpers(monkeypatch):
     assert sensors.model_skips_tweak("FanCurveDaemon") is False
 
 
+def test_kbd_no_server_restart_when_reasserting_the_same_effect(monkeypatch):
+    """A spectrum re-assert (tray / boot / resume, saved mode == 'spectrum')
+    must NOT bounce the OpenRGB SDK server — overlapping re-asserts used to
+    turn that into a restart storm that SIGSEGV'd Steam's HID enumeration."""
+    import tuxthrottle_kbd as kbd
+    calls = []
+    monkeypatch.setattr(kbd, "restart_server", lambda *a, **k: calls.append(k))
+    monkeypatch.setattr(kbd, "load_meta", lambda: {"mode": "spectrum"})
+    kbd._leave_effect_kick("spectrum")          # re-asserting spectrum
+    assert calls == []
+    kbd._leave_effect_kick(None)                # spectrum -> static: a real transition
+    assert len(calls) == 1
+
+
+def test_kbd_restart_server_is_rate_limited(monkeypatch, tmp_path):
+    import tuxthrottle_kbd as kbd
+    stamp = tmp_path / "stamp"
+    monkeypatch.setattr(kbd, "_RESTART_STAMP", str(stamp))
+    ran = []
+    monkeypatch.setattr(kbd.subprocess, "run",
+                        lambda *a, **k: ran.append(a) or type("R", (), {"returncode": 1})())
+    monkeypatch.setattr(kbd.time, "sleep", lambda _s: None)
+    kbd.restart_server()                        # first call: allowed
+    n1 = len(ran)
+    assert n1 > 0
+    kbd.restart_server()                        # immediately again: rate-limited
+    assert len(ran) == n1
+    kbd.restart_server(force=True)              # force overrides
+    assert len(ran) > n1
+
+
 def test_kbd_reads_device_from_profile(monkeypatch):
     _reset_cache()
     monkeypatch.setattr(

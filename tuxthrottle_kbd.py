@@ -213,13 +213,36 @@ def _run(args: list[str]) -> str:
             lk.close()
 
 
-def restart_server() -> bool:
+_RESTART_STAMP = "/tmp/tuxthrottle-openrgb-restart.stamp"  # noqa: S108
+_RESTART_MIN_GAP = 20.0   # seconds — never bounce the SDK server faster than this
+
+
+def _restart_too_recent() -> bool:
+    """True if the OpenRGB SDK server was restarted < _RESTART_MIN_GAP ago.
+    Every restart triggers a full OpenRGB device rescan (SMBus + HID
+    enumeration of *every* device); doing that in a tight loop — which a
+    spectrum-effect re-assert storm used to — collides with other HID
+    consumers (Steam's controller enumeration) hard enough to SIGSEGV them."""
+    try:
+        return (time.time() - os.path.getmtime(_RESTART_STAMP)) < _RESTART_MIN_GAP
+    except OSError:
+        return False
+
+
+def restart_server(force: bool = False) -> bool:
     """Kick the OpenRGB SDK server. After a lot of mode changes this AW-ELC
     controller wedges — the CLI still exits 0 but the keyboard stops
     responding ('frozen'). Restarting the server (which re-opens the HID
     device) clears it. Tries the systemd unit first, then a plain pkill so it
     respawns / a later call falls back to the standalone --noautoconnect path.
-    Returns True if it did something."""
+    Rate-limited (see `_restart_too_recent`) unless `force`. Returns True if it
+    did something."""
+    if not force and _restart_too_recent():
+        return False
+    try:
+        open(_RESTART_STAMP, "w").close()
+    except OSError:
+        pass
     for cmd in (["systemctl", "restart", "tuxthrottle-openrgb"],
                 ["sudo", "-n", "systemctl", "restart", "tuxthrottle-openrgb"]):
         try:
@@ -238,8 +261,9 @@ def restart_server() -> bool:
 
 def reset() -> None:
     """Unfreeze the backlight: restart the server, then re-assert saved state
-    (or a plain white static fallback)."""
-    restart_server()
+    (or a plain white static fallback). `force` — this is the explicit
+    user 'unfreeze' action, it should always bounce the server."""
+    restart_server(force=True)
     st = load_state()
     if not st:
         _run_once(["-m", "Static", "-c", "FFFFFF", "-b", "100"], server=False)
@@ -261,15 +285,19 @@ def _hexval(s: str) -> str:
 
 # ---- operations ----------------------------------------------------------- #
 
-def _leave_effect_kick() -> None:
+def _leave_effect_kick(target_mode: str | None = None) -> None:
     """The AW-ELC will NOT switch out of a firmware effect (Spectrum Cycle,
     etc.) on a plain `-m Static` write — the keys flash the new colour for an
     instant, then the MCU effect just carries on. Verified live: the only
     thing that reliably clears it is restarting the OpenRGB SDK server (its
-    HID connection state is what's stuck). So when the saved mode is an
-    effect, kick the server before writing static colour."""
+    HID connection state is what's stuck). So kick the server ONLY when we are
+    actually leaving an effect for a *different* mode — re-asserting the same
+    effect (the tray / boot / resume re-assert, saved mode = spectrum) must
+    NOT restart the server, or overlapping re-asserts turn into a restart
+    storm that crashes other HID consumers (Steam)."""
     try:
-        if load_meta().get("mode") in ALL_EFFECTS:
+        saved = load_meta().get("mode")
+        if saved in ALL_EFFECTS and saved != target_mode:
             restart_server()
     except Exception:  # noqa: BLE001
         pass
@@ -315,9 +343,8 @@ def set_effect(name: str, speed: int | None = None, brightness: int = 100) -> No
     controller reports a degenerate brightness range (min=100/max=0) and
     empirically `-b 100` is what lights it, so the caller's brightness is
     passed straight through (`-b 0` leaves it dark)."""
-    _leave_effect_kick()      # clear a stuck prior effect — this controller
-                              # won't switch effect->effect without an
-                              # OpenRGB server restart
+    _leave_effect_kick(name)  # clear a stuck *prior different* effect — but not
+                              # when we're just re-asserting the same one
     mode = EFFECT_MODES.get(name, name)
     args = ["-m", mode, "-b", str(max(0, min(100, brightness)))]
     if speed is not None:
