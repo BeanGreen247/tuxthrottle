@@ -354,6 +354,12 @@ def apply_bios_style(style: tb.Style, accent: str, theme_name: str = "BIOS Dark"
         "Card.TLabel": {"background": BIOS_PANEL, "foreground": BIOS_FG},
         "CardKey.TLabel": {"background": BIOS_PANEL, "foreground": accent_txt_hi,
                            "font": ("Sans", 10, "bold")},
+        # section header inside a Card — neutral bright text, NOT the accent:
+        # accent-coloured titles everywhere read as errors (esp. when the KDE
+        # accent BIOS Dark follows is a saturated red). Accent stays on the
+        # card's left edge / active controls only.
+        "CardTitle.TLabel": {"background": BIOS_PANEL, "foreground": BIOS_FG,
+                             "font": ("Sans", 10, "bold")},
         "TCheckbutton": {"background": BIOS_PANEL, "foreground": BIOS_FG},
         "TRadiobutton": {"background": BIOS_PANEL, "foreground": BIOS_FG},
         "TSeparator": {"background": BIOS_BORDER},
@@ -597,7 +603,7 @@ class Card(tb.Frame):
             if glyph:
                 tb.Label(head, text=glyph, style="CardKey.TLabel").pack(side="left",
                                                                         padx=(0, PAD_S))
-            tb.Label(head, text=title, style="CardKey.TLabel",
+            tb.Label(head, text=title, style="CardTitle.TLabel",
                      font=FONT_TITLE, wraplength=1100, justify="left",
                      anchor="w").pack(side="left")
             self._head = head
