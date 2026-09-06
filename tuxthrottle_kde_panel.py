@@ -122,27 +122,46 @@ def systray_show(plugin: str, enable: bool) -> int:
 
 _LAUNCHER_PLUGINS = ("org.kde.plasma.kickoff", "org.kde.plasma.kicker",
                      "org.kde.plasma.kickerdash")
-# the full session/power footer for the app launcher, in the usual order
+# the full session/power footer for the app launcher, in the usual order.
+# Kickoff reads `systemFavorites`; the classic Kicker menu reads a *different*
+# key, `favoriteSystemActions` — writing only the first is why the classic
+# menu still showed just 'Log Out'. Write both.
 _SYSTEM_FAVORITES = ("suspend,hibernate,reboot,shutdown,lock-screen,"
                      "logout,save-session,switch-user")
+_KICKER_SYSTEM_ACTIONS = ("lock-screen,logout,save-session,switch-user,"
+                          "suspend,hibernate,reboot,shutdown")
+
+
+def _restore_launcher_power(enable: bool) -> int:
+    """Set (or clear) the power/session button row on every launcher applet.
+    Assumes plasmashell is already stopped by the caller."""
+    targets = [(plug, cid, aid) for plug in _LAUNCHER_PLUGINS
+               for cid, aid in find_applets(plug)]
+    for _plug, cid, aid in targets:
+        _kwrite(cid, aid, ["Configuration", "General"], "systemFavorites",
+                _SYSTEM_FAVORITES if enable else None)
+        _kwrite(cid, aid, ["Configuration", "General"], "favoriteSystemActions",
+                _KICKER_SYSTEM_ACTIONS if enable else None)
+        # Plasma sets this after migrating favorites and won't re-populate the
+        # row while it's true — drop it so our values are what Kicker loads.
+        if enable:
+            _kwrite(cid, aid, ["Configuration", "General"],
+                    "favoritesPortedToKAstats", None)
+    return len(targets)
 
 
 def launcher_power(enable: bool) -> int:
     """Restore the full power/session button row (Sleep, Hibernate, Restart,
-    Shut Down, Lock, Log Out, …) in the KDE application launcher — it goes to
-    just 'Log Out' when `systemFavorites` gets trimmed. plasmashell owns this
-    key, so stop it first or it writes the old value back on exit."""
-    targets = [(plug, cid, aid) for plug in _LAUNCHER_PLUGINS
-               for cid, aid in find_applets(plug)]
-    if not targets:
+    Shut Down, Lock, Log Out, …) in the KDE application launcher — Kickoff or
+    the classic Kicker menu. plasmashell owns these keys, so stop it first or
+    it writes the old values back on exit."""
+    if not any(find_applets(p) for p in _LAUNCHER_PLUGINS):
         print("no application-launcher applet in the panel config", file=sys.stderr)
         return 0
     _stop_plasmashell()
-    for _plug, cid, aid in targets:
-        _kwrite(cid, aid, ["Configuration", "General"], "systemFavorites",
-                _SYSTEM_FAVORITES if enable else None)
+    n = _restore_launcher_power(enable)
     print(f"launcher power buttons -> {'full set' if enable else 'default'} "
-          f"on {len(targets)} launcher(s)")
+          f"on {n} launcher(s)")
     return 0
 
 
@@ -163,6 +182,7 @@ def classic_menu(enable: bool) -> int:
     if not p.is_file():
         print("panel config not found", file=sys.stderr)
         return 1
+    _stop_plasmashell()          # so it can't flush a stale copy over our edits
     text = p.read_text(errors="ignore")
     if enable:
         new = re.sub(r"^plugin=org\.kde\.plasma\.(kickoff|kickerdash)$",
@@ -170,11 +190,16 @@ def classic_menu(enable: bool) -> int:
     else:
         new = re.sub(r"^plugin=org\.kde\.plasma\.kicker$",
                      "plugin=org.kde.plasma.kickoff", text, flags=re.M)
-    if new == text:
+    if new != text:
+        p.write_text(new)
+        print("launcher plugin -> " + ("kicker (classic menu)" if enable else "kickoff"))
+    else:
         print("launcher plugin already as requested")
-        return 0
-    p.write_text(new)
-    print("launcher plugin -> " + ("kicker (classic menu)" if enable else "kickoff"))
+    # switching to the classic Kicker menu triggers a Plasma favorites
+    # migration that often trims the power row to just 'Log Out' — restore
+    # the full session/power buttons so this tweak doesn't cause that.
+    if enable:
+        _restore_launcher_power(True)
     return 0
 
 

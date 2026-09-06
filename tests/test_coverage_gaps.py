@@ -175,3 +175,25 @@ def test_csv_parses_and_strips_and_drops_empties():
     assert kp._csv("a, b ,, c") == ["a", "b", "c"]
     assert kp._csv("") == []
     assert kp._csv("solo") == ["solo"]
+
+
+def test_restore_launcher_power_writes_both_keys(monkeypatch):
+    """The classic Kicker menu reads favoriteSystemActions, Kickoff reads
+    systemFavorites — restoring the power row must set BOTH (and drop
+    favoritesPortedToKAstats) or the classic menu still shows only Log Out."""
+    monkeypatch.setattr(kp, "find_applets",
+                        lambda plugin: [("2", "3")] if plugin == "org.kde.plasma.kicker" else [])
+    calls = []
+    monkeypatch.setattr(kp, "_kwrite",
+                        lambda cid, aid, chain, key, val: calls.append((key, val)))
+    n = kp._restore_launcher_power(True)
+    assert n == 1
+    keys = dict(calls)
+    assert "shutdown" in keys["systemFavorites"] and "reboot" in keys["systemFavorites"]
+    assert "shutdown" in keys["favoriteSystemActions"]
+    assert keys["favoritesPortedToKAstats"] is None      # deleted
+
+    calls.clear()
+    kp._restore_launcher_power(False)
+    off = dict(calls)
+    assert off["systemFavorites"] is None and off["favoriteSystemActions"] is None

@@ -620,10 +620,10 @@
   },
   "KdeLauncherPowerButtons": {
     "Content": "KDE: restore Sleep / Restart / Shut Down in the app launcher",
-    "Description": "The application launcher's footer sometimes ends up with only a Log Out button — this sets systemFavorites back to the full session/power row (Sleep, Hibernate, Restart, Shut Down, Lock, Log Out, Save Session, Switch User) on every Kickoff / Kicker / Application Dashboard applet in plasma-org.kde.plasma.desktop-appletsrc. plasmashell is stopped before the edit (it owns this key and would write the old value back on exit) and restarted after (panel reloads ~2 s). `undo` clears the override, back to the Plasma default.",
+    "Description": "The application launcher's footer sometimes ends up with only a Log Out button (a Plasma favorites-migration glitch, and switching to the classic menu commonly triggers it). This sets the full session/power row — Sleep, Hibernate, Restart, Shut Down, Lock, Log Out, Save Session, Switch User — on every Kickoff / Kicker / Application Dashboard applet. Kickoff reads `systemFavorites`; the classic Kicker menu reads a different key, `favoriteSystemActions` — this writes BOTH (and drops `favoritesPortedToKAstats` so Kicker actually reloads the row). plasmashell is stopped before the edit (it owns these keys and would write the old value back on exit) and restarted after (panel reloads ~2 s). `undo` clears the overrides, back to the Plasma default.",
     "category": "KDE (Desktop GUI Tweaks)",
     "risk": "safe",
-    "check": "grep -qE \"^systemFavorites=.*(shutdown|reboot)\" /home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null",
+    "check": "f=/home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc; for k in systemFavorites favoriteSystemActions; do grep -qE \"^$k=\" \"$f\" 2>/dev/null && ! grep -qE \"^$k=.*(shutdown|reboot)\" \"$f\" 2>/dev/null && exit 1; done; exit 0",
     "apply": [
       "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py launcher-power on"
     ],
