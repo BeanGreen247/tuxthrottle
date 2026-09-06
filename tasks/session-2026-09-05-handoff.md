@@ -165,10 +165,47 @@ For anything touching `tuxthrottle.py` or its extracted modules, in order:
    # any name in both means the mixin's copy is a dead, MRO-shadowed twin.
    ```
 
-## What's left in the module-split refactor
+## Module-split refactor — DONE (2026-09-06)
 
-`tuxthrottle.py` is currently **5513 lines** (was 8133 at session start —
-about a third moved out already, across these files, all done and verified):
+Finished in the 2026-09-06 session and **merged to `main`** (PR #2 merge
+commit `a1fb8c9`; `refactor-modular-ui` branch deleted). `tuxthrottle.py` is
+now **1450 lines** (from 8133). Final batch extracted five more mixins +
+one helper module, all verbatim-diffed, `ruff`/`mypy`/`pytest` clean, CI
+green (checks/gui-smoke/tui-smoke/typecheck), and verified with a real
+mainloop GUI launch on the g15 (Dashboard polling loop live, no errors):
+
+- `tuxthrottle_tab_dashboard.py` (`DashboardTabMixin`) — dashboard tab +
+  the `_dashboard_loop`/`_poll_dash_queue` polling worker.
+- `tuxthrottle_tab_power_display.py` (`PowerDisplayTabMixin`) — battery-
+  health / power / display / touchpad tabs and every interleaved helper
+  section (TDP, CO, NVPL, GPU clock/mode, refresh, VRR, auto-switch).
+- `tuxthrottle_tab_category.py` (`CategoryTabMixin`) — `_build_category_tab`
+  + `_build_presets_tab`.
+- `tuxthrottle_tab_games.py` (`GamesTabMixin`) — Setup Games + Game Tools,
+  all boxes (shadercache/steamperf/launchopts/mangohud/savevault/prefix/
+  Fixes). Biggest slice, ~2300 lines.
+- `tuxthrottle_tab_diagnostics.py` (`DiagnosticsTabMixin`) — Diagnostics
+  tab UI only.
+- `tuxthrottle_diag.py` — the heavy report builders (`collect_debug_report`,
+  `collect_hw_bundle`, `wrap_issue_block`, `GITHUB_ISSUE_TEMPLATE`,
+  onboarding dumps). No Tk deps; moved out of module scope so the diag tab
+  mixin imports it without a circular dep. Added to the CI mypy gate.
+
+New tests: `tests/test_diag.py`, `tests/test_module_split.py` (AST guard
+against MRO-shadowed method twins + monolith regrowth). 200 passing in the
+sandbox / 214 on the g15.
+
+What stayed on `ToolkitApp` (cross-cutting, deliberately not extracted):
+`__init__`, `_build_ui`, the status/apply/undo/nav/preset-apply machinery,
+the busy/progress + log queue state machines, `_run_stream`, `_user_py`,
+`_scroll_body`/`_global_wheel`/`_tip`, and the `cli_*`/`main` entry points.
+The refactor is considered complete — no more `_build_*` tab code left in
+the monolith.
+
+### (historical) earlier slices
+
+`tuxthrottle.py` was **5513 lines** at the start of the 2026-09-06 session
+(8133 at the previous session's start), across these files:
 
 - `tuxthrottle_items.py` — Item/tweaks-engine, ledger, `toolkit_version()`,
   `PROJECT_URL`/`PROJECT_ISSUES_URL`, `_dnf_metadata_age()` (the last three
