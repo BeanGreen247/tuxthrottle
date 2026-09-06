@@ -64,7 +64,8 @@ jobs:
             tuxthrottle_btrfs.py tuxthrottle_watchdog.py tuxthrottle_fixlog.py \
             tuxthrottle_crashwatch.py tuxthrottle_protondb.py \
             tuxthrottle_mangohud_status.py tuxthrottle_launchopts.py \
-            tuxthrottle_steamperf.py tuxthrottle_tui.py tuxthrottle_items.py
+            tuxthrottle_steamperf.py tuxthrottle_tui.py tuxthrottle_items.py \
+            tuxthrottle_diag.py
 
   gui-smoke:
     runs-on: ubuntu-latest
