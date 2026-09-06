@@ -12,6 +12,7 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import DANGER, INFO, SECONDARY, SUCCESS, WARNING
 
 import tuxthrottle_profiles
+from tuxthrottle_gui_widgets import Card
 
 
 class ProfilesTabMixin:
@@ -28,7 +29,7 @@ class ProfilesTabMixin:
             "there is always a known-good state to return to if something "
             "misbehaves.")).pack(anchor="w", pady=(0, 12))
 
-        cap = tb.Labelframe(frame, text="Capture current state", padding=12)
+        cap = Card(frame, "Capture current state")
         cap.pack(fill="x", pady=6)
         crow = tb.Frame(cap); crow.pack(anchor="w")
         self._prof_name = tk.StringVar()
@@ -39,7 +40,7 @@ class ProfilesTabMixin:
                                       justify="left")
         self._prof_preview.pack(anchor="w", pady=(8, 0))
 
-        pf = tb.Labelframe(frame, text="Saved profiles", padding=12)
+        pf = Card(frame, "Saved profiles")
         pf.pack(fill="x", pady=6)
         tb.Label(pf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "A saved profile is a plain JSON file — export one to share a "
@@ -49,13 +50,13 @@ class ProfilesTabMixin:
                   command=self._profile_import).pack(anchor="w", pady=(0, 8))
         self._prof_list = tb.Frame(pf); self._prof_list.pack(fill="x")
 
-        sf = tb.Labelframe(frame, text="Snapshots — automatic rollback points", padding=12)
+        sf = Card(frame, "Snapshots — automatic rollback points")
         sf.pack(fill="x", pady=6)
         tb.Button(sf, text="↩  Roll back to the latest snapshot", bootstyle=(WARNING, "outline"),
                   command=lambda: self._snapshot_rollback("last")).pack(anchor="w", pady=(0, 8))
         self._snap_list = tb.Frame(sf); self._snap_list.pack(fill="x")
 
-        gpf = tb.Labelframe(frame, text="Per-game auto-profiles", padding=12)
+        gpf = Card(frame, "Per-game auto-profiles")
         gpf.pack(fill="x", pady=6)
         tb.Label(gpf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "When a listed process is running (match on the executable name — for "
@@ -97,7 +98,7 @@ class ProfilesTabMixin:
 
     def _build_schedule_section(self, parent):
         sc = self._read_power_state("powerd.json").get("schedule", {})
-        lf = tb.Labelframe(parent, text="Time schedule", padding=12)
+        lf = Card(parent, "Time schedule")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "The daemon applies a profile by time of day — e.g. Quiet 22:00–07:00. "

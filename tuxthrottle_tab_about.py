@@ -13,12 +13,14 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import INFO, SECONDARY, WARNING
 
 import sensors
+from tuxthrottle_gui_widgets import PALETTES, Card
 from tuxthrottle_items import BASE_DIR, PROJECT_ISSUES_URL, PROJECT_URL, toolkit_version
 
 
 class AboutTabMixin:
     def _build_about_tab(self, outer):
         frame = self._scroll_body(outer, pad=20)
+        self._build_appearance_card(frame)
 
         head = tb.Frame(frame)
         head.pack(fill="x", pady=(0, 12))
@@ -81,7 +83,7 @@ class AboutTabMixin:
                      "\nFEATURES.md in the repo has the full, detailed list "
                      "with examples for every control.")).pack(anchor="w")
 
-        link = tb.Labelframe(frame, text="Project", padding=12)
+        link = Card(frame, "Project")
         link.pack(fill="x", pady=6)
         row = tb.Frame(link); row.pack(fill="x")
         tb.Button(row, text="Open on GitHub", bootstyle=INFO,
@@ -96,7 +98,7 @@ class AboutTabMixin:
         url_ent.configure(state="readonly")
         url_ent.pack(fill="x", pady=(8, 0))
 
-        tray = tb.Labelframe(frame, text="System tray", padding=12)
+        tray = Card(frame, "System tray")
         tray.pack(fill="x", pady=6)
         tb.Label(tray, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "A small tray icon (left-click opens this window, middle-click "
@@ -115,7 +117,7 @@ class AboutTabMixin:
         self._tray_status_lbl = tb.Label(btnrow, text="", bootstyle=SECONDARY)
         self._tray_status_lbl.pack(side="left", padx=10)
 
-        meta = tb.Labelframe(frame, text="Details", padding=12)
+        meta = Card(frame, "Details")
         meta.pack(fill="x", pady=6)
         m = sensors.detect_model()
         for k, v in (
@@ -135,6 +137,35 @@ class AboutTabMixin:
             "Built in the spirit of WinUtil-style Windows tweak tools and "
             "Div-Acer-Manager-Max. Not affiliated with Dell or Alienware."
         )).pack(anchor="w", pady=(10, 0))
+
+    # ---------- appearance / theme ----------
+
+    def _build_appearance_card(self, parent):
+        card = Card(parent, "Appearance", icon="◐")
+        card.pack(fill="x", pady=(0, 14))
+        b = card.body
+        tb.Label(b, bootstyle=SECONDARY, wraplength=1000, justify="left",
+                 text="Colour theme for the whole GUI. 'BIOS Dark' follows your "
+                      "KDE accent colour; the others pin their own palette. "
+                      "Takes effect after a restart.").pack(anchor="w", pady=(0, 8))
+        row = tb.Frame(b)
+        row.pack(anchor="w")
+        cur = getattr(self, "_theme", "BIOS Dark")
+        self._theme_var = tk.StringVar(value=cur)
+        tb.Label(row, text="Theme").pack(side="left", padx=(0, 8))
+        om = tb.OptionMenu(row, self._theme_var, cur, *PALETTES.keys(),
+                           command=self._on_theme_pick, bootstyle=INFO)
+        om.pack(side="left")
+        self._theme_hint = tb.Label(b, bootstyle=WARNING, text="")
+        self._theme_hint.pack(anchor="w", pady=(6, 0))
+
+    def _on_theme_pick(self, name):
+        self._write_power_state("gui.json", {"theme": name})
+        self._theme = name
+        applied = getattr(self, "_theme_applied", name)
+        self._theme_hint.configure(
+            text="" if name == applied
+            else f"“{name}” saved — restart TuxThrottle to apply it.")
 
     # ---------- system-tray autostart ----------
 

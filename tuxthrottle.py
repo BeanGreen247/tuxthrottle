@@ -53,6 +53,7 @@ except Exception:  # noqa: BLE001
     tuxthrottle_kbd = None
 
 import tuxthrottle_btrfs  # noqa: E402  (stdlib, filesystem snapshot-before-apply)
+import tuxthrottle_gui_widgets as gw  # noqa: E402  (live palette lookups after set_palette)
 import tuxthrottle_profiles  # noqa: E402  (stdlib, imports sensors)
 import tuxthrottle_watchdog  # noqa: E402  (stdlib, confirm-or-auto-revert timer)
 from tuxthrottle_diag import (  # noqa: E402  (report builders — extracted)
@@ -61,7 +62,6 @@ from tuxthrottle_diag import (  # noqa: E402  (report builders — extracted)
 )
 from tuxthrottle_gui_widgets import (  # noqa: E402  (standalone widgets/theme — extracted)
     ACCENT_FALLBACK,
-    BIOS_PANEL,
     SidebarNav,
     _Tooltip,
     apply_bios_style,
@@ -186,11 +186,13 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         self._set_window_icon(root)
 
         self.accent = read_desktop_accent()
+        self._theme = self._read_power_state("gui.json").get("theme", "BIOS Dark")
         try:
-            apply_bios_style(root.style, self.accent)
-            root.configure(background=BIOS_PANEL)
+            self._theme = apply_bios_style(root.style, self.accent, self._theme)
+            root.configure(background=gw.BIOS_PANEL)
         except Exception:  # noqa: BLE001
             self.accent = ACCENT_FALLBACK
+        self._theme_applied = self._theme   # what's live now; picker compares to this
 
         self.has_nvidia = sensors.has_nvidia_gpu()
         self.has_amd = sensors.has_amd_gpu()

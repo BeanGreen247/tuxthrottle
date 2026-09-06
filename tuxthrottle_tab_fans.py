@@ -18,7 +18,7 @@ from ttkbootstrap.constants import DANGER, INFO, SECONDARY, SUCCESS, WARNING
 
 import sensors
 import tuxthrottle_fixlog as fixlog
-from tuxthrottle_gui_widgets import Segmented
+from tuxthrottle_gui_widgets import Card, Segmented
 
 try:
     import tuxthrottle_kbd
@@ -39,7 +39,7 @@ except Exception:  # noqa: BLE001
                 return b0 + (temp - t0) / (t1 - t0) * (b1 - b0)
         return s[-1][1]
 
-from tuxthrottle_gui_widgets import CHART_AXIS  # noqa: E402
+import tuxthrottle_gui_widgets as gw  # noqa: E402  (live palette lookups)
 from tuxthrottle_items import BASE_DIR  # noqa: E402
 
 FAN_CURVE_POINTS = 10
@@ -64,7 +64,7 @@ class FanTabMixin:
         self._fan_pwm_vars: dict = {}
         self._fan_manual = tk.BooleanVar(value=False)
 
-        note = tb.Labelframe(frame, text="How this works", padding=12)
+        note = Card(frame, "How this works")
         note.pack(fill="x", pady=(0, 14))
         tb.Label(
             note, wraplength=1100, justify="left", bootstyle=SECONDARY,
@@ -78,7 +78,7 @@ class FanTabMixin:
 
         choices = sensors.platform_profile_choices()
         if choices:
-            pf = tb.Labelframe(frame, text="Thermal profile", padding=12)
+            pf = Card(frame, "Thermal profile")
             pf.pack(fill="x", pady=6)
             self._fan_profile_var = tk.StringVar(value=sensors.get_platform_profile())
             Segmented(pf, self._fan_profile_var,
@@ -94,7 +94,7 @@ class FanTabMixin:
                     variable=self._kbd_tie_var, bootstyle="round-toggle",
                     command=self._kbd_tie_toggle).pack(anchor="w", pady=(8, 0))
 
-        lf = tb.Labelframe(frame, text="Fans & boost", padding=12)
+        lf = Card(frame, "Fans & boost")
         lf.pack(fill="x", pady=6)
         boosts = sensors.get_fan_boost()
         for k, fan in enumerate(fans):
@@ -200,7 +200,7 @@ class FanTabMixin:
         fc = cfg.get("fan_curve", {})
         pts = self._fc_resample(fc.get("points") or self._FANCURVE_DEFAULT)
 
-        lf = tb.Labelframe(parent, text="Custom fan curve (closed-loop)", padding=12)
+        lf = Card(parent, "Custom fan curve (closed-loop)")
         lf.pack(fill="x", pady=(14, 6))
         tb.Label(lf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "A background daemon maps temperature → additive fan boost on a curve "
@@ -314,7 +314,7 @@ class FanTabMixin:
             c.create_line(X(t0), Y(b0), X(t1), Y(b1), fill=acc, width=2)
         for t, b in pts:
             c.create_oval(X(t) - 3, Y(b) - 3, X(t) + 3, Y(b) + 3, fill=acc, outline="")
-            c.create_text(X(t), Y(b) - 10, text=f"{t}°", fill=CHART_AXIS, font=("Sans", 7))
+            c.create_text(X(t), Y(b) - 10, text=f"{t}°", fill=gw.CHART_AXIS, font=("Sans", 7))
 
         live = getattr(self, "_fc_live_point", None)
         if live is not None:

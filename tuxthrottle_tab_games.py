@@ -22,9 +22,10 @@ from ttkbootstrap.constants import DANGER, INFO, SECONDARY, SUCCESS, WARNING
 
 import sensors
 import tuxthrottle_fixlog as fixlog
+import tuxthrottle_gui_widgets as gw
 import tuxthrottle_mangohud_status as mangohud_status
 import tuxthrottle_protondb as protondb
-from tuxthrottle_gui_widgets import BIOS_PANEL, BIOS_SUNKEN, _human_bytes
+from tuxthrottle_gui_widgets import Card, _human_bytes
 from tuxthrottle_items import BASE_DIR, run_cmd3
 
 
@@ -91,7 +92,7 @@ class GamesTabMixin:
         return base
 
     def _build_steamperf_box(self, parent):
-        lf = tb.Labelframe(parent, text="Steam client — low-resource mode", padding=10)
+        lf = Card(parent, "Steam client — low-resource mode")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
             "Runs the Steam client (not games) as light as it goes — most of "
@@ -150,7 +151,7 @@ class GamesTabMixin:
     # ---------- "Steam won't start" checks, and a log of what auto-fixed itself) ---
 
     def _build_fixes_box(self, parent):
-        lf = tb.Labelframe(parent, text="Fixes — quick diagnosis & one-click repairs", padding=10)
+        lf = Card(parent, "Fixes — quick diagnosis & one-click repairs")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
             "Checks for the causes behind Steam problems already tracked down on this "
@@ -317,7 +318,7 @@ class GamesTabMixin:
             lbl.configure(text=txt, bootstyle=style)
 
     def _build_shadercache_box(self, parent):
-        lf = tb.Labelframe(parent, text="Shader / pipeline cache storage", padding=10)
+        lf = Card(parent, "Shader / pipeline cache storage")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
             "One folder for every generated shader cache — Mesa (AMD), DXVK "
@@ -642,8 +643,7 @@ class GamesTabMixin:
             lbl.configure(text={"on": "ON", "off": "OFF"}.get(st, st), bootstyle=style)
 
     def _build_launch_opts_box(self, parent):
-        lf = tb.Labelframe(parent, text="Steam / Lutris launch-options builder",
-                           padding=10)
+        lf = Card(parent, "Steam / Lutris launch-options builder")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left",
                  text="Tick what you want and copy the string into a game's "
@@ -860,7 +860,7 @@ class GamesTabMixin:
         return base / (f"{g}.conf" if g else "MangoHud.conf")
 
     def _build_mangohud_box(self, parent):
-        lf = tb.Labelframe(parent, text="MangoHud overlay", padding=10)
+        lf = Card(parent, "MangoHud overlay")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
             "The overlay's CPU / GPU names, position and detail level. Names load "
@@ -1290,9 +1290,9 @@ class GamesTabMixin:
         win.bind("<Escape>", lambda _e: win.destroy())
 
         # floating control bar
-        bar = tk.Frame(win, bg=BIOS_PANEL, bd=1, relief="solid")
+        bar = tk.Frame(win, bg=gw.BIOS_PANEL, bd=1, relief="solid")
         bar.place(relx=0.5, y=24, anchor="n")
-        info = tk.Label(bar, bg=BIOS_PANEL, fg="#eaeaea", font=("Sans", 11, "bold"),
+        info = tk.Label(bar, bg=gw.BIOS_PANEL, fg="#eaeaea", font=("Sans", 11, "bold"),
                         padx=14, pady=6)
         info.pack(side="top")
         snap_var = tk.BooleanVar(value=True)
@@ -1304,10 +1304,10 @@ class GamesTabMixin:
             redraw()
 
         tk.Checkbutton(bar, text=f"snap to {GRID}×{GRID} grid", variable=snap_var,
-                       command=_toggle_snap, bg=BIOS_PANEL, fg="#eaeaea",
-                       selectcolor=BIOS_SUNKEN, activebackground=BIOS_PANEL,
+                       command=_toggle_snap, bg=gw.BIOS_PANEL, fg="#eaeaea",
+                       selectcolor=gw.BIOS_SUNKEN, activebackground=gw.BIOS_PANEL,
                        activeforeground="#eaeaea").pack(side="top", pady=(0, 2))
-        btns = tk.Frame(bar, bg=BIOS_PANEL); btns.pack(side="top", padx=10, pady=(0, 8))
+        btns = tk.Frame(bar, bg=gw.BIOS_PANEL); btns.pack(side="top", padx=10, pady=(0, 8))
 
         def set_to(pos, ox, oy):
             st["bx"], st["by"] = self._mh_box_xy(pos, ox, oy, sw, sh)
@@ -1667,7 +1667,7 @@ class GamesTabMixin:
         self._log(f"[MangoHud] reset to a clean config → {p} (.bak kept)")
 
     def _build_last_session_card(self, parent):
-        lf = tb.Labelframe(parent, text="Last game session", padding=10)
+        lf = Card(parent, "Last game session")
         lf.pack(fill="x", pady=6)
         self._last_sess_lbl = tb.Label(lf, bootstyle=SECONDARY, justify="left",
                                        wraplength=1100)
@@ -1678,7 +1678,7 @@ class GamesTabMixin:
         self._build_session_history_card(parent)
 
     def _build_session_history_card(self, parent):
-        lf = tb.Labelframe(parent, text="Session history", padding=10)
+        lf = Card(parent, "Session history")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left",
                  text="Every game session the daemon logged (newest first, last "
@@ -1782,7 +1782,7 @@ class GamesTabMixin:
             "save-game vault, choose one home for every shader cache, and build "
             "a launch-options string.")).pack(anchor="w", pady=(0, 12))
 
-        pf = tb.Labelframe(frame, text="Proton prefix & save-file tools", padding=10)
+        pf = Card(frame, "Proton prefix & save-file tools")
         pf.pack(fill="x", pady=6)
         tb.Label(pf, bootstyle=SECONDARY, wraplength=1100, justify="left",
                  text="A game installed on an NTFS or exFAT drive can't build its Proton "

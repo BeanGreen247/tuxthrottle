@@ -14,6 +14,7 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import DANGER, INFO, SECONDARY, SUCCESS, WARNING
 
 import sensors
+from tuxthrottle_gui_widgets import Card
 from tuxthrottle_items import BASE_DIR
 
 
@@ -36,7 +37,7 @@ class PowerDisplayTabMixin:
             anchor="w", pady=(0, 14))
 
         # --- health card ---
-        hf = tb.Labelframe(frame, text="Health", padding=12)
+        hf = Card(frame, "Health")
         hf.pack(fill="x", pady=6)
 
         wear = info.get("wear_pct")
@@ -67,7 +68,7 @@ class PowerDisplayTabMixin:
             tb.Label(r, text=str(val), bootstyle=SECONDARY).pack(side="left")
 
         # --- live card ---
-        lf = tb.Labelframe(frame, text="Now", padding=12)
+        lf = Card(frame, "Now")
         lf.pack(fill="x", pady=6)
         self._bath_live = {}
         for key, cap in (("charge", "Charge"), ("state", "State"),
@@ -86,7 +87,7 @@ class PowerDisplayTabMixin:
         # --- charging speed (Dell libsmbios) ---
         if sensors._smbios_battery_ctl():
             mode = self._probe("bat_mode")
-            cf = tb.Labelframe(frame, text="Charging speed", padding=12)
+            cf = Card(frame, "Charging speed")
             cf.pack(fill="x", pady=6)
             note = ("Express charges the pack faster (more heat, a little more "
                     "wear); Standard is the gentler default. Firmware setting — "
@@ -221,8 +222,7 @@ class PowerDisplayTabMixin:
     # --- CPU TDP (ryzenadj) ---
 
     def _build_tdp_section(self, parent):
-        lf = tb.Labelframe(parent, text="CPU power limits — Ryzen 7 5800H (ryzenadj)",
-                           padding=12)
+        lf = Card(parent, "CPU power limits — Ryzen 7 5800H (ryzenadj)")
         lf.pack(fill="x", pady=6)
         if not self._probe("ryzenadj_avail"):
             tb.Label(lf, bootstyle=WARNING, wraplength=1000, justify="left",
@@ -291,8 +291,7 @@ class PowerDisplayTabMixin:
     def _build_co_section(self, parent):
         if not self._probe("ryzenadj_co"):
             return
-        lf = tb.Labelframe(parent, text="Curve Optimizer — all-core undervolt  (advanced)",
-                           padding=12)
+        lf = Card(parent, "Curve Optimizer — all-core undervolt  (advanced)")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=DANGER, wraplength=1000, justify="left",
                  text="⚠  An undervolt that's too aggressive causes silent errors, a "
@@ -369,8 +368,7 @@ class PowerDisplayTabMixin:
     def _build_nvpl_section(self, parent):
         if not self.has_nvidia:
             return
-        lf = tb.Labelframe(parent, text="NVIDIA board power limit — RTX 3050 Ti",
-                           padding=12)
+        lf = Card(parent, "NVIDIA board power limit — RTX 3050 Ti")
         lf.pack(fill="x", pady=6)
         info = self._probe("nvpl")
         if info is not None and not info.get("supported", True):
@@ -422,8 +420,7 @@ class PowerDisplayTabMixin:
         if not self.has_nvidia:
             return
         info = self._probe("nvclk")
-        lf = tb.Labelframe(parent, text="NVIDIA GPU clock lock — RTX 3050 Ti",
-                           padding=12)
+        lf = Card(parent, "NVIDIA GPU clock lock — RTX 3050 Ti")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "Clamps the dGPU graphics clock. Lowering the ceiling is the one GPU "
@@ -624,7 +621,7 @@ class PowerDisplayTabMixin:
 
     def _build_vrr_section(self, parent):
         vrr = self._probe("vrr")
-        lf = tb.Labelframe(parent, text="Adaptive Sync (VRR)", padding=12)
+        lf = Card(parent, "Adaptive Sync (VRR)")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1000, justify="left",
                  text=(f"{', '.join(vrr['capable'])} report VRR-capable — enable it "
@@ -655,7 +652,7 @@ class PowerDisplayTabMixin:
         tb.Label(frame, wraplength=1000, justify="left", bootstyle=SECONDARY,
                  text=f"Device: {info.get('name') or '(unnamed)'}").pack(anchor="w", pady=(0, 12))
 
-        ef = tb.Labelframe(frame, text="Enable / disable", padding=12)
+        ef = Card(frame, "Enable / disable")
         ef.pack(fill="x", pady=6)
         tb.Label(ef, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "Takes effect immediately. This is a live session setting, not a "
@@ -669,7 +666,7 @@ class PowerDisplayTabMixin:
                                                           sensors.set_touchpad_enabled)
                        ).pack(anchor="w")
 
-        tf = tb.Labelframe(frame, text="Behaviour", padding=12)
+        tf = Card(frame, "Behaviour")
         tf.pack(fill="x", pady=6)
         self._tp_tap_var = tk.BooleanVar(value=bool(info.get("tap_to_click", True)))
         tb.Checkbutton(tf, text="Tap to click", variable=self._tp_tap_var,
@@ -707,7 +704,7 @@ class PowerDisplayTabMixin:
 
     def _build_refresh_section(self, parent):
         info = self._probe("panel_modes")
-        lf = tb.Labelframe(parent, text="Panel refresh rate", padding=12)
+        lf = Card(parent, "Panel refresh rate")
         lf.pack(fill="x", pady=6)
         if not info or len(info.get("rates", [])) < 2:
             tb.Label(lf, bootstyle=SECONDARY, wraplength=1000, justify="left", text=(
@@ -754,7 +751,7 @@ class PowerDisplayTabMixin:
         # placed on two pages (Power & Limits and Battery) without the second
         # build clobbering the first's widget references.
         info = self._probe("bat_limit")
-        lf = tb.Labelframe(parent, text="Battery charge limit", padding=12)
+        lf = Card(parent, "Battery charge limit")
         lf.pack(fill="x", pady=6)
         if not info["supported"]:
             msg = ("This machine doesn't expose a charge-stop threshold "
@@ -807,7 +804,7 @@ class PowerDisplayTabMixin:
     def _build_gpumode_section(self, parent):
         if not self.has_nvidia:
             return
-        lf = tb.Labelframe(parent, text="Hybrid graphics mode", padding=12)
+        lf = Card(parent, "Hybrid graphics mode")
         lf.pack(fill="x", pady=6)
         if not sensors.envycontrol_available():
             tb.Label(lf, bootstyle=WARNING, wraplength=1000, justify="left",
@@ -857,7 +854,7 @@ class PowerDisplayTabMixin:
     def _build_autoswitch_section(self, parent):
         cfg = self._read_power_state("powerd.json") or {}
         aw = cfg.get("autoswitch", {})
-        lf = tb.Labelframe(parent, text="AC / battery auto profile switch", padding=12)
+        lf = Card(parent, "AC / battery auto profile switch")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "When the charger is plugged or pulled, the fan-curve daemon applies a "

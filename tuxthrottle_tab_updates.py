@@ -15,6 +15,7 @@ from tkinter import messagebox
 import ttkbootstrap as tb
 from ttkbootstrap.constants import DANGER, INFO, SECONDARY, SUCCESS, WARNING
 
+from tuxthrottle_gui_widgets import Card
 from tuxthrottle_items import _dnf_metadata_age
 
 
@@ -28,7 +29,7 @@ class UpdatesTabMixin:
         have_flatpak = shutil.which("flatpak") is not None
         have_fwupd = shutil.which("fwupdmgr") is not None
 
-        note = tb.Labelframe(frame, text="System updates", padding=12)
+        note = Card(frame, "System updates")
         note.pack(fill="x", pady=(0, 14))
         mgrs = ", ".join(m for m, ok in (("dnf" if have_ns else "dnf (no nobara-sync)", True),
                                          ("flatpak", have_flatpak), ("fwupd", have_fwupd)) if ok)

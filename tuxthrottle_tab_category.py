@@ -7,6 +7,8 @@ import tkinter as tk
 import ttkbootstrap as tb
 from ttkbootstrap.constants import SECONDARY, SUCCESS, WARNING
 
+from tuxthrottle_gui_widgets import Card
+
 
 class CategoryTabMixin:
     def _build_category_tab(self, outer, category: str):
@@ -58,8 +60,7 @@ class CategoryTabMixin:
 
         # before/after sensor deltas from the last preset apply (filled ~30 s
         # after an apply by _preset_delta_watch)
-        dl = tb.Labelframe(frame, text="Last preset — sensor change (30 s after apply)",
-                           padding=12)
+        dl = Card(frame, "Last preset — sensor change (30 s after apply)")
         dl.pack(fill="x", pady=(0, 10))
         prev = getattr(self, "_last_preset_delta", None)
         self._preset_delta_lbl = tb.Label(
@@ -69,7 +70,7 @@ class CategoryTabMixin:
         self._preset_delta_lbl.pack(anchor="w")
 
         recs = self._recommended_all()
-        rb = tb.Labelframe(frame, text="Developer recommendations", padding=14)
+        rb = Card(frame, "Developer recommendations")
         rb.pack(fill="x", pady=(0, 10))
         tb.Label(rb, wraplength=900, bootstyle=SECONDARY, text=(
             "Applies every item the developer marked ★ recommended — across all "

@@ -13,6 +13,7 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import SECONDARY, SUCCESS, WARNING
 
 import sensors
+from tuxthrottle_gui_widgets import Card
 
 try:
     import tuxthrottle_kbd
@@ -53,7 +54,7 @@ class KeyboardTabMixin:
             ).pack(anchor="w")
             return
 
-        note = tb.Labelframe(frame, text="How this works", padding=12)
+        note = Card(frame, "How this works")
         note.pack(fill="x", pady=(0, 14))
         tb.Label(
             note, wraplength=1100, justify="left", bootstyle=SECONDARY,
@@ -86,7 +87,7 @@ class KeyboardTabMixin:
         self.kbd_push_accent = tk.BooleanVar(value=bool(_meta.get("push_accent")))
 
         # ---- brightness ----
-        br_box = tb.Labelframe(frame, text="Brightness", padding=12)
+        br_box = Card(frame, "Brightness")
         br_box.pack(fill="x", pady=(0, 12))
         scale = tb.Scale(br_box, from_=0, to=100, variable=self.kbd_brightness, orient="horizontal")
         scale.pack(side="left", fill="x", expand=True, padx=(0, 10))
@@ -94,7 +95,7 @@ class KeyboardTabMixin:
         tb.Label(br_box, textvariable=self.kbd_brightness, width=4).pack(side="left")
 
         # ---- whole keyboard ----
-        whole = tb.Labelframe(frame, text="Whole keyboard", padding=12)
+        whole = Card(frame, "Whole keyboard")
         whole.pack(fill="x", pady=(0, 12))
         r1 = tb.Frame(whole)
         r1.pack(fill="x")
@@ -111,7 +112,7 @@ class KeyboardTabMixin:
                       ).pack(side="left", padx=2)
 
         # ---- desktop accent ----  (the two toggles are mutually exclusive)
-        acc = tb.Labelframe(frame, text="Desktop accent colour", padding=12)
+        acc = Card(frame, "Desktop accent colour")
         acc.pack(fill="x", pady=(0, 12))
         self._tip(tb.Checkbutton(
             acc, text="Keyboard follows the desktop accent colour",
@@ -134,7 +135,7 @@ class KeyboardTabMixin:
         self._kbd_refresh_accent_ui()
 
         # ---- effects ----
-        fx = tb.Labelframe(frame, text="Effect", padding=12)
+        fx = Card(frame, "Effect")
         fx.pack(fill="x", pady=(0, 12))
         srow = tb.Frame(fx)
         srow.pack(fill="x", pady=(0, 6))

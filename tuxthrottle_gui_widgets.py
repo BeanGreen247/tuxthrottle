@@ -114,29 +114,106 @@ class _Tooltip:
 # --------------------------------------------------------------------------- #
 
 ACCENT_FALLBACK = "#3daee9"   # Breeze blue, if the desktop accent can't be read
-# One flat surface for every widget background (frames, labels, labelframes,
-# scales, nav rail) — a per-widget mismatch here is what showed up as "black
-# boxes" behind labels/sliders. BIOS_SUNKEN is only used for scale/progress
-# troughs and the window ground behind everything.
-BIOS_PANEL = "#141a21"        # the surface — all widget backgrounds
-BIOS_SUNKEN = "#0b0e12"       # troughs / window ground (darker, so troughs read)
-BIOS_BG = BIOS_SUNKEN         # back-compat alias (busy overlay etc.)
-BIOS_PANEL_HI = "#212c38"     # hover / selected nav row / disclosure headers
-BIOS_FG = "#e9eff5"
-BIOS_MUTED = "#b3bfcb"        # secondary text — >= 7:1 on every panel surface
-BIOS_BORDER = "#3c4a5b"       # card / labelframe hairline — clearly visible, not invisible
-BIOS_BORDER_HI = "#5a6b7e"    # stronger edge for the active / hovered card
-BIOS_CARD = "#1b2531"         # a subtle lift above BIOS_PANEL for raised panels / rows
-CHART_AXIS = "#8b98a8"        # sparkline axis / point labels — readable, not invisible
-# semantic status colours, re-picked so each clears ~6:1 on the dark panels
-# (darkly's defaults — esp. danger/info — drop below AA on the card / hover bg)
-SEM_SUCCESS = "#3ddc97"
-SEM_DANGER = "#ff7b70"
-SEM_WARNING = "#f5b041"
-SEM_INFO = "#57c4f2"
-SEM_SECONDARY = "#c3ccd6"
-HELP_AMBER = "#e8a33d"         # the "support / bug report" accent (warm, != KDE accent)
-HELP_BANNER_BG = "#2a2314"     # dark amber tint behind the bug-report banner
+
+# --- theme palettes ------------------------------------------------------- #
+# A theme is a palette dict. The keys below are the whole surface language;
+# every widget class + apply_bios_style() reads the module-level names that
+# set_palette() rebinds from the chosen palette. "BIOS Dark" is the default
+# and also the fallback for any key a palette omits.
+#   panel   = every widget background      sunken  = troughs / window ground
+#   panel_hi= hover / active row           fg / muted = primary / secondary text
+#   border / border_hi = hairline / active-edge
+#   card    = optional raised surface      chart_axis = sparkline labels
+#   accent  = used when a theme pins its own accent instead of the KDE one
+#             (None → follow the desktop accent)
+_BASE_PALETTE = {
+    "panel": "#141a21", "sunken": "#0b0e12", "panel_hi": "#212c38",
+    "fg": "#e9eff5", "muted": "#b3bfcb", "border": "#3c4a5b",
+    "border_hi": "#5a6b7e", "card": "#1b2531", "chart_axis": "#8b98a8",
+    "success": "#3ddc97", "danger": "#ff7b70", "warning": "#f5b041",
+    "info": "#57c4f2", "secondary": "#c3ccd6",
+    "help_amber": "#e8a33d", "help_banner_bg": "#2a2314",
+    "accent": None,
+}
+PALETTES: dict[str, dict] = {
+    "BIOS Dark": {},  # the base as-is (follows the KDE accent)
+    "Carbon": {       # near-monochrome, minimal colour, tighter contrast
+        "panel": "#161616", "sunken": "#0b0b0b", "panel_hi": "#242424",
+        "fg": "#ededed", "muted": "#a8a8a8", "border": "#3a3a3a",
+        "border_hi": "#585858", "card": "#1d1d1d", "chart_axis": "#8a8a8a",
+        "accent": "#7aa2f7",
+    },
+    "Nord": {         # the popular arctic palette
+        "panel": "#2e3440", "sunken": "#242933", "panel_hi": "#3b4252",
+        "fg": "#eceff4", "muted": "#c2cad8", "border": "#4c566a",
+        "border_hi": "#5e6a86", "card": "#343c4c", "chart_axis": "#8b98b4",
+        "success": "#a3be8c", "danger": "#bf616a", "warning": "#ebcb8b",
+        "info": "#88c0d0", "secondary": "#d8dee9", "accent": "#88c0d0",
+    },
+    "Gruvbox": {      # warm retro dark
+        "panel": "#282828", "sunken": "#1d2021", "panel_hi": "#3c3836",
+        "fg": "#ebdbb2", "muted": "#c8b391", "border": "#504945",
+        "border_hi": "#6b625b", "card": "#32302f", "chart_axis": "#a89984",
+        "success": "#b8bb26", "danger": "#fb4934", "warning": "#fabd2f",
+        "info": "#83a598", "secondary": "#d5c4a1", "accent": "#fabd2f",
+    },
+    "Slate Blue": {   # cooler, softer blue-grey than BIOS Dark
+        "panel": "#1b2330", "sunken": "#111823", "panel_hi": "#2b3748",
+        "fg": "#e8edf4", "muted": "#aebacb", "border": "#3d4b5f",
+        "border_hi": "#5b6d84", "card": "#232d3d", "chart_axis": "#8fa0b6",
+        "accent": "#5aa9e6",
+    },
+}
+
+_P = dict(_BASE_PALETTE)          # active palette (mutated by set_palette)
+
+
+def set_palette(name: str) -> str:
+    """Rebind the module-level colour names from PALETTES[name] over the base.
+    Returns the name actually applied (falls back to 'BIOS Dark')."""
+    name = name if name in PALETTES else "BIOS Dark"
+    _P.clear()
+    _P.update(_BASE_PALETTE)
+    _P.update(PALETTES[name])
+    g = globals()
+    g["BIOS_PANEL"] = _P["panel"]
+    g["BIOS_SUNKEN"] = _P["sunken"]
+    g["BIOS_BG"] = _P["sunken"]
+    g["BIOS_PANEL_HI"] = _P["panel_hi"]
+    g["BIOS_FG"] = _P["fg"]
+    g["BIOS_MUTED"] = _P["muted"]
+    g["BIOS_BORDER"] = _P["border"]
+    g["BIOS_BORDER_HI"] = _P["border_hi"]
+    g["BIOS_CARD"] = _P["card"]
+    g["CHART_AXIS"] = _P["chart_axis"]
+    g["SEM_SUCCESS"] = _P["success"]
+    g["SEM_DANGER"] = _P["danger"]
+    g["SEM_WARNING"] = _P["warning"]
+    g["SEM_INFO"] = _P["info"]
+    g["SEM_SECONDARY"] = _P["secondary"]
+    g["HELP_AMBER"] = _P["help_amber"]
+    g["HELP_BANNER_BG"] = _P["help_banner_bg"]
+    return name
+
+
+# module-level names (rebound by set_palette); initialised to the base here
+BIOS_PANEL = _BASE_PALETTE["panel"]
+BIOS_SUNKEN = _BASE_PALETTE["sunken"]
+BIOS_BG = _BASE_PALETTE["sunken"]
+BIOS_PANEL_HI = _BASE_PALETTE["panel_hi"]
+BIOS_FG = _BASE_PALETTE["fg"]
+BIOS_MUTED = _BASE_PALETTE["muted"]
+BIOS_BORDER = _BASE_PALETTE["border"]
+BIOS_BORDER_HI = _BASE_PALETTE["border_hi"]
+BIOS_CARD = _BASE_PALETTE["card"]
+CHART_AXIS = _BASE_PALETTE["chart_axis"]
+SEM_SUCCESS = _BASE_PALETTE["success"]
+SEM_DANGER = _BASE_PALETTE["danger"]
+SEM_WARNING = _BASE_PALETTE["warning"]
+SEM_INFO = _BASE_PALETTE["info"]
+SEM_SECONDARY = _BASE_PALETTE["secondary"]
+HELP_AMBER = _BASE_PALETTE["help_amber"]
+HELP_BANNER_BG = _BASE_PALETTE["help_banner_bg"]
 
 
 def _rgb_str_to_hex(s: str) -> str | None:
@@ -202,9 +279,14 @@ def readable_on(fg: str, bg: str, target: float = 4.5) -> str:
     return cand
 
 
-def apply_bios_style(style: tb.Style, accent: str) -> None:
-    """Re-skin the ttkbootstrap 'darkly' base into the BIOS look. All wrapped
-    defensively — a theming quirk must never take the app down."""
+def apply_bios_style(style: tb.Style, accent: str, theme_name: str = "BIOS Dark") -> str:
+    """Re-skin the ttkbootstrap 'darkly' base into the chosen palette. All
+    wrapped defensively — a theming quirk must never take the app down.
+    Returns the theme name actually applied. A palette that pins its own
+    `accent` overrides the passed-in (desktop) accent."""
+    theme_name = set_palette(theme_name)
+    if _P.get("accent"):
+        accent = _P["accent"]
     # accent as *text* on the dark panels must stay legible whatever the
     # desktop accent is
     # headings/accents: aim past AA (>=6:1) so they read easily even when the
@@ -250,13 +332,16 @@ def apply_bios_style(style: tb.Style, accent: str) -> None:
                                "font": ("Sans", 10, "bold"), "anchor": "w",
                                "relief": "solid", "borderwidth": 1,
                                "padding": (12, 9)},
-        # a slightly raised surface for panels / rows that should stand off the page
-        "Card.TFrame": {"background": BIOS_CARD, "bordercolor": BIOS_BORDER,
+        # Card = the page surface + a hairline border + a glyphed header. Same
+        # background as everything else (BIOS_PANEL) so raw children — RingGauge
+        # canvases, plain tb.Labels, Scales — sit on it seamlessly instead of
+        # showing as darker rectangles (the "wrong gauge background" bug).
+        "Card.TFrame": {"background": BIOS_PANEL, "bordercolor": BIOS_BORDER,
                         "darkcolor": BIOS_BORDER, "lightcolor": BIOS_BORDER,
                         "relief": "solid", "borderwidth": 1},
-        "CardRow.TFrame": {"background": BIOS_CARD, "borderwidth": 0, "relief": "flat"},
-        "Card.TLabel": {"background": BIOS_CARD, "foreground": BIOS_FG},
-        "CardKey.TLabel": {"background": BIOS_CARD, "foreground": accent_txt_hi,
+        "CardRow.TFrame": {"background": BIOS_PANEL, "borderwidth": 0, "relief": "flat"},
+        "Card.TLabel": {"background": BIOS_PANEL, "foreground": BIOS_FG},
+        "CardKey.TLabel": {"background": BIOS_PANEL, "foreground": accent_txt_hi,
                            "font": ("Sans", 10, "bold")},
         "TCheckbutton": {"background": BIOS_PANEL, "foreground": BIOS_FG},
         "TRadiobutton": {"background": BIOS_PANEL, "foreground": BIOS_FG},
@@ -334,6 +419,7 @@ def apply_bios_style(style: tb.Style, accent: str) -> None:
                   foreground=[("selected", accent_txt_hi), ("active", hover)])
     except Exception:  # noqa: BLE001
         pass
+    return theme_name
 
 
 class RingGauge(tk.Canvas):
@@ -390,7 +476,7 @@ class HistoryChart(tk.Canvas):
 
     def __init__(self, master, *, caption="", unit="", samples=90, color=None,
                  height=64, thresholds=None):
-        super().__init__(master, height=height, bg="#0e1116",
+        super().__init__(master, height=height, bg=BIOS_SUNKEN,
                          highlightthickness=0, bd=0)
         self._buf = deque(maxlen=samples)
         self._color = color or ACCENT_FALLBACK
@@ -480,12 +566,16 @@ _CARD_ICONS = {"CPU": "▤", "GPU": "◈", "Details": "≣", "History": "∿",
 
 
 class Card(tb.Frame):
-    """A titled, hair-lined surface that stands slightly off the page — the
-    DAMX/LACT card. Add content into `.body` (a plain frame). `icon` defaults
-    to a glyph looked up from the title."""
+    """A titled, hair-lined section — the DAMX/LACT card, and a drop-in for
+    `tb.Labelframe(parent, text=…, padding=…)`. A glyphed header is packed at
+    the top. **pack** your content straight into the Card; use `.body` (a
+    zero-height-when-empty sub-frame) only when you need to `.grid()` children,
+    since a container can't mix pack and grid. `icon` defaults to a glyph
+    from the title; pass `icon=""` to suppress it."""
 
     def __init__(self, master, title="", *, icon=None, **kw):
-        super().__init__(master, style="Card.TFrame", padding=PAD_M, **kw)
+        kw.setdefault("padding", PAD_M)
+        super().__init__(master, style="Card.TFrame", **kw)
         if title:
             head = tb.Frame(self, style="CardRow.TFrame")
             head.pack(fill="x", pady=(0, PAD_S))
@@ -494,10 +584,13 @@ class Card(tb.Frame):
                 tb.Label(head, text=glyph, style="CardKey.TLabel").pack(side="left",
                                                                         padx=(0, PAD_S))
             tb.Label(head, text=title, style="CardKey.TLabel",
-                     font=FONT_TITLE).pack(side="left")
+                     font=FONT_TITLE, wraplength=1100, justify="left",
+                     anchor="w").pack(side="left")
             self._head = head
+        # for callers that .grid() their content (Dashboard gauge grid) — a
+        # container can't mix pack and grid, so give them their own frame.
         self.body = tb.Frame(self, style="CardRow.TFrame")
-        self.body.pack(fill="both", expand=True)
+        self.body.pack(fill="x")
 
 
 class Segmented(tb.Frame):

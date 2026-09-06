@@ -10,6 +10,7 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import INFO, SECONDARY, WARNING
 
 import sensors
+from tuxthrottle_gui_widgets import Card
 from tuxthrottle_items import BASE_DIR
 
 try:
@@ -39,7 +40,7 @@ class VramTabMixin:
         self._vram_q = queue.Queue()
         self._vram_bars = {}
 
-        lf = tb.Labelframe(frame, text="Live VRAM usage", padding=12)
+        lf = Card(frame, "Live VRAM usage")
         lf.pack(fill="x", pady=6)
         for g in sensors.drm_gpus():
             name = self._vram_gpu_name(g["pci"]) or g["driver"] or g["pci"]
@@ -73,7 +74,7 @@ class VramTabMixin:
         self._tip(b2, "Also restart KWin — releases allocations the evict can't. "
                   "Windows stay open; the screen blacks for about a second.")
 
-        lf2 = tb.Labelframe(frame, text="VRAM budget tier", padding=12)
+        lf2 = Card(frame, "VRAM budget tier")
         lf2.pack(fill="x", pady=6)
         self._vram_tier_var = tk.StringVar(value=tuxthrottle_vram.current_tier())
         for val, cap, desc in self._VRAM_TIERS:
@@ -87,7 +88,7 @@ class VramTabMixin:
                       "the first time you left it — not necessarily stock Plasma "
                       "defaults.").pack(anchor="w", pady=(8, 0))
 
-        lf3 = tb.Labelframe(frame, text="Which GPU renders the desktop", padding=12)
+        lf3 = Card(frame, "Which GPU renders the desktop")
         lf3.pack(fill="x", pady=6)
         tb.Label(lf3, bootstyle=WARNING, wraplength=1000, justify="left",
                  text="Takes effect after you log out and back in. If the "
@@ -109,7 +110,7 @@ class VramTabMixin:
             tb.Label(lf3, text=desc, bootstyle=SECONDARY, wraplength=1000,
                      justify="left").pack(anchor="w", padx=26)
 
-        lf4 = tb.Labelframe(frame, text="Discrete GPU idle power", padding=12)
+        lf4 = Card(frame, "Discrete GPU idle power")
         lf4.pack(fill="x", pady=6)
         pm = sensors.nvidia_runtime_pm()
         if pm:
