@@ -185,3 +185,31 @@ def test_load_json_reads_real_config():
     tweaks = ti.load_json("tweaks.json")
     assert isinstance(tweaks, dict)
     assert len(tweaks) > 0
+
+
+# --------------------------------------------------------------------------- #
+#  dnf metadata age / staleness (Updates tab snapshot labelling)
+# --------------------------------------------------------------------------- #
+def test_dnf_metadata_secs_none_when_no_repomd(monkeypatch):
+    monkeypatch.setattr(ti.glob, "glob", lambda _pat: [])
+    assert ti._dnf_metadata_secs() is None
+    assert ti._dnf_metadata_age() == ""
+    assert ti._dnf_metadata_stale() is True          # missing == stale
+
+
+def test_dnf_metadata_age_and_staleness_buckets(monkeypatch):
+    now = 1_000_000.0
+    monkeypatch.setattr(ti.time, "time", lambda: now)
+    monkeypatch.setattr(ti.glob, "glob", lambda _pat: ["/fake/repomd.xml"])
+
+    def at(age_secs):
+        monkeypatch.setattr(ti.os.path, "getmtime", lambda _p: now - age_secs)
+
+    at(30);           assert ti._dnf_metadata_age() == "as of just now"
+    at(20 * 60);      assert ti._dnf_metadata_age() == "as of 20 min ago"
+    at(3 * 3600);     assert ti._dnf_metadata_age() == "as of 3 h ago"
+    at(3 * 86400);    assert ti._dnf_metadata_age() == "as of 3 d ago"
+
+    at(3600);         assert ti._dnf_metadata_stale() is False     # 1 h — fresh
+    at(7 * 3600);     assert ti._dnf_metadata_stale() is True      # 7 h — stale
+    at(3600);         assert ti._dnf_metadata_stale(1800) is True  # custom threshold

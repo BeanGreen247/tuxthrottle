@@ -16,7 +16,7 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import DANGER, INFO, SECONDARY, SUCCESS, WARNING
 
 from tuxthrottle_gui_widgets import Card
-from tuxthrottle_items import _dnf_metadata_age
+from tuxthrottle_items import _dnf_metadata_age, _dnf_metadata_stale
 
 
 class UpdatesTabMixin:
@@ -44,8 +44,9 @@ class UpdatesTabMixin:
         self._upd_count_q: queue.Queue = queue.Queue()
         self._upd_count_var = tk.StringVar(value="Updates available:  checking…")
         crow = tb.Frame(note); crow.pack(anchor="w", fill="x", pady=(8, 0))
-        tb.Label(crow, textvariable=self._upd_count_var, bootstyle=SECONDARY,
-                 font=("Sans", 10, "bold")).pack(side="left")
+        self._upd_count_lbl = tb.Label(crow, textvariable=self._upd_count_var,
+                                       bootstyle=SECONDARY, font=("Sans", 10, "bold"))
+        self._upd_count_lbl.pack(side="left")
         tb.Button(crow, text="↻ recount", bootstyle=(INFO, "link"),
                   command=self._refresh_update_count).pack(side="left", padx=8)
 
@@ -139,8 +140,15 @@ class UpdatesTabMixin:
         dnf is queried with --cacheonly so this never blocks on slow mirrors —
         the number is "as of the last metadata sync" and becomes exact right
         after any Check/Update action (which refreshes the cache; this then
-        re-runs). '?' means the query failed or timed out."""
-        self._upd_count_var.set("Updates available:  checking…")
+        re-runs). '?' means the query failed or timed out.
+
+        While the (up to ~60 s) count runs, a spinner ticks from
+        _poll_busy_queue so the label doesn't look frozen; when the dnf
+        metadata is stale (>6 h) the total is shown as approximate (~N) and
+        the label turns amber."""
+        self._upd_checking = True
+        self._upd_spin_i = 0
+        self._upd_count_var.set("Updates available:  checking  ⠋")
 
         def sh(cmd: str, timeout: int) -> tuple[int, str]:
             try:
@@ -170,8 +178,19 @@ class UpdatesTabMixin:
             total = sum(int(v) for _, v in parts if v.isdigit())
             detail = "  ·  ".join(f"{k} {v}" for k, v in parts)
             age = _dnf_metadata_age()
-            stamp = f"   —   dnf list {age}" if age else ""
-            self._upd_count_q.put(f"Updates available:  {total}   ({detail}){stamp}")
+            stale = _dnf_metadata_stale()
+            any_unknown = any(v == "?" for _, v in parts)
+            shown = f"~{total}" if (stale and not any_unknown) else str(total)
+            if age:
+                stamp = f"   —   {'⚠ ' if stale else ''}dnf list {age}"
+                if stale:
+                    stamp += "; run “Check for updates” to refresh"
+            else:
+                stamp = ""
+            self._upd_count_q.put({
+                "text": f"Updates available:  {shown}   ({detail}){stamp}",
+                "stale": stale,
+            })
 
         threading.Thread(target=work, daemon=True).start()
 

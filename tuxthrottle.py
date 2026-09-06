@@ -802,9 +802,21 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                 self._refresh_update_count()
         if hasattr(self, "_upd_count_q"):
             try:
-                self._upd_count_var.set(self._upd_count_q.get_nowait())
+                res = self._upd_count_q.get_nowait()
             except queue.Empty:
-                pass
+                if getattr(self, "_upd_checking", False):
+                    frames = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+                    self._upd_spin_i = (getattr(self, "_upd_spin_i", 0) + 1) % len(frames)
+                    self._upd_count_var.set(
+                        f"Updates available:  checking  {frames[self._upd_spin_i]}")
+            else:
+                self._upd_checking = False
+                self._upd_count_var.set(res["text"] if isinstance(res, dict) else res)
+                lbl = getattr(self, "_upd_count_lbl", None)
+                if lbl is not None:
+                    lbl.configure(bootstyle="warning"
+                                  if isinstance(res, dict) and res.get("stale")
+                                  else "secondary")
         self.root.after(150, self._poll_busy_queue)
 
     def _show_output_dialog(self, title: str, lines: list[str]) -> None:

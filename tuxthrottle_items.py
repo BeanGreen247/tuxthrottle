@@ -55,9 +55,9 @@ def toolkit_version() -> str:
     return "unknown"
 
 
-def _dnf_metadata_age() -> str:
-    """Human 'as of …' string for the newest dnf repo metadata on disk, so the
-    update count reads as a snapshot, not a live number. '' if not found."""
+def _dnf_metadata_secs() -> float | None:
+    """Seconds since the newest dnf/libdnf5 repo metadata on disk was written,
+    or None if no repomd.xml is found."""
     newest = 0.0
     for pat in ("/var/cache/dnf/*/repodata/repomd.xml",
                 "/var/cache/libdnf5/*/repodata/repomd.xml"):
@@ -67,8 +67,16 @@ def _dnf_metadata_age() -> str:
             except OSError:
                 pass
     if not newest:
+        return None
+    return max(0.0, time.time() - newest)
+
+
+def _dnf_metadata_age() -> str:
+    """Human 'as of …' string for the newest dnf repo metadata on disk, so the
+    update count reads as a snapshot, not a live number. '' if not found."""
+    secs = _dnf_metadata_secs()
+    if secs is None:
         return ""
-    secs = max(0, time.time() - newest)
     if secs < 90:
         return "as of just now"
     if secs < 5400:
@@ -76,6 +84,14 @@ def _dnf_metadata_age() -> str:
     if secs < 172800:
         return f"as of {round(secs / 3600)} h ago"
     return f"as of {round(secs / 86400)} d ago"
+
+
+def _dnf_metadata_stale(threshold_secs: float = 21600.0) -> bool:
+    """True when the dnf metadata is older than threshold (default 6 h) — the
+    pending-update count is then only a rough snapshot and should read as such.
+    Missing metadata counts as stale."""
+    secs = _dnf_metadata_secs()
+    return secs is None or secs >= threshold_secs
 
 
 def resolve_real_user() -> str:
