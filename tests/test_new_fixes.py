@@ -198,3 +198,48 @@ def test_diagnose_flags_a_shadow_still_carrying_the_repair_suppression(monkeypat
     monkeypatch.setattr(sp, "_user_desktop", lambda: shadow)
     bad = [m for s, m in sp.diagnose(user=None) if s == "bad"]
     assert any("noverifyfiles" in m for m in bad)
+
+
+# --------------------------------------------------------------------------- #
+#  steamperf: the autostart backup must not sit in ~/.config/autostart —
+#  Plasma's autostart scanner launches it as a 2nd Steam that fights the
+#  singleton lock, leaving one steamwebhelper stuck respawning.
+# --------------------------------------------------------------------------- #
+def _wire_autostart(monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    (tmp_path / "cfg" / "autostart").mkdir(parents=True)
+
+
+def test_autostart_backup_lands_outside_the_autostart_dir(monkeypatch, tmp_path):
+    _wire_autostart(monkeypatch, tmp_path)
+    monkeypatch.setattr(sp, "status_igpu", lambda: "off")
+    monkeypatch.setattr(sp, "_apply_client_settings", lambda _on: ["(skipped)"])
+    monkeypatch.setattr(sp, "_base_desktop_body",
+                        lambda: "[Desktop Entry]\nExec=/usr/bin/steam %U\n")
+    au = sp._autostart()
+    au.write_text("[Desktop Entry]\nExec=/usr/bin/steam -bigpicture %U\n")  # user's own
+    sp.enable(autostart=True)
+    strays = [f.name for f in au.parent.iterdir() if f.name != au.name]
+    assert strays == [], f"stray file left in autostart dir: {strays}"
+    assert sp._autostart_bak("tuxthrottle-bak").is_file()
+
+
+def test_migrate_moves_a_legacy_stray_bak_out(monkeypatch, tmp_path):
+    _wire_autostart(monkeypatch, tmp_path)
+    au = sp._autostart()
+    legacy = au.with_name(au.name + ".tuxthrottle-bak")
+    legacy.write_text("[Desktop Entry]\nExec=/usr/bin/steam %U\n")
+    sp._migrate_stray_bak()
+    assert not legacy.exists()
+    assert sp._autostart_bak("tuxthrottle-bak").read_text().startswith("[Desktop Entry]")
+
+
+def test_diagnose_flags_a_stray_steam_autostart_file(monkeypatch, tmp_path):
+    _wire_autostart(monkeypatch, tmp_path)
+    monkeypatch.setattr(sp, "status_igpu", lambda: "on")
+    monkeypatch.setattr(sp, "_SYS_DESKTOP", str(tmp_path / "nope.desktop"))
+    monkeypatch.setattr(sp, "_user_desktop", lambda: tmp_path / "shadow.desktop")
+    sp._autostart().with_name("steam.desktop.tuxthrottle-bak").write_text("x")
+    bad = [m for s, m in sp.diagnose(user=None) if s == "bad"]
+    assert any("autostart" in m.lower() for m in bad)

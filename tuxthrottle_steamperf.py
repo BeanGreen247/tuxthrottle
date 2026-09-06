@@ -272,6 +272,34 @@ def _autostart() -> Path:
     return Path(base) / "autostart" / "steam.desktop"
 
 
+def _autostart_bak(suffix: str) -> Path:
+    """Backup of the user's real autostart steam.desktop, kept OUTSIDE the
+    autostart dir. A `*.desktop.*`-named file left in ~/.config/autostart is
+    picked up by Plasma's autostart scanner and launched as a second Steam
+    instance — the two race the singleton lock and one client's steamwebhelper
+    then respawns forever ("Steam Web Helper is not responding")."""
+    base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    return Path(base) / "tuxthrottle" / f"steam.desktop.{suffix}"
+
+
+def _migrate_stray_bak() -> None:
+    """Move any pre-existing in-autostart-dir backup to the safe location and
+    delete the stray so it stops autostarting a duplicate Steam."""
+    au = _autostart()
+    for suffix in ("tuxthrottle-bak", "tuxthrottle-igpu-bak"):
+        stray = au.with_name(au.name + "." + suffix)
+        if not stray.is_file():
+            continue
+        dst = _autostart_bak(suffix)
+        try:
+            if not dst.exists():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_text(stray.read_text())
+            stray.unlink()
+        except OSError:
+            pass
+
+
 def _steam_bin() -> str:
     return shutil.which("steam") or "/usr/bin/steam"
 
@@ -387,11 +415,13 @@ def enable_igpu() -> tuple[bool, str]:
     body = _stamp_key(_force_igpu_keys(_base_desktop_body()), IGPU_MARKER, "true")
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(body)
+    _migrate_stray_bak()
     au = _autostart()
     did = [str(dst)]
     if au.is_file() and IGPU_MARKER not in au.read_text() and MARKER not in au.read_text():
-        bak = au.with_name(au.name + ".tuxthrottle-igpu-bak")
+        bak = _autostart_bak("tuxthrottle-igpu-bak")
         if not bak.exists():
+            bak.parent.mkdir(parents=True, exist_ok=True)
             bak.write_text(au.read_text())
         au.write_text(_stamp_key(_force_igpu_keys(au.read_text()), IGPU_MARKER, "true"))
         did.append(f"{au} (patched)")
@@ -417,8 +447,9 @@ def disable_igpu() -> tuple[bool, str]:
         else:
             dst.unlink()
             done.append(f"removed {dst}")
+    _migrate_stray_bak()
     au = _autostart()
-    bak = au.with_name(au.name + ".tuxthrottle-igpu-bak")
+    bak = _autostart_bak("tuxthrottle-igpu-bak")
     if bak.is_file():
         au.write_text(bak.read_text())
         bak.unlink()
@@ -484,12 +515,14 @@ def enable(autostart: bool = True) -> tuple[bool, str]:
     dst.write_text(body)
     did = [str(dst)]
 
+    _migrate_stray_bak()
     au = _autostart()
-    bak = au.with_name(au.name + ".tuxthrottle-bak")
+    bak = _autostart_bak("tuxthrottle-bak")
     if au.is_file() and MARKER not in au.read_text():
         # a real pre-existing Steam autostart entry — back it up, patch in place
         had_mountwait = _MOUNTWAIT_BIN in au.read_text()
         if not bak.exists():
+            bak.parent.mkdir(parents=True, exist_ok=True)
             bak.write_text(au.read_text())
         au.write_text(_patch(au.read_text(), had_mountwait))
         did.append(f"{au} (patched)")
@@ -540,8 +573,9 @@ def disable() -> tuple[bool, str]:
         else:
             dst.unlink()
             done.append(f"removed {dst}")
+    _migrate_stray_bak()
     au = _autostart()
-    bak = au.with_name(au.name + ".tuxthrottle-bak")
+    bak = _autostart_bak("tuxthrottle-bak")
     if au.is_file() and "X-TuxThrottle-Created=true" in au.read_text():
         au.unlink()                                   # we made it — remove it
         if bak.is_file():
@@ -632,6 +666,33 @@ def diagnose(user: str | None = None) -> list[tuple[str, str]]:
             "back on to regenerate the launcher without them."))
     else:
         results.append(("ok", "No known-broken flags in the Steam launcher."))
+
+    # 2b) a stray Steam autostart entry that double-launches the client
+    #     (two Steam instances race the singleton lock -> one client's
+    #      steamwebhelper respawns forever = "not responding")
+    au = _autostart()
+    strays = []
+    try:
+        adir = au.parent
+        if adir.is_dir():
+            for f in adir.iterdir():
+                if f.name == au.name or not f.is_file():
+                    continue
+                if f.name.startswith("steam.desktop.") or (
+                        f.name.startswith("steam") and f.suffix == ".desktop"):
+                    strays.append(f.name)
+    except OSError:
+        pass
+    if strays:
+        results.append(("bad",
+            f"Extra Steam autostart file(s) in ~/.config/autostart: "
+            f"{', '.join(sorted(strays))} — these launch a second Steam at login "
+            "that fights the first for the single-instance lock, leaving one "
+            "client's steamwebhelper stuck respawning ('not responding'). Fix: "
+            "turn Steam low-resource mode off then on (it now keeps its backup "
+            "outside the autostart dir), or delete the stray file."))
+    else:
+        results.append(("ok", "No duplicate Steam autostart entry."))
 
     # 3) a declared Steam library folder that looks unmounted/missing
     home = Path(f"~{user}").expanduser() if user else Path.home()
