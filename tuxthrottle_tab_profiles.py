@@ -17,9 +17,7 @@ import tuxthrottle_profiles
 class ProfilesTabMixin:
     # ---------- Profiles + snapshots tab ----------
 
-    def _build_profiles_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Profiles")
+    def _build_profiles_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
 
         tb.Label(frame, wraplength=1100, justify="left", bootstyle=SECONDARY, text=(

@@ -17,9 +17,7 @@ from tuxthrottle_items import BASE_DIR, PROJECT_ISSUES_URL, PROJECT_URL, toolkit
 
 
 class AboutTabMixin:
-    def _build_about_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="About", pin=True)
+    def _build_about_tab(self, outer):
         frame = self._scroll_body(outer, pad=20)
 
         head = tb.Frame(frame)

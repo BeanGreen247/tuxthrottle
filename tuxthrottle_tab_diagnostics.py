@@ -22,10 +22,7 @@ from tuxthrottle_diag import (
 
 
 class DiagnosticsTabMixin:
-    def _build_diagnostics_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Report a Bug", kind="support", spacer=True)
-
+    def _build_diagnostics_tab(self, outer):
         # amber banner — this page is about GitHub issues / sending logs, not
         # changing the machine
         banner = tb.Frame(outer, style="SupportBanner.TFrame", padding=(16, 10))

@@ -472,32 +472,37 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         # let the global mouse-wheel handler drive the scrollable nav rail too
         self._scroll_canvases.append(self.notebook._nav_canvas)  # noqa: SLF001
 
+        # Dashboard is the landing page — build it eagerly. Every other tab is
+        # registered as a lazy page: its widgets are constructed the first time
+        # its nav entry is clicked (SidebarNav.add_lazy), which is what keeps
+        # cold start off the ~2 s all-22-tabs build.
         self._build_dashboard_tab()
-        self._build_keyboard_tab()
-        self._build_touchpad_tab()
-        self._build_fan_tab()
-        self._build_power_tab()
-        self._build_display_tab()
-        self._build_battery_health_tab()
-        self._build_vram_tab()
-        self._build_profiles_tab()
-        self._build_presets_tab()
-        self._build_updates_tab()
+        self.notebook.add_lazy("Keyboard", self._build_keyboard_tab)
+        self.notebook.add_lazy("Touchpad", self._build_touchpad_tab)
+        self.notebook.add_lazy("Fans", self._build_fan_tab)
+        self.notebook.add_lazy("Power & Limits", self._build_power_tab)
+        self.notebook.add_lazy("Display", self._build_display_tab)
+        self.notebook.add_lazy("Battery", self._build_battery_health_tab)
+        self.notebook.add_lazy("VRAM", self._build_vram_tab)
+        self.notebook.add_lazy("Profiles", self._build_profiles_tab)
+        self.notebook.add_lazy("Presets", self._build_presets_tab)
+        self.notebook.add_lazy("Updates", self._build_updates_tab)
         if self.games:
-            self._build_games_tab()
-        self._build_gametools_tab()
+            self.notebook.add_lazy("Setup Games", self._build_games_tab)
+        self.notebook.add_lazy("Game Tools", self._build_gametools_tab)
 
         categories = sorted(
             {item.category for item in self.items.values() if not item.hidden},
             key=lambda c: CATEGORY_ORDER.index(c) if c in CATEGORY_ORDER else 99,
         )
         for cat in categories:
-            self._build_category_tab(cat)
+            self.notebook.add_lazy(cat, lambda f, c=cat: self._build_category_tab(f, c))
 
         # last, pinned to the foot of the rail (always visible, below the
         # scrollable list): About, then the "gather logs for a GitHub issue" page
-        self._build_about_tab()
-        self._build_diagnostics_tab()
+        self.notebook.add_lazy("About", self._build_about_tab, pin=True)
+        self.notebook.add_lazy("Report a Bug", self._build_diagnostics_tab,
+                               kind="support", spacer=True)
 
         # per-section "apply the developer's picks" button, right side of the
         # page title — only shows on a tweak/app category page that still has
@@ -961,7 +966,9 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
     def _recompute_status_summary(self):
         n_done = n_total = n_attention = 0
         for item in self.items.values():
-            if item.status_label is None or not item.hw_supported:
+            # count by item substance, not widget presence — category tabs are
+            # built lazily now, so status_label is often still None here
+            if item.hidden or not item.hw_supported or item.state == "unknown":
                 continue
             n_total += 1
             if item.done:
@@ -1270,10 +1277,21 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         threading.Thread(target=self._apply_ids_worker,
                          args=(ids, "recommended-all"), daemon=True).start()
 
+    # per-tab live polling: only the tab currently on screen polls hardware.
+    # {nav label: (live-flag attr, poll method name)}. The poll loops gate
+    # their body on the flag and carry a generation token so re-entering a
+    # tab can't stack duplicate loops. Dashboard keeps its own enter/leave.
+    _TAB_LIVE = {
+        "Fans": ("_fan_live", "_fan_poll"),
+        "Power & Limits": ("_power_live", "_power_poll"),
+        "Battery": ("_bath_live_on", "_bath_poll"),
+        "VRAM": ("_vram_live", "_vram_poll"),
+    }
+
     def _on_nav_page(self, page_text: str):
-        """Lazy-load / unload the Dashboard on entry / exit, and show the
-        'Apply section recommendations' button only on a category page that
-        still has unapplied dev picks."""
+        """Start/stop the visible tab's live polling, and show the 'Apply
+        section recommendations' button only on a category page that still has
+        unapplied dev picks."""
         want_dash = (page_text == "Dashboard")
         if want_dash and not self._dash_shown:
             self._dash_shown = True
@@ -1282,12 +1300,13 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
             self._dash_shown = False
             self._dash_leave()
 
-        want_vram = (page_text == "VRAM")
-        if want_vram and not getattr(self, "_vram_live", False):
-            self._vram_live = True
-            self._vram_poll()
-        elif not want_vram:
-            self._vram_live = False
+        for label, (flag, poll) in self._TAB_LIVE.items():
+            on = (page_text == label)
+            if on and not getattr(self, flag, False):
+                setattr(self, flag, True)
+                getattr(self, poll)()          # fresh token → starts one loop
+            elif not on and getattr(self, flag, False):
+                setattr(self, flag, False)     # loop dies on its next tick
 
         btn = getattr(self, "_rec_btn", None)
         if btn is None:

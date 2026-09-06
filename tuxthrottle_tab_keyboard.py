@@ -29,9 +29,7 @@ class KeyboardTabMixin:
         ("Amber", "#ff6a00"),
     ]
 
-    def _build_keyboard_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Keyboard")
+    def _build_keyboard_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
 
         import shutil as _sh

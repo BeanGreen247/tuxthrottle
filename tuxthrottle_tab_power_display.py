@@ -18,9 +18,7 @@ from tuxthrottle_items import BASE_DIR
 
 
 class PowerDisplayTabMixin:
-    def _build_battery_health_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Battery")
+    def _build_battery_health_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
 
         info = self._probe("bat_health")
@@ -104,16 +102,18 @@ class PowerDisplayTabMixin:
                                variable=self._chg_mode, bootstyle="toolbutton",
                                command=self._apply_charge_mode).pack(side="left", padx=3)
 
-        self._bath_live_on = True
-        self._bath_poll()
+        # live polling gated by _on_nav_page (ToolkitApp._TAB_LIVE).
 
     def _apply_charge_mode(self):
         m = self._chg_mode.get()
         ok, err = sensors.set_battery_charge_mode(m)
         self._log(f"[Battery] charging mode → {m}" + ("" if ok else f"  FAILED: {err}"))
 
-    def _bath_poll(self):
-        if not getattr(self, "_bath_live_on", False):
+    def _bath_poll(self, token=None):
+        if token is None:
+            self._bath_tok = getattr(self, "_bath_tok", 0) + 1
+            token = self._bath_tok
+        if not getattr(self, "_bath_live_on", False) or token != self._bath_tok:
             return
         try:
             i = sensors.battery_health_info()
@@ -144,7 +144,7 @@ class PowerDisplayTabMixin:
                 live.configure(text=f"now: {cl} %" if cl is not None else "now: — %")
         except Exception:  # noqa: BLE001
             pass
-        self.root.after(4000, self._bath_poll)
+        self.root.after(4000, lambda: self._bath_poll(token))
 
     # ------------------------------------------------------------------ #
     #  VRAM budget — a laptop iGPU shares a small slice of system RAM as
@@ -200,9 +200,7 @@ class PowerDisplayTabMixin:
             "laptops; offered only where a hardware MUX exists."))
         return rows
 
-    def _build_power_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Power & Limits")
+    def _build_power_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
 
         tb.Label(frame, wraplength=1100, justify="left", bootstyle=SECONDARY,
@@ -218,9 +216,7 @@ class PowerDisplayTabMixin:
         self._build_gpumode_section(frame)
         self._build_battery_section(frame)
         self._build_autoswitch_section(frame)
-
-        self._power_live = True
-        self._power_poll()
+        # live polling gated by _on_nav_page (ToolkitApp._TAB_LIVE).
 
     # --- CPU TDP (ryzenadj) ---
 
@@ -504,9 +500,7 @@ class PowerDisplayTabMixin:
     # Power & Limits (refresh rate) and Battery (VRR, as a buried info line)
     # into one place — same idea as Legion-Linux-Toolkit's Display tab.
 
-    def _build_display_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Display")
+    def _build_display_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
         self._build_refresh_section(frame)
         self._build_vrr_section(frame)
@@ -530,10 +524,8 @@ class PowerDisplayTabMixin:
     # touchpad can never survive past the next logout/reboot on its own —
     # see sensors.py's touchpad section docstring for why that's deliberate.
 
-    def _build_touchpad_tab(self):
+    def _build_touchpad_tab(self, outer):
         info = self._probe("touchpad")
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Touchpad")
         frame = self._scroll_body(outer, pad=16)
 
         if not info or not info.get("available"):
@@ -814,14 +806,17 @@ class PowerDisplayTabMixin:
 
     # --- live readouts ---
 
-    def _power_poll(self):
+    def _power_poll(self, token=None):
         """Refresh the 'now:' readouts. The reads (ryzenadj -i, nvidia-smi)
         can each take ~1s, so they run on a worker and the label writes are
         marshalled back to the Tk thread."""
-        if not getattr(self, "_power_live", False):
+        if token is None:
+            self._power_tok = getattr(self, "_power_tok", 0) + 1
+            token = self._power_tok
+        if not getattr(self, "_power_live", False) or self._power_tok != token:
             return
         threading.Thread(target=self._power_poll_worker, daemon=True).start()
-        self.root.after(3000, self._power_poll)
+        self.root.after(3000, lambda: self._power_poll(token))
 
     def _power_poll_worker(self):
         tdp = sensors.read_ryzenadj_info() if getattr(self, "_tdp_val_labels", None) else None

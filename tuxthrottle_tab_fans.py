@@ -47,9 +47,7 @@ FAN_CURVE_POINTS = 10
 class FanTabMixin:
     # ---------- fan control ----------
 
-    def _build_fan_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Fans")
+    def _build_fan_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
 
         fans = sensors.read_fans()
@@ -164,9 +162,8 @@ class FanTabMixin:
             self._fan_manual_toggle()
 
         self._build_fancurve_section(frame)
-
-        self._fan_live = True
-        self._fan_poll()
+        # live polling is started/stopped by _on_nav_page when this tab is
+        # shown/hidden — see ToolkitApp._TAB_LIVE.
 
     # --- closed-loop fan curve (tuxthrottle_powerd.py) ---
 
@@ -468,8 +465,11 @@ class FanTabMixin:
             sensors.set_fan_boost(i, round(boost * 255 / 100))
         self._log(f"[Fans] preset: {kind} (profile {prof}, boost {boost}%)")
 
-    def _fan_poll(self):
-        if not getattr(self, "_fan_live", False):
+    def _fan_poll(self, token=None):
+        if token is None:
+            self._fan_tok = getattr(self, "_fan_tok", 0) + 1
+            token = self._fan_tok
+        if not getattr(self, "_fan_live", False) or token != self._fan_tok:
             return
         for fan in sensors.read_fans():
             lab = self._fan_rpm_labels.get(fan["index"])
@@ -493,7 +493,7 @@ class FanTabMixin:
                 self._fc_redraw()
             except (tk.TclError, ValueError):
                 pass
-        self.root.after(2000, self._fan_poll)
+        self.root.after(2000, lambda: self._fan_poll(token))
 
     # ---------- Power & Limits tab ----------
 

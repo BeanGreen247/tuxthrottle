@@ -488,6 +488,8 @@ class SidebarNav(tb.Frame):
         self.on_select = None       # ToolkitApp callback: fn(page_text)
         self._pages: list = []      # (text, frame, button)
         self._current = None
+        self._lazy: dict = {}       # str(frame) -> builder(frame); built on first select
+        self._built: set = set()    # str(frame) of lazily-built pages already built
 
     def _nav_reflow(self):
         """Keep the scrollregion in sync and hide the scrollbar unless the
@@ -516,6 +518,22 @@ class SidebarNav(tb.Frame):
 
     def add(self, frame, text: str = "", *, kind: str = "normal",
             spacer: bool = False, pin: bool = False):
+        """Register an already-built page (its widgets exist now)."""
+        self._register(frame, text, kind=kind, spacer=spacer, pin=pin)
+        if self._current is None:
+            self.select(frame)
+
+    def add_lazy(self, text: str, builder, *, kind: str = "normal",
+                 spacer: bool = False, pin: bool = False):
+        """Register a page whose widgets are built on first selection. `builder`
+        is called once as `builder(frame)` the first time the nav entry is
+        clicked. Returns the (empty for now) page frame."""
+        frame = tb.Frame(self)
+        self._register(frame, text, kind=kind, spacer=spacer, pin=pin)
+        self._lazy[str(frame)] = builder
+        return frame
+
+    def _register(self, frame, text, *, kind="normal", spacer=False, pin=False):
         frame.master  # noqa: B018  (frame was created as tb.Frame(self); fine)
         pinned = pin or spacer or kind == "support"
         parent = self._rail_bottom if pinned else self._nav_box
@@ -530,12 +548,18 @@ class SidebarNav(tb.Frame):
         btn.pack(side="top", fill="x", padx=0, pady=1)
         btn._nav_kind = kind  # noqa: SLF001
         self._pages.append((text, frame, btn))
-        if self._current is None:
-            self.select(frame)
 
     def select(self, frame=None):
         if frame is None:
             return self._current
+        key = str(frame)
+        if key in self._lazy and key not in self._built:
+            self._built.add(key)
+            try:
+                self._lazy[key](frame)
+            except Exception:  # noqa: BLE001
+                import traceback
+                traceback.print_exc()
         for text, f, b in self._pages:
             on = f is frame
             support = getattr(b, "_nav_kind", "normal") == "support"

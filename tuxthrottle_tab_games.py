@@ -1701,10 +1701,7 @@ class GamesTabMixin:
             parts.append(f"thermally throttled {tp}% of the session")
         self._last_sess_lbl.config(text="   ·   ".join(parts))
 
-    def _build_games_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Setup Games")
-
+    def _build_games_tab(self, outer):
         intro = tb.Frame(outer, padding=(16, 12, 16, 6))
         intro.pack(fill="x")
         tb.Label(intro, text="Per-game setup walkthroughs",
@@ -1721,9 +1718,7 @@ class GamesTabMixin:
         gnb.pack(fill="both", expand=True, padx=8, pady=8)
         self._games_notebook_body(gnb)
 
-    def _build_gametools_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Game Tools")
+    def _build_gametools_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
         tb.Label(frame, wraplength=1100, justify="left", bootstyle=SECONDARY, text=(
             "Steam / Proton helpers that work for any game — not just the ones "

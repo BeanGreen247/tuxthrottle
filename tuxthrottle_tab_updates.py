@@ -21,9 +21,7 @@ from tuxthrottle_items import _dnf_metadata_age
 class UpdatesTabMixin:
     # ---------- updates ----------
 
-    def _build_updates_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Updates")
+    def _build_updates_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
 
         have_ns = shutil.which("nobara-sync") is not None

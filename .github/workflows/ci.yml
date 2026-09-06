@@ -92,7 +92,20 @@ jobs:
           pages = [x for x, f, b in a.notebook._pages]
           assert pages, "no nav pages built"
           assert pages[-1] == "Report a Bug", pages[-1]
-          print(f"GUI built OK — {len(pages)} nav pages, last = {pages[-1]!r}")
+          # Phase 1: only Dashboard is built at startup; the rest are lazy.
+          for text, frame, _b in a.notebook._pages:
+              n = len(frame.winfo_children())
+              if text == "Dashboard":
+                  assert n > 0, "Dashboard not built eagerly"
+              else:
+                  assert n == 0, f"{text!r} built at startup (should be lazy)"
+          # ...but every tab must still construct cleanly when selected.
+          for _text, frame, _b in list(a.notebook._pages):
+              a.notebook.select(frame)
+              r.update()
+          for text, frame, _b in a.notebook._pages:
+              assert len(frame.winfo_children()) > 0, f"{text!r} built empty"
+          print(f"GUI built OK — {len(pages)} nav pages, last = {pages[-1]!r}, all lazy-build clean")
           r.destroy()
           PY
 

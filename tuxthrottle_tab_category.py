@@ -9,9 +9,7 @@ from ttkbootstrap.constants import SECONDARY, SUCCESS, WARNING
 
 
 class CategoryTabMixin:
-    def _build_category_tab(self, category: str):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text=category)
+    def _build_category_tab(self, outer, category: str):
         inner = self._scroll_body(outer)
 
         for item in self.items.values():
@@ -44,9 +42,15 @@ class CategoryTabMixin:
             tb.Label(text_frame, text=item.description, wraplength=1250,
                      bootstyle="inverse-dark", justify="left").pack(anchor="w", pady=(4, 0))
 
-    def _build_presets_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="Presets")
+        # This tab may be built lazily, after the first status sweep already
+        # ran — paint the rows with whatever state we already know so they
+        # don't sit on "checking…" until the next refresh.
+        for item in self.items.values():
+            if item.category == category and not item.hidden and item.state != "unknown":
+                self._apply_one_status(item)
+                item.var.set(item.done)
+
+    def _build_presets_tab(self, outer):
         frame = self._scroll_body(outer, pad=14)
         tb.Label(frame, text="One click applies a curated bundle of tweaks + installs apps.", bootstyle=SECONDARY).pack(anchor="w", pady=(0, 12))
 

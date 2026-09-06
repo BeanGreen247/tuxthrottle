@@ -19,9 +19,7 @@ except Exception:  # noqa: BLE001
 
 
 class VramTabMixin:
-    def _build_vram_tab(self):
-        outer = tb.Frame(self.notebook)
-        self.notebook.add(outer, text="VRAM")
+    def _build_vram_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
 
         if tuxthrottle_vram is None:
@@ -136,11 +134,14 @@ class VramTabMixin:
     def _vram_helper(self, args: str) -> str:
         return f"python3 {BASE_DIR}/tuxthrottle_vram.py {args}"
 
-    def _vram_poll(self):
-        if not getattr(self, "_vram_live", False):
+    def _vram_poll(self, token=None):
+        if token is None:
+            self._vram_tok = getattr(self, "_vram_tok", 0) + 1
+            token = self._vram_tok
+        if not getattr(self, "_vram_live", False) or token != self._vram_tok:
             return
         threading.Thread(target=self._vram_poll_worker, daemon=True).start()
-        self.root.after(5000, self._vram_poll)
+        self.root.after(5000, lambda: self._vram_poll(token))
 
     def _vram_poll_worker(self):
         try:
