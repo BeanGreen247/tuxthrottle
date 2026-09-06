@@ -529,6 +529,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         btn_apply = tb.Button(btn_bar, text="✓  Apply Selected", bootstyle=SUCCESS,
                               command=self._on_apply_click)
         btn_apply.pack(side="left", padx=8)
+        self._btn_apply = btn_apply   # relabelled with the pending count (LACT-style)
         self._tip(btn_apply, "Act on the ticks: apply ticked-but-not-applied "
                   "tweaks, install ticked-but-missing apps, and undo unticked "
                   "tweaks that are currently applied. Already-done items are "
@@ -943,6 +944,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                 if x is not True:
                     self._apply_one_status(x)
             self._recompute_status_summary()
+            self._refresh_pending_bar()
             if any(x is True for x in done) and hasattr(self, "notebook"):
                 # batch finished → the section-recommendations button may need
                 # to hide (all applied) or update its count
@@ -962,6 +964,32 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         item.status_label.configure(text=label, bootstyle=style)
         if item.var is not None:
             item.var.set(item.done)
+
+    def _pending_ids(self) -> list[str]:
+        """Item ids whose tick disagrees with their applied state — the count
+        the footer's Apply button shows. Only built category tabs have an
+        `item.var`, which is exactly the set the user could have toggled."""
+        out = []
+        for item in self.items.values():
+            var = getattr(item, "var", None)
+            if var is None or item.hidden or not item.hw_supported:
+                continue
+            try:
+                if bool(var.get()) != bool(item.done):
+                    out.append(item.id)
+            except tk.TclError:
+                pass
+        return out
+
+    def _refresh_pending_bar(self):
+        btn = getattr(self, "_btn_apply", None)
+        if btn is None:
+            return
+        n = len(self._pending_ids())
+        try:
+            btn.configure(text=f"✓  Apply Selected ({n})" if n else "✓  Apply Selected")
+        except tk.TclError:
+            pass
 
     def _recompute_status_summary(self):
         n_done = n_total = n_attention = 0
@@ -985,6 +1013,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         for item in self.items.values():
             self._apply_one_status(item)
         self._recompute_status_summary()
+        self._refresh_pending_bar()
 
     def _on_refresh_click(self):
         self.status_var.set("Refreshing status…")

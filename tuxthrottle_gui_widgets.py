@@ -381,14 +381,22 @@ class HistoryChart(tk.Canvas):
     Dashboard history strip."""
 
     def __init__(self, master, *, caption="", unit="", samples=90, color=None,
-                 height=64):
+                 height=64, thresholds=None):
         super().__init__(master, height=height, bg="#0e1116",
                          highlightthickness=0, bd=0)
         self._buf = deque(maxlen=samples)
         self._color = color or ACCENT_FALLBACK
         self._caption = caption
         self._unit = unit
+        # [(value, color, label)] — horizontal reference lines (throttle temp,
+        # TDP cap, …). Mapped through the same base/span as the trace so they
+        # only render once the value is inside the visible range.
+        self._thresholds = list(thresholds or [])
         self.bind("<Configure>", lambda _e: self._draw())
+
+    def set_thresholds(self, thresholds):
+        self._thresholds = list(thresholds or [])
+        self._draw()
 
     def push(self, value):
         try:
@@ -409,10 +417,30 @@ class HistoryChart(tk.Canvas):
         if len(vals) < 2:
             return
         lo, hi = min(vals), max(vals)
+        # widen the range so an in-view threshold line stays visible
+        for tv, _c, _l in self._thresholds:
+            try:
+                lo, hi = min(lo, float(tv)), max(hi, float(tv))
+            except (TypeError, ValueError):
+                pass
         if hi - lo < 1e-6:
             lo, hi = lo - 1, hi + 1
         span = (hi - lo) * 1.15
         base = lo - (hi - lo) * 0.075
+
+        def _y(v):
+            return h - pad - (v - base) / span * (h - 2 * pad - 10) - 2
+
+        for tv, tc, tl in self._thresholds:
+            try:
+                ty = _y(float(tv))
+            except (TypeError, ValueError):
+                continue
+            self.create_line(pad, ty, w - pad, ty, fill=tc, width=1,
+                             dash=(3, 3))
+            if tl and 14 < ty < h - 10:      # room, and clear of the caption row
+                self.create_text(w - pad - 2, ty - 5, text=tl, anchor="e",
+                                 fill=tc, font=("Sans", 7))
         n = len(vals)
         step = (w - 2 * pad) / max(1, self._buf.maxlen - 1)
         x0 = w - pad - (n - 1) * step
@@ -428,6 +456,73 @@ class HistoryChart(tk.Canvas):
                          fill=CHART_AXIS, font=("Sans", 7))
         self.create_text(w - 6, 8, text=f"{hi:.0f}", anchor="ne",
                          fill=CHART_AXIS, font=("Sans", 7))
+
+
+# ---- shared layout primitives (the DAMX/LACT restyle) --------------------- #
+
+# spacing scale — use instead of ad-hoc pixel pads so every tab lines up
+PAD_XS, PAD_S, PAD_M, PAD_L = 4, 8, 14, 22
+FONT_TITLE = ("Sans", 11, "bold")     # card / section heading
+FONT_BODY = ("Sans", 10)              # normal copy
+FONT_CAPTION = ("Sans", 9)            # secondary / hint text
+
+# monochrome glyph per card title — same visual language as SidebarNav._NAV_ICONS
+_CARD_ICONS = {
+    "CPU": "▤", "GPU": "◈", "Fans": "❄", "Battery": "⏻", "History": "∿",
+    "Power": "⚡", "Display": "▭", "Thermals": "🌡", "Memory": "▥",
+}
+
+
+class Card(tb.Frame):
+    """A titled, hair-lined surface that stands slightly off the page — the
+    DAMX/LACT card. Add content into `.body` (a plain frame). `icon` defaults
+    to a glyph looked up from the title."""
+
+    def __init__(self, master, title="", *, icon=None, **kw):
+        super().__init__(master, style="Card.TFrame", padding=PAD_M, **kw)
+        if title:
+            head = tb.Frame(self, style="CardRow.TFrame")
+            head.pack(fill="x", pady=(0, PAD_S))
+            glyph = icon if icon is not None else _CARD_ICONS.get(title, "")
+            if glyph:
+                tb.Label(head, text=glyph, style="CardKey.TLabel").pack(side="left",
+                                                                        padx=(0, PAD_S))
+            tb.Label(head, text=title, style="CardKey.TLabel",
+                     font=FONT_TITLE).pack(side="left")
+            self._head = head
+        self.body = tb.Frame(self, style="CardRow.TFrame")
+        self.body.pack(fill="both", expand=True)
+
+
+class Segmented(tb.Frame):
+    """A row of linked toggle buttons bound to one StringVar — replaces a
+    cluster of Radiobuttons / an OptionMenu for picking one of a few modes.
+    `options` is [(label, value), ...] or a plain list (label == value)."""
+
+    def __init__(self, master, variable: tk.StringVar, options, *,
+                 command=None, **kw):
+        super().__init__(master, **kw)
+        self._var = variable
+        self._cmd = command
+        self._btns = {}
+        for opt in options:
+            label, value = opt if isinstance(opt, (tuple, list)) else (opt, opt)
+            b = tb.Button(self, text=label, bootstyle="toolbutton", takefocus=False,
+                          command=lambda v=value: self._pick(v))
+            b.pack(side="left", padx=(0, 2))
+            self._btns[value] = b
+        self._sync()
+
+    def _pick(self, value):
+        self._var.set(value)
+        self._sync()
+        if callable(self._cmd):
+            self._cmd()
+
+    def _sync(self):
+        cur = self._var.get()
+        for value, b in self._btns.items():
+            b.configure(bootstyle="toolbutton" if value != cur else ("info", "toolbutton"))
 
 
 class SidebarNav(tb.Frame):

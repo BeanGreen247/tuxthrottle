@@ -19,7 +19,8 @@ class CategoryTabMixin:
             row.pack(fill="x", padx=2, pady=4)
 
             item.var = tk.BooleanVar(value=False)
-            cb = tb.Checkbutton(row, variable=item.var, bootstyle="round-toggle")
+            cb = tb.Checkbutton(row, variable=item.var, bootstyle="round-toggle",
+                                command=self._refresh_pending_bar)
             cb.pack(side="left", anchor="n", padx=(0, 14))
             item.checkbutton = cb
             if not item.hw_supported:
@@ -49,6 +50,7 @@ class CategoryTabMixin:
             if item.category == category and not item.hidden and item.state != "unknown":
                 self._apply_one_status(item)
                 item.var.set(item.done)
+        self._refresh_pending_bar()
 
     def _build_presets_tab(self, outer):
         frame = self._scroll_body(outer, pad=14)

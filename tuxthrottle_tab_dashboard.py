@@ -11,7 +11,18 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import SECONDARY, WARNING
 
 import sensors
-from tuxthrottle_gui_widgets import ACCENT_FALLBACK, HistoryChart, RingGauge
+from tuxthrottle_gui_widgets import (
+    ACCENT_FALLBACK,
+    PAD_M,
+    PAD_S,
+    Card,
+    HistoryChart,
+    RingGauge,
+)
+
+# history-chart reference lines (DAMX/CoreCtrl); G15 5515 Ryzen + RTX 3050 Ti
+_CPU_THROTTLE_C = 90
+_DGPU_THROTTLE_C = 87
 
 
 class DashboardTabMixin:
@@ -104,35 +115,41 @@ class DashboardTabMixin:
         self._dash_body = frame
         self._dash_built = True
 
-        gauges = tb.Frame(frame)
-        gauges.pack(fill="x", pady=(0, 18))
         acc = getattr(self, "accent", ACCENT_FALLBACK)
-        # Two rows of four. dGPU/iGPU clock gauges sit next to their temps so a
-        # glance shows whether a chip is boosting or parked.
-        specs = [
+        # DAMX-style: CPU and GPU each get their own card, gauges in a 2x2 grid.
+        cpu_specs = [
             ("meter_cpu_temp",  "CPU temp",   "°C",  100, acc,       "{:.0f}"),
             ("meter_cpu_freq",  "CPU clock",  "GHz", 5.0, "#3fb950", "{:.2f}"),
             ("meter_cpu_power", "CPU power",  "W",    65, acc,       "{:.0f}"),
             ("meter_igpu_freq", "iGPU clock", "MHz", 2000, "#3fb950", "{:.0f}"),
+        ]
+        gpu_specs = [
             ("meter_dgpu_temp", "dGPU temp",  "°C",  100, "#d29922", "{:.0f}"),
             ("meter_dgpu_freq", "dGPU clock", "MHz", 2100, "#d29922", "{:.0f}"),
             ("meter_dgpu_util", "dGPU util",  "%",   100, "#f85149", "{:.0f}"),
             ("meter_dgpu_power","dGPU power", "W",    80, "#d29922", "{:.0f}"),
         ]
-        for i, (attr, cap, unit, mx, col, fmt) in enumerate(specs):
-            g = RingGauge(gauges, caption=cap, unit=unit, maximum=mx,
-                          color=col, fmt=fmt, size=132)
-            g.grid(row=i // 4, column=i % 4, padx=8, pady=6, sticky="n")
-            gauges.columnconfigure(i % 4, weight=1)
-            setattr(self, attr, g)
+        cards = tb.Frame(frame)
+        cards.pack(fill="x", pady=(0, PAD_M))
+        for col, (title, specs) in enumerate((("CPU", cpu_specs), ("GPU", gpu_specs))):
+            card = Card(cards, title)
+            card.grid(row=0, column=col, sticky="nsew", padx=(0, PAD_S) if col == 0 else 0)
+            cards.columnconfigure(col, weight=1)
+            for i, (attr, cap, unit, mx, gcol, fmt) in enumerate(specs):
+                g = RingGauge(card.body, caption=cap, unit=unit, maximum=mx,
+                              color=gcol, fmt=fmt, size=124)
+                g.grid(row=i // 2, column=i % 2, padx=PAD_S, pady=PAD_S, sticky="n")
+                card.body.columnconfigure(i % 2, weight=1)
+                setattr(self, attr, g)
 
         self.rapl_warning = tb.Label(
             frame, text="", bootstyle=WARNING, wraplength=900,
         )
         self.rapl_warning.pack(anchor="w", pady=(0, 12))
 
-        details = tb.Labelframe(frame, text="Details", padding=12)
-        details.pack(fill="x", pady=(0, 12))
+        det_card = Card(frame, "Details")
+        det_card.pack(fill="x", pady=(0, PAD_M))
+        details = det_card.body
         self.dash_cpu_label = tb.Label(details, text="CPU: …", font=("Monospace", 10))
         self.dash_cpu_label.pack(anchor="w")
         self.dash_igpu_label = tb.Label(details, text="iGPU: …", font=("Monospace", 10))
@@ -141,21 +158,26 @@ class DashboardTabMixin:
         self.dash_dgpu_label.pack(anchor="w")
 
         # rolling history strip
-        hist = tb.Labelframe(frame, text="History  (rolling ~3 min)", padding=12)
-        hist.pack(fill="x", pady=(0, 12))
-        hgrid = tb.Frame(hist); hgrid.pack(fill="x")
+        hist_card = Card(frame, "History", icon="∿")
+        hist_card.pack(fill="x", pady=(0, PAD_M))
+        tb.Label(hist_card.body, text="rolling ~3 min", bootstyle=SECONDARY,
+                 font=("Sans", 9)).pack(anchor="w", pady=(0, PAD_S))
+        hgrid = tb.Frame(hist_card.body)
+        hgrid.pack(fill="x")
         self._hist_charts = {}
-        for i, (key, cap, unit, col) in enumerate([
-            ("cpu_temp",  "CPU °C",   "",  acc),
-            ("cpu_power", "CPU W",    "",  acc),
-            ("dgpu_temp", "dGPU °C",  "",  "#d29922"),
-            ("dgpu_power","dGPU W",   "",  "#d29922"),
+        for i, (key, cap, unit, col, thr) in enumerate([
+            ("cpu_temp",  "CPU °C",   "",  acc,       [(_CPU_THROTTLE_C, "#f85149", "throttle")]),
+            ("cpu_power", "CPU W",    "",  acc,       []),
+            ("dgpu_temp", "dGPU °C",  "",  "#d29922", [(_DGPU_THROTTLE_C, "#f85149", "throttle")]),
+            ("dgpu_power","dGPU W",   "",  "#d29922", []),
         ]):
-            c = HistoryChart(hgrid, caption=cap, unit=unit, color=col, samples=90)
+            c = HistoryChart(hgrid, caption=cap, unit=unit, color=col, samples=90,
+                             thresholds=thr)
             c.grid(row=i // 2, column=i % 2, sticky="ew", padx=6, pady=4)
             hgrid.columnconfigure(i % 2, weight=1)
             self._hist_charts[key] = c
-        logrow = tb.Frame(hist); logrow.pack(anchor="w", pady=(6, 0))
+        logrow = tb.Frame(hist_card.body)
+        logrow.pack(anchor="w", pady=(6, 0))
         tb.Checkbutton(logrow, text="Log this session to CSV",
                        variable=self._csv_logging, bootstyle="round-toggle",
                        command=self._toggle_csv_log).pack(side="left")
@@ -163,8 +185,9 @@ class DashboardTabMixin:
                                       font=("Monospace", 8))
         self._csv_path_lbl.pack(side="left", padx=10)
 
-        toggle_frame = tb.Labelframe(frame, text="Game Mode", padding=16)
-        toggle_frame.pack(fill="x")
+        gm_card = Card(frame, "Game Mode", icon="♞")
+        gm_card.pack(fill="x")
+        toggle_frame = gm_card.body
         row = tb.Frame(toggle_frame)
         row.pack(fill="x")
         tb.Checkbutton(
@@ -267,6 +290,9 @@ class DashboardTabMixin:
                     ch = self._hist_charts.get(k)
                     if ch is not None and v is not None:
                         ch.push(v)
+                if stapm_limit and self._hist_charts.get("cpu_power"):
+                    self._hist_charts["cpu_power"].set_thresholds(
+                        [(stapm_limit, "#d29922", "STAPM cap")])
                 if self._csv_writer is not None:
                     try:
                         self._csv_writer.writerow([
