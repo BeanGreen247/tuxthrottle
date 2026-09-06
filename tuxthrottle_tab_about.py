@@ -154,7 +154,7 @@ class AboutTabMixin:
         self._theme_var = tk.StringVar(value=cur)
         tb.Label(row, text="Theme").pack(side="left", padx=(0, 8))
         om = tb.OptionMenu(row, self._theme_var, cur, *PALETTES.keys(),
-                           command=self._on_theme_pick, bootstyle=INFO)
+                           command=self._on_theme_pick, bootstyle=(SECONDARY, "outline"))
         om.pack(side="left")
         self._theme_hint = tb.Label(b, bootstyle=WARNING, text="")
         self._theme_hint.pack(anchor="w", pady=(6, 0))

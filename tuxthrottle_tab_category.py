@@ -90,10 +90,10 @@ class CategoryTabMixin:
         self._rec_all_lbl.pack(anchor="w", pady=(4, 0))
 
         for preset_id, data in self.presets.items():
-            box = tb.Frame(frame, padding=14, bootstyle="secondary")
+            box = Card(frame, data["Content"], icon="★")
             box.pack(fill="x", pady=6)
-            tb.Label(box, text=data["Content"], font=("Sans", 12, "bold")).pack(anchor="w")
-            tb.Label(box, text=data["Description"], wraplength=900, bootstyle=SECONDARY).pack(anchor="w", pady=(2, 8))
+            tb.Label(box, text=data["Description"], wraplength=900,
+                     bootstyle=SECONDARY).pack(anchor="w", pady=(0, 8))
             self._tip(tb.Button(
                 box, text="Apply This Preset", bootstyle=SUCCESS,
                 command=lambda pid=preset_id: self._on_apply_preset(pid)),

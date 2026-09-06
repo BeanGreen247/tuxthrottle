@@ -136,8 +136,7 @@ class FanTabMixin:
                   "so it still happens even if you close the app.").pack(side="left", padx=(12, 4))
 
         if sensors.get_pwm_state():
-            adv = tb.Labelframe(frame, text="Manual PWM — advanced / risky",
-                                bootstyle=DANGER, padding=12)
+            adv = Card(frame, "Manual PWM — advanced / risky", border="danger")
             adv.pack(fill="x", pady=(14, 6))
             tb.Checkbutton(adv, variable=self._fan_manual, bootstyle="round-toggle",
                            text="Enable manual PWM control (takes the EC off its "

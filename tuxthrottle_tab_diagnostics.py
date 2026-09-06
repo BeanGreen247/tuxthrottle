@@ -19,6 +19,7 @@ from tuxthrottle_diag import (
     collect_hw_bundle,
     wrap_issue_block,
 )
+from tuxthrottle_gui_widgets import Card
 
 
 class DiagnosticsTabMixin:
@@ -75,10 +76,12 @@ class DiagnosticsTabMixin:
                  text="  — raw sysfs / DMI / evdev-keycaps / hwmon / PCI / OpenRGB dumps; "
                       "attach the file to a “new hardware support” issue").pack(side="left", padx=6)
 
-        box = tb.Labelframe(
-            frame, padding=10, bootstyle=WARNING,
-            text="  ⧉  GITHUB ISSUE BLOCK — “Copy for GitHub issue” copies exactly what's "
-                 "in here (a collapsible <details> block); paste it straight into the issue  ")
+        box = Card(
+            frame, "⧉  GITHUB ISSUE BLOCK", border="warning", icon="")
+        tb.Label(box, bootstyle=SECONDARY, wraplength=1100, justify="left",
+                 text="“Copy for GitHub issue” copies exactly what's in here (a "
+                      "collapsible <details> block); paste it straight into the "
+                      "issue.").pack(anchor="w", pady=(0, 6))
         box.pack(fill="both", expand=True, pady=(4, 0))
         self._diag_text = self._make_log_text(box)
         self._diag_text.configure(height=28)

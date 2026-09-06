@@ -55,7 +55,8 @@ class UpdatesTabMixin:
                       ).pack(side="left", padx=4, pady=4)
 
         def section(title, style):
-            lf = tb.Labelframe(frame, text=title, bootstyle=style, padding=12)
+            lf = Card(frame, title,
+                      border=style if style in ("success", "warning", "danger") else None)
             lf.pack(fill="x", pady=6)
             row = tb.Frame(lf); row.pack(anchor="w")
             return row

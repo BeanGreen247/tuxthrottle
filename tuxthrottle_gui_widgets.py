@@ -339,6 +339,17 @@ def apply_bios_style(style: tb.Style, accent: str, theme_name: str = "BIOS Dark"
         "Card.TFrame": {"background": BIOS_PANEL, "bordercolor": BIOS_BORDER,
                         "darkcolor": BIOS_BORDER, "lightcolor": BIOS_BORDER,
                         "relief": "solid", "borderwidth": 1},
+        # coloured-border variants — for a section that needs a semantic edge
+        # (risky = danger, firmware = warning, …). Card(parent, t, border="danger")
+        "CardDanger.TFrame": {"background": BIOS_PANEL, "bordercolor": SEM_DANGER,
+                              "darkcolor": SEM_DANGER, "lightcolor": SEM_DANGER,
+                              "relief": "solid", "borderwidth": 1},
+        "CardWarning.TFrame": {"background": BIOS_PANEL, "bordercolor": SEM_WARNING,
+                               "darkcolor": SEM_WARNING, "lightcolor": SEM_WARNING,
+                               "relief": "solid", "borderwidth": 1},
+        "CardSuccess.TFrame": {"background": BIOS_PANEL, "bordercolor": SEM_SUCCESS,
+                               "darkcolor": SEM_SUCCESS, "lightcolor": SEM_SUCCESS,
+                               "relief": "solid", "borderwidth": 1},
         "CardRow.TFrame": {"background": BIOS_PANEL, "borderwidth": 0, "relief": "flat"},
         "Card.TLabel": {"background": BIOS_PANEL, "foreground": BIOS_FG},
         "CardKey.TLabel": {"background": BIOS_PANEL, "foreground": accent_txt_hi,
@@ -573,9 +584,12 @@ class Card(tb.Frame):
     since a container can't mix pack and grid. `icon` defaults to a glyph
     from the title; pass `icon=""` to suppress it."""
 
-    def __init__(self, master, title="", *, icon=None, **kw):
+    _BORDER_STYLE = {"danger": "CardDanger.TFrame", "warning": "CardWarning.TFrame",
+                     "success": "CardSuccess.TFrame"}
+
+    def __init__(self, master, title="", *, icon=None, border=None, **kw):
         kw.setdefault("padding", PAD_M)
-        super().__init__(master, style="Card.TFrame", **kw)
+        super().__init__(master, style=self._BORDER_STYLE.get(border, "Card.TFrame"), **kw)
         if title:
             head = tb.Frame(self, style="CardRow.TFrame")
             head.pack(fill="x", pady=(0, PAD_S))
@@ -606,9 +620,9 @@ class Segmented(tb.Frame):
         self._btns = {}
         for opt in options:
             label, value = opt if isinstance(opt, (tuple, list)) else (opt, opt)
-            b = tb.Button(self, text=label, bootstyle="toolbutton", takefocus=False,
+            b = tb.Button(self, text=label, takefocus=False,
                           command=lambda v=value: self._pick(v))
-            b.pack(side="left", padx=(0, 2))
+            b.pack(side="left", padx=(0, 3))
             self._btns[value] = b
         self._sync()
 
@@ -621,7 +635,10 @@ class Segmented(tb.Frame):
     def _sync(self):
         cur = self._var.get()
         for value, b in self._btns.items():
-            b.configure(bootstyle="toolbutton" if value != cur else ("info", "toolbutton"))
+            # active = solid accent fill; inactive = quiet outline. A clear,
+            # unmistakable selected state (the toolbutton style was too subtle
+            # on the dark panels).
+            b.configure(bootstyle="info" if value == cur else "secondary-outline")
 
 
 class SidebarNav(tb.Frame):
