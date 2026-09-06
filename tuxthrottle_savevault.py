@@ -30,7 +30,11 @@ from pathlib import Path
 
 # shared Steam-library / prefix helpers
 from tuxthrottle_prefix_relocate import (
-    all_prefixes, appid_name, library_for_appid, steam_root, steam_running,
+    all_prefixes,
+    appid_name,
+    library_for_appid,
+    steam_root,
+    steam_running,
 )
 
 # folders under pfx/drive_c/users/steamuser/ worth backing up (save/config

@@ -57,8 +57,9 @@ c_info "Uninstalling TuxThrottle${U:+ (user: $U)}$([[ $DO_PURGE -eq 1 ]] && echo
 echo
 
 # ---- stop anything the tool has running --------------------------------
-pkill -f 'tuxthrottle_kbd.py .*-wave' 2>/dev/null || true
 pkill -f 'tuxthrottle.py'     2>/dev/null || true
+# legacy: pre-single-zone versions ran software keyboard-wave daemons
+pkill -f 'tuxthrottle_kbd.py .*-wave' 2>/dev/null || true
 [[ -n "$UHOME" && -f "$UHOME/.config/tuxthrottle/fx.pid" ]] && \
     kill "$(cat "$UHOME/.config/tuxthrottle/fx.pid" 2>/dev/null)" 2>/dev/null || true
 

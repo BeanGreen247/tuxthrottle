@@ -1,0 +1,77 @@
+name: COPR build
+
+# Build a source RPM on every version tag and hand it to COPR.
+# Requires two repo secrets:
+#   COPR_CONFIG   - the contents of ~/.config/copr (the API token block from
+#                   https://copr.fedorainfracloud.org/api/)
+#   COPR_PROJECT  - e.g. "beangreen247/tuxthrottle"
+# Manual runs are allowed too (workflow_dispatch) for a one-off rebuild.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "git ref to build (tag/branch/sha)"
+        default: "main"
+
+jobs:
+  srpm-and-copr:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:43
+    steps:
+      - name: Install build tooling
+        run: dnf -y install git rpm-build rpmdevtools copr-cli
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Derive version
+        id: ver
+        run: |
+          desc=$(git describe --tags --always 2>/dev/null || echo 0.1.0)
+          tag=${GITHUB_REF_NAME:-main}
+          # v1.2.3 -> 1.2.3 ; otherwise a date+sha snapshot version
+          if [[ "$tag" =~ ^v([0-9].*)$ ]]; then
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "release=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.1.0" >> "$GITHUB_OUTPUT"
+            echo "release=0.$(date +%Y%m%d).git$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+          echo "gittag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Build SRPM
+        run: |
+          rpmdev-setuptree
+          tarball="$HOME/rpmbuild/SOURCES/tuxthrottle-${{ steps.ver.outputs.gittag }}.tar.gz"
+          git archive --format=tar.gz \
+            --prefix="tuxthrottle-${{ steps.ver.outputs.gittag }}/" \
+            -o "$tarball" HEAD
+          rpmbuild -bs packaging/tuxthrottle.spec \
+            --define "_version ${{ steps.ver.outputs.version }}" \
+            --define "_release ${{ steps.ver.outputs.release }}" \
+            --define "_gittag ${{ steps.ver.outputs.gittag }}"
+          ls -l "$HOME"/rpmbuild/SRPMS/
+
+      - name: Submit to COPR
+        if: ${{ env.COPR_CONFIG != '' }}
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+          COPR_PROJECT: ${{ secrets.COPR_PROJECT }}
+        run: |
+          mkdir -p ~/.config
+          printf '%s\n' "$COPR_CONFIG" > ~/.config/copr
+          copr-cli build "${COPR_PROJECT:-beangreen247/tuxthrottle}" \
+            "$HOME"/rpmbuild/SRPMS/*.src.rpm
+
+      - name: Upload SRPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuxthrottle-srpm
+          path: ~/rpmbuild/SRPMS/*.src.rpm

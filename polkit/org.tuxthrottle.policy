@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>TuxThrottle</vendor>
+  <vendor_url>https://github.com/BeanGreen247/tuxthrottle</vendor_url>
+  <action id="org.tuxthrottle.manage">
+    <description>Manage TuxThrottle power, fan and profile settings</description>
+    <message>Authentication is required to change TuxThrottle hardware settings</message>
+    <icon_name>input-keyboard</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/bin/tuxthrottlectl</annotate>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+</policyconfig>

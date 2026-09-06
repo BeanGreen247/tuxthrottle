@@ -1,6 +1,5 @@
 import tuxthrottle_powerd as pd
 
-
 CURVE = [[45, 0], [60, 25], [72, 55], [82, 85], [90, 100]]
 
 
@@ -122,3 +121,135 @@ def test_gameprofile_wildcard_needs_gamemode(monkeypatch):
     gc.tick({"game_profiles": {"enabled": True, "match": {"*": "Performance"}, "default": None}})
     assert gc._active_key == "*"
     assert applied
+
+
+def test_session_summary_written_on_game_exit(monkeypatch, tmp_path):
+    monkeypatch.setattr(pd, "_running_procs", lambda: {"gta5.exe"})
+    monkeypatch.setattr(pd.profiles, "snapshot", lambda *a, **k: None)
+    monkeypatch.setattr(pd.profiles, "load_profile", lambda n, u=None: {"x": 1})
+    monkeypatch.setattr(pd.profiles, "apply_state",
+                        lambda st, u=None: [{"key": "x", "ok": True, "msg": ""}])
+    monkeypatch.setattr(pd.profiles, "rollback", lambda t, u=None: [])
+    monkeypatch.setattr(pd, "_session_path", lambda u: tmp_path / "last_session.json")
+    monkeypatch.setattr(pd, "_chown_user", lambda p, u: None)
+    monkeypatch.setattr(pd.sensors, "read_ryzenadj_info", lambda: {"tctl_value": 92.0})
+    monkeypatch.setattr(pd.sensors, "read_cpu_power_watts", lambda: 55.0)
+    monkeypatch.setattr(pd.sensors, "read_cpu_freq_ghz_value", lambda: 3.8)
+    monkeypatch.setattr(pd.sensors, "read_dgpu_values", lambda: (1650, 70, 80, 60.0))
+    gc = pd.GameProfileController("bean")
+    cfg = {"game_profiles": {"enabled": True, "match": {"gta5.exe": "Gaming"},
+                             "default": None, "poll_s": 6}}
+    for _ in range(4):
+        gc.tick(cfg)                       # game running -> samples
+    monkeypatch.setattr(pd, "_running_procs", lambda: set())
+    gc.tick(cfg)                            # game exits -> writes summary
+    import json
+    s = json.loads((tmp_path / "last_session.json").read_text())
+    assert s["game"] == "gta5.exe"
+    assert s["cpu_temp_max_c"] == 92
+    assert s["gpu_temp_max_c"] == 70
+    assert s["throttle_pct"] == 100        # tctl 92 >= 90 every sample
+
+
+def test_thermal_fan_stall_recover(monkeypatch):
+    tw = pd.ThermalWatcher("bean")
+    set_calls = []
+    monkeypatch.setattr(pd.sensors, "get_platform_profile", lambda: "balanced")
+    monkeypatch.setattr(pd.sensors, "set_platform_profile",
+                        lambda p: set_calls.append(p) or (True, ""))
+    monkeypatch.setattr(pd.sensors, "read_ryzenadj_info", lambda: {"tctl_value": 60})
+    monkeypatch.setattr(pd.sensors, "read_fans",
+                        lambda: [{"index": 1, "label": "CPU Fan", "rpm": 0}])
+    monkeypatch.setattr(pd, "read_temp", lambda s: 85.0)
+    monkeypatch.setattr(pd, "_ac_online", lambda: True)
+    cfg = {"thermal_notify": {"enabled": True, "stalled_fan_hot_c": 70,
+                              "stalled_fan_recover": True, "stalled_fan_recover_s": 45}}
+    tw.tick(cfg)
+    assert set_calls == ["performance"]     # kicked G-Mode
+    assert tw._recover_prev == "balanced"
+    # fans come back, recovery window elapsed -> restore
+    monkeypatch.setattr(pd.sensors, "read_fans",
+                        lambda: [{"index": 1, "label": "CPU Fan", "rpm": 3200}])
+    tw._recover_until = 0.0
+    tw.tick(cfg)
+    assert set_calls == ["performance", "balanced"]
+    assert tw._recover_prev is None
+
+
+# --- time-of-day schedule -----------------------------------------------------
+
+def test_hhmm_to_min():
+    assert pd._hhmm_to_min("00:00") == 0
+    assert pd._hhmm_to_min("22:30") == 22 * 60 + 30
+    assert pd._hhmm_to_min("7:05") == 7 * 60 + 5
+    assert pd._hhmm_to_min("nope") is None
+    assert pd._hhmm_to_min(None) is None
+
+
+class _Clock:
+    def __init__(self, hh, mm, wday=2):
+        import time as _t
+        self._st = _t.struct_time((2026, 9, 1, hh, mm, 0, wday, 244, -1))
+
+    def __call__(self):
+        return self._st
+
+
+def _sched(monkeypatch, hh, mm, wday=2):
+    applied = []
+    monkeypatch.setattr(pd, "_apply_bundle_or_profile",
+                        lambda name, user: applied.append(name))
+    monkeypatch.setattr(pd.time, "localtime", _Clock(hh, mm, wday))
+    return pd.ScheduleController(user=None), applied
+
+
+CFG = {"schedule": {"enabled": True, "poll_s": 0,
+                    "rules": [{"from": "22:00", "to": "07:00", "apply": "Quiet"}],
+                    "outside": "Balanced"}}
+
+
+def test_schedule_overnight_rule_active_before_midnight(monkeypatch):
+    sc, applied = _sched(monkeypatch, 23, 30)
+    sc.tick(CFG, game_active=False)
+    assert applied == ["Quiet"]
+
+
+def test_schedule_overnight_rule_active_after_midnight(monkeypatch):
+    sc, applied = _sched(monkeypatch, 3, 0)
+    sc.tick(CFG, game_active=False)
+    assert applied == ["Quiet"]
+
+
+def test_schedule_outside_rule_daytime(monkeypatch):
+    sc, applied = _sched(monkeypatch, 12, 0)
+    sc.tick(CFG, game_active=False)
+    assert applied == ["Balanced"]
+
+
+def test_schedule_only_applies_on_change(monkeypatch):
+    sc, applied = _sched(monkeypatch, 12, 0)
+    sc.tick(CFG, game_active=False)
+    sc.tick(CFG, game_active=False)
+    assert applied == ["Balanced"]
+
+
+def test_schedule_yields_to_game(monkeypatch):
+    sc, applied = _sched(monkeypatch, 12, 0)
+    sc.tick(CFG, game_active=True)
+    assert applied == []
+
+
+def test_schedule_days_filter(monkeypatch):
+    cfg = {"schedule": {"enabled": True, "poll_s": 0,
+                        "rules": [{"from": "09:00", "to": "17:00",
+                                   "apply": "Performance", "days": [0, 1, 2, 3, 4]}],
+                        "outside": "Quiet"}}
+    sc, applied = _sched(monkeypatch, 12, 0, wday=6)   # Sunday
+    sc.tick(cfg, game_active=False)
+    assert applied == ["Quiet"]
+
+
+def test_schedule_disabled_noop(monkeypatch):
+    sc, applied = _sched(monkeypatch, 3, 0)
+    sc.tick({"schedule": {"enabled": False}}, game_active=False)
+    assert applied == []

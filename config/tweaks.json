@@ -271,15 +271,15 @@
   },
   "MangoHudGlobalToggle": {
     "Content": "Install MangoHud Global On/Off Scripts",
-    "Description": "Turns MangoHud into a system-wide overlay instead of something you paste into each game's Steam launch options one at a time. Installs 'mangohud-global-on'/'mangohud-global-off', which write/remove ~/.config/environment.d/mangohud.conf (MANGOHUD=1 + LD_PRELOAD for the rare pure-OpenGL title \u2014 Vulkan games pick it up via the implicit-layer 'enable_environment' mechanism from MANGOHUD=1 alone, no LD_PRELOAD needed there). Takes effect on next login (or next Steam/game launch after restarting your session) since it's a systemd environment.d file, not a live env var. Once active, MangoHud's own in-game keybind (Shift_R+F12 by default) shows/hides the overlay display without disabling the underlying hook. Requires the GameModeMangoHud app installed first.",
+    "Description": "Turns MangoHud into a system-wide overlay instead of something you paste into each game's Steam launch options one at a time. Installs 'mangohud-global-on'/'mangohud-global-off', which write/remove ~/.config/environment.d/mangohud.conf with just MANGOHUD=1 \u2014 Vulkan games pick up the overlay via the implicit-layer 'enable_environment' mechanism from that alone. NO global LD_PRELOAD: an LD_PRELOAD of libMangoHud.so forces the overlay layer into KWin and Plasma too, and editing the MangoHud config from this app then crashes the desktop session (KWin SIGABRT, tray loses the power/battery applets). Takes effect on next login since it's a systemd environment.d file, not a live env var. Once active, MangoHud's own in-game keybind (Shift_R+F12 by default) shows/hides the overlay. Requires the GameModeMangoHud app installed first.",
     "category": "Gaming",
     "risk": "safe",
     "check": "test -f /home/{USER}/.config/environment.d/mangohud.conf",
     "apply": [
       "mkdir -p /home/{USER}/.config/environment.d",
-      "printf 'MANGOHUD=1\\nLD_PRELOAD=/usr/lib64/mangohud/libMangoHud.so\\n' > /home/{USER}/.config/environment.d/mangohud.conf",
+      "printf 'MANGOHUD=1\\n' > /home/{USER}/.config/environment.d/mangohud.conf",
       "chown {USER}:{USER} /home/{USER}/.config/environment.d/mangohud.conf",
-      "cat > /usr/local/bin/mangohud-global-on <<'SCRIPT'\n#!/usr/bin/env bash\nmkdir -p ~/.config/environment.d\ncat > ~/.config/environment.d/mangohud.conf <<'CONF'\nMANGOHUD=1\nLD_PRELOAD=/usr/lib64/mangohud/libMangoHud.so\nCONF\necho 'MangoHud enabled globally - log out/in (or relaunch Steam) for it to apply to new games.'\nSCRIPT",
+      "cat > /usr/local/bin/mangohud-global-on <<'SCRIPT'\n#!/usr/bin/env bash\nmkdir -p ~/.config/environment.d\ncat > ~/.config/environment.d/mangohud.conf <<'CONF'\nMANGOHUD=1\nCONF\necho 'MangoHud enabled globally (MANGOHUD=1, no LD_PRELOAD) - log out/in for it to apply to new games.'\nSCRIPT",
       "cat > /usr/local/bin/mangohud-global-off <<'SCRIPT'\n#!/usr/bin/env bash\nrm -f ~/.config/environment.d/mangohud.conf\necho 'MangoHud global toggle removed - log out/in (or relaunch Steam) for it to fully clear.'\nSCRIPT",
       "chmod +x /usr/local/bin/mangohud-global-on /usr/local/bin/mangohud-global-off"
     ],
@@ -591,6 +591,75 @@
     ],
     "recommended": true
   },
+  "KdePanelFlush": {
+    "Content": "KDE: panel flush to the screen edge (no floating gap)",
+    "Description": "Turns off the Plasma 6 \"floating panel\" behaviour so the bottom panel stays pinned flush to the screen edge instead of lifting a few millimetres away from it when no window is maximised (the r/Fedora 'taskbar isn't flush' behaviour). Sets floating false on every org.kde.panel containment in plasma-org.kde.plasma.desktop-appletsrc AND floating=0 on the matching [PlasmaViews][Panel N] group in plasmashellrc (the one that actually drives the gap), then restarts plasmashell so it applies (the panel reloads for ~2 s). Reversible (back to floating).",
+    "category": "KDE (Desktop GUI Tweaks)",
+    "risk": "safe",
+    "check": "! grep -q \"^floating=1$\" /home/{USER}/.config/plasmashellrc 2>/dev/null && grep -q \"^floating=false$\" /home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null",
+    "apply": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py panel-floating off"
+    ],
+    "undo": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py panel-floating on"
+    ]
+  },
+  "KdeAutoShowBattery": {
+    "Content": "KDE: always show the Battery & Brightness tray icon",
+    "Description": "Pins the Battery and Brightness widget to \"Always shown\" in the system tray instead of letting Plasma auto-hide it in the pop-up overflow — so the charge %, AC/battery state and the brightness slider are one click away, and it reappears immediately if plasmashell restarts. Adds org.kde.plasma.battery to shownItems (and removes it from hiddenItems) on every system-tray applet in plasma-org.kde.plasma.desktop-appletsrc, then restarts plasmashell (panel reloads ~2 s). `undo` puts it back to automatic.",
+    "category": "KDE (Desktop GUI Tweaks)",
+    "risk": "safe",
+    "check": "grep -qE \"^shownItems=.*org\\.kde\\.plasma\\.battery\" /home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null",
+    "apply": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py battery-tray on"
+    ],
+    "undo": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py battery-tray off"
+    ],
+    "recommended": true
+  },
+  "KdeLauncherPowerButtons": {
+    "Content": "KDE: restore Sleep / Restart / Shut Down in the app launcher",
+    "Description": "The application launcher's footer sometimes ends up with only a Log Out button (a Plasma favorites-migration glitch, and switching to the classic menu commonly triggers it). This sets the full session/power row — Sleep, Hibernate, Restart, Shut Down, Lock, Log Out, Save Session, Switch User — on every Kickoff / Kicker / Application Dashboard applet. Kickoff reads `systemFavorites`; the classic Kicker menu reads a different key, `favoriteSystemActions` — this writes BOTH (and drops `favoritesPortedToKAstats` so Kicker actually reloads the row). plasmashell is stopped before the edit (it owns these keys and would write the old value back on exit) and restarted after (panel reloads ~2 s). `undo` clears the overrides, back to the Plasma default.",
+    "category": "KDE (Desktop GUI Tweaks)",
+    "risk": "safe",
+    "check": "f=/home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc; for k in systemFavorites favoriteSystemActions; do grep -qE \"^$k=\" \"$f\" 2>/dev/null && ! grep -qE \"^$k=.*(shutdown|reboot)\" \"$f\" 2>/dev/null && exit 1; done; exit 0",
+    "apply": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py launcher-power on"
+    ],
+    "undo": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py launcher-power off"
+    ],
+    "recommended": true
+  },
+  "KdeKwalletOff": {
+    "Content": "KDE: disable KWallet (password wallet / GPG-SSH passphrase prompts)",
+    "Description": "Turns KWallet off entirely (kwalletrc [Wallet] Enabled=false + First Use=false) and stops the running kwalletd. KWallet is the KDE secret store that pops the 'unlock your wallet' dialog at login and caches GPG / SSH key passphrases and app secrets (Chromium, KMail, network passwords) behind it — this removes that prompt. Apps then fall back to their own storage (or an unencrypted plaintext store, or asking each time), so only apply this if the login-time wallet prompt bothers you more than per-app secret storage does. Fully reversible: undo deletes the keys (KWallet re-enables itself on next use). Takes effect next login; the current session's kwalletd is killed so it stops prompting now.",
+    "category": "KDE (Desktop GUI Tweaks)",
+    "risk": "safe",
+    "check": "[ \"$(sudo -u {USER} -H kreadconfig6 --file kwalletrc --group Wallet --key Enabled 2>/dev/null)\" = \"false\" ]",
+    "apply": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus bash -lc 'command -v kwriteconfig6 >/dev/null 2>&1 || { echo \"TuxThrottle: this tweak needs KDE Plasma 6\"; exit 1; }; kwriteconfig6 --file kwalletrc --group Wallet --key Enabled false; kwriteconfig6 --file kwalletrc --group Wallet --key \"First Use\" false; { kquitapp6 kwalletd6 || kquitapp6 kwalletd5 || pkill -x kwalletd6 || pkill -x kwalletd5 || pkill -x kwalletd; } >/dev/null 2>&1 || true'"
+    ],
+    "undo": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus bash -lc 'command -v kwriteconfig6 >/dev/null 2>&1 || { echo \"TuxThrottle: this tweak needs KDE Plasma 6\"; exit 1; }; kwriteconfig6 --file kwalletrc --group Wallet --key Enabled --delete; kwriteconfig6 --file kwalletrc --group Wallet --key \"First Use\" --delete'"
+    ],
+    "recommended": true
+  },
+  "KdeMetaKeyOff": {
+    "Content": "KDE: disable the Meta (Super / Win) key opening the launcher",
+    "Description": "Stops a lone tap of the Meta / Super / Windows key from opening the application launcher (kwinrc [ModifierOnlyShortcuts] Meta=\"\"). The classic 'the Win key yanked me out of my fullscreen game' fix — every Meta+<key> combo shortcut still works, only the press-and-release-alone action is removed. Reloads KWin live. Reversible (restores the default launcher binding).",
+    "category": "KDE (Desktop GUI Tweaks)",
+    "risk": "safe",
+    "recommended": true,
+    "check": "[ \"$(sudo -u {USER} -H kreadconfig6 --file kwinrc --group ModifierOnlyShortcuts --key Meta --default __UNSET__ 2>/dev/null)\" = \"\" ]",
+    "apply": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus bash -lc 'command -v kwriteconfig6 >/dev/null 2>&1 || { echo \"TuxThrottle: this tweak needs KDE Plasma 6\"; exit 1; }; kwriteconfig6 --file kwinrc --group ModifierOnlyShortcuts --key Meta \"\"; { qdbus-qt6 org.kde.KWin /KWin reconfigure || qdbus org.kde.KWin /KWin reconfigure || dbus-send --session --type=method_call --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure; } >/dev/null 2>&1 || true'"
+    ],
+    "undo": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus bash -lc 'command -v kwriteconfig6 >/dev/null 2>&1 || { echo \"TuxThrottle: this tweak needs KDE Plasma 6\"; exit 1; }; kwriteconfig6 --file kwinrc --group ModifierOnlyShortcuts --key Meta --delete; { qdbus-qt6 org.kde.KWin /KWin reconfigure || qdbus org.kde.KWin /KWin reconfigure || dbus-send --session --type=method_call --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure; } >/dev/null 2>&1 || true'"
+    ]
+  },
   "DesktopLauncher": {
     "Content": "Add to the application menu",
     "Description": "Installs a .desktop entry (with the flaming-gauge icon) into your application menu / launcher so you can start the Toolkit without a terminal. Points at wherever this repo currently lives. Reversible.",
@@ -688,6 +757,35 @@
       "systemctl daemon-reload"
     ]
   },
+  "NvidiaClockLock": {
+    "Content": "NVIDIA GPU clock-lock persistence",
+    "Description": "Lets the Power & Limits tab clamp the RTX 3050 Ti's graphics clock (nvidia-smi --lock-gpu-clocks) \u2014 the one GPU lever that still works when the board power limit is firmware-locked, so you can under-clock the dGPU for heat / battery. Installs tuxthrottle-nvclk + a boot service and a systemd-sleep hook that re-apply ~/.config/tuxthrottle/nvclk.json (gr_min/gr_max MHz) after a reboot or resume, plus a scoped sudoers rule. Requires the NVIDIA driver. Reversible (clears the lock).",
+    "category": "GPU",
+    "risk": "advanced",
+    "requires_vendor": "nvidia",
+    "check": "test -x /usr/local/bin/tuxthrottle-nvclk && systemctl is-enabled tuxthrottle-nvclk.service 2>/dev/null | grep -q enabled",
+    "reinstall_if": [
+      "/etc/systemd/system/tuxthrottle-nvclk.service"
+    ],
+    "apply": [
+      "cat > /usr/local/bin/tuxthrottle-nvclk <<'SCRIPT'\n#!/usr/bin/env bash\n# Re-apply a saved dGPU graphics-clock lock from nvclk.json (MHz).\nF=\"${1:-/home/{USER}/.config/tuxthrottle/nvclk.json}\"\ncommand -v nvidia-smi >/dev/null 2>&1 || exit 0\n[ -r \"$F\" ] || exit 0\nMN=$(grep -oE '\"gr_min\"[ ]*:[ ]*[0-9]+' \"$F\" | grep -oE '[0-9]+$')\nMX=$(grep -oE '\"gr_max\"[ ]*:[ ]*[0-9]+' \"$F\" | grep -oE '[0-9]+$')\n[ -n \"$MX\" ] || exit 0\n[ -n \"$MN\" ] || MN=$MX\nnvidia-smi -pm 1 >/dev/null 2>&1 || true\nnvidia-smi --lock-gpu-clocks=\"${MN},${MX}\" >/dev/null 2>&1 || true\nexit 0\nSCRIPT",
+      "chmod +x /usr/local/bin/tuxthrottle-nvclk",
+      "cat > /etc/systemd/system/tuxthrottle-nvclk.service <<'UNIT'\n[Unit]\nDescription=Re-apply saved NVIDIA GPU clock lock (TuxThrottle)\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/local/bin/tuxthrottle-nvclk\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-nvclk <<'HOOK'\n#!/usr/bin/env bash\n[ \"$1\" = post ] && /usr/local/bin/tuxthrottle-nvclk || true\nHOOK",
+      "chmod +x /usr/lib/systemd/system-sleep/tuxthrottle-nvclk",
+      "printf '{USER} ALL=(root) NOPASSWD: /usr/local/bin/tuxthrottle-nvclk\\n' > /etc/sudoers.d/tuxthrottle-nvclk",
+      "chmod 0440 /etc/sudoers.d/tuxthrottle-nvclk",
+      "visudo -c -f /etc/sudoers.d/tuxthrottle-nvclk",
+      "systemctl daemon-reload",
+      "systemctl enable --now tuxthrottle-nvclk.service || true"
+    ],
+    "undo": [
+      "systemctl disable --now tuxthrottle-nvclk.service 2>/dev/null || true",
+      "command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi --reset-gpu-clocks >/dev/null 2>&1 || true",
+      "rm -f /etc/systemd/system/tuxthrottle-nvclk.service /usr/local/bin/tuxthrottle-nvclk /usr/lib/systemd/system-sleep/tuxthrottle-nvclk /etc/sudoers.d/tuxthrottle-nvclk",
+      "systemctl daemon-reload"
+    ]
+  },
   "GameModeBridge": {
     "Content": "Feral GameMode \u2192 Game Mode bridge",
     "Description": "Installs Feral gamemode and wires its start/end hooks to the gaming-performance / gaming-balanced scripts, so launching any game with 'gamemoderun %command%' (or a Lutris/Heroic/Steam that requests GameMode) automatically flips the performance platform_profile + fan slam, and drops back when you quit. Also sets a sensible renice/softrealtime. Requires the PowerProfileScripts tweak first. Reversible.",
@@ -705,8 +803,8 @@
     "recommended": true
   },
   "FanCurveDaemon": {
-    "Content": "Fan-curve + AC-switch daemon",
-    "Description": "Runs tuxthrottle_powerd.py as a systemd service: a closed-loop fan curve (temperature \u2192 additive alienware-wmi fan boost, on the curve you draw in the Fans tab, with cool-down hysteresis) and optional AC/battery auto-switching (applies a platform_profile + ryzenadj TDP bundle when the charger is plugged/pulled). The daemon only ever ADDS airflow over the firmware curve \u2014 it can't stop a fan \u2014 and restores fully automatic control when stopped. Reads ~/.config/tuxthrottle/powerd.json live (edit it from the Fans / Power & Limits tabs). Reversible.",
+    "Content": "Fan-curve + AC-switch + thermal-alert daemon (+ control socket)",
+    "Description": "Runs tuxthrottle_powerd.py as a systemd service: a closed-loop fan curve (temperature \u2192 additive alienware-wmi fan boost, on the curve you draw in the Fans tab, with cool-down hysteresis), optional AC/battery auto-switching (applies a platform_profile + ryzenadj TDP bundle when the charger is plugged/pulled), per-game auto-profiles, thermal-event notifications (sustained Tjmax / a stalled fan while hot / Performance on low battery \u2192 notify-send + a journal line, config block thermal_notify), and a root-only control socket at /run/tuxthrottle/control.sock so the GUI and tuxthrottlectl route hardware writes through this one process. The daemon only ever ADDS airflow over the firmware curve \u2014 it can't stop a fan \u2014 and restores fully automatic control when stopped. Reads ~/.config/tuxthrottle/powerd.json live (edit it from the Fans / Power & Limits tabs). Reversible.",
     "category": "Power",
     "risk": "advanced",
     "check": "systemctl is-enabled tuxthrottle-powerd.service 2>/dev/null | grep -q enabled",
@@ -715,7 +813,7 @@
     ],
     "apply": [
       "chmod +x {TOOLKIT_DIR}/tuxthrottle_powerd.py",
-      "cat > /etc/systemd/system/tuxthrottle-powerd.service <<'UNIT'\n[Unit]\nDescription=TuxThrottle fan-curve + AC-switch daemon\nAfter=multi-user.target\n\n[Service]\nType=simple\nExecStart=/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_powerd.py run --user {USER}\nRestart=on-failure\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "cat > /etc/systemd/system/tuxthrottle-powerd.service <<'UNIT'\n[Unit]\nDescription=TuxThrottle fan-curve + AC-switch + thermal-alert daemon\nAfter=multi-user.target\n\n[Service]\nType=simple\nExecStart=/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_powerd.py run --user {USER}\nRuntimeDirectory=tuxthrottle\nRuntimeDirectoryMode=0755\nRestart=on-failure\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
       "systemctl daemon-reload",
       "systemctl enable --now tuxthrottle-powerd.service"
     ],
@@ -725,6 +823,33 @@
       "systemctl daemon-reload"
     ],
     "recommended": true
+  },
+  "RyzenCurveOptimizer": {
+    "Content": "Ryzen Curve Optimizer undervolt (stress-tested) + persist",
+    "Description": "DANGER ZONE. Enables an all-core Curve Optimizer offset (ryzenadj --set-coall) — an undervolt that lowers temps and lifts sustained clocks, but too aggressive a value causes silent miscalculation, a segfault storm, or a hard hang. The Power & Limits tab drives it through tuxthrottle_co_stress.py, which snapshots, applies the offset, runs a stress-ng + GPU load for N minutes while watching dmesg for MCE / WHEA, and auto-reverts on any fault. This tweak just installs the boot service + sleep hook (they run 'tuxthrottle_co_stress.py reapply') so an offset survives a reboot — and re-apply only ever restores an offset you explicitly CONFIRMED after a clean stress run. No-op until you apply and confirm an offset. Needs ryzenadj. Reversible (undo also sets CO back to 0).",
+    "category": "Power",
+    "risk": "advanced",
+    "requires_vendor": "amd",
+    "check": "command -v ryzenadj >/dev/null 2>&1 && test -x /usr/lib/systemd/system-sleep/tuxthrottle-co && systemctl is-enabled tuxthrottle-co.service 2>/dev/null | grep -q enabled",
+    "reinstall_if": [
+      "/etc/systemd/system/tuxthrottle-co.service"
+    ],
+    "apply": [
+      "command -v ryzenadj >/dev/null 2>&1 || dnf install -y ryzenadj || true",
+      "chmod +x {TOOLKIT_DIR}/tuxthrottle_co_stress.py",
+      "mkdir -p /usr/lib/systemd/system-sleep",
+      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-co <<'HOOK'\n#!/usr/bin/env bash\n[ \"$1\" = post ] && /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_co_stress.py reapply --user {USER} || true\nHOOK",
+      "chmod +x /usr/lib/systemd/system-sleep/tuxthrottle-co",
+      "cat > /etc/systemd/system/tuxthrottle-co.service <<'UNIT'\n[Unit]\nDescription=Re-apply a confirmed Ryzen Curve Optimizer offset (TuxThrottle)\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_co_stress.py reapply --user {USER}\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "systemctl daemon-reload",
+      "systemctl enable --now tuxthrottle-co.service || true"
+    ],
+    "undo": [
+      "/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_co_stress.py revert --user {USER} 2>/dev/null || true",
+      "systemctl disable --now tuxthrottle-co.service 2>/dev/null || true",
+      "rm -f /etc/systemd/system/tuxthrottle-co.service /usr/lib/systemd/system-sleep/tuxthrottle-co",
+      "systemctl daemon-reload"
+    ]
   },
   "StateResume": {
     "Content": "Re-apply power state after suspend/resume + at boot",
@@ -738,9 +863,9 @@
     "apply": [
       "chmod +x {TOOLKIT_DIR}/tuxthrottle_profiles.py",
       "mkdir -p /usr/lib/systemd/system-sleep",
-      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-reassert <<'HOOK'\n#!/usr/bin/env bash\n[ \"$1\" = post ] && /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_profiles.py reassert --user {USER} || true\nHOOK",
+      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-reassert <<'HOOK'\n#!/usr/bin/env bash\nif [ \"$1\" = post ]; then\n  sleep 3   # let KWin/kscreen come back first — kscreen-doctor SIGABRTs if it doesn't exist yet\n  /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_profiles.py --user {USER} reassert || true\nfi",
       "chmod +x /usr/lib/systemd/system-sleep/tuxthrottle-reassert",
-      "cat > /etc/systemd/system/tuxthrottle-reassert.service <<'UNIT'\n[Unit]\nDescription=Re-apply last TuxThrottle power state at boot\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_profiles.py reassert --user {USER}\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "cat > /etc/systemd/system/tuxthrottle-reassert.service <<'UNIT'\n[Unit]\nDescription=Re-apply last TuxThrottle power state at boot\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_profiles.py --user {USER} reassert\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
       "systemctl daemon-reload",
       "systemctl enable --now tuxthrottle-reassert.service || true"
     ],
@@ -750,6 +875,143 @@
       "systemctl daemon-reload"
     ],
     "recommended": true
+  },
+  "PolkitTuxthrottlectl": {
+    "Content": "polkit action for pkexec tuxthrottlectl (no broad sudoers)",
+    "Description": "Installs a single polkit action (org.tuxthrottle.manage) so 'pkexec tuxthrottlectl set …' / 'pkexec tuxthrottlectl profile apply …' run for an active local user WITHOUT a password prompt, instead of needing a broad sudoers rule or the daemon socket. This is what lets the waybar / KDE-plasmoid profile buttons switch the power profile on their own. Remote / ssh / inactive sessions still require admin auth (allow_any/allow_inactive = auth_admin). It is a plain .policy file in /usr/share/polkit-1/actions/ — NOT a D-Bus bus policy — so it can't wedge the system bus; polkitd simply ignores a file it can't parse. The apply step verifies the action loaded (pkaction) and rolls itself back if polkit rejected it. Reversible — undo removes the file and reloads polkit.",
+    "category": "Power",
+    "risk": "advanced",
+    "check": "pkaction --action-id org.tuxthrottle.manage >/dev/null 2>&1",
+    "reinstall_if": [
+      "/usr/share/polkit-1/actions/org.tuxthrottle.policy"
+    ],
+    "apply": [
+      "install -Dm644 {TOOLKIT_DIR}/polkit/org.tuxthrottle.policy /usr/share/polkit-1/actions/org.tuxthrottle.policy",
+      "systemctl try-restart polkit >/dev/null 2>&1 || true",
+      "sleep 1",
+      "if pkaction --action-id org.tuxthrottle.manage >/dev/null 2>&1; then echo 'TuxThrottle: polkit action org.tuxthrottle.manage registered'; else echo 'TuxThrottle: polkit did NOT accept the action — rolling back'; rm -f /usr/share/polkit-1/actions/org.tuxthrottle.policy; systemctl try-restart polkit >/dev/null 2>&1 || true; exit 1; fi"
+    ],
+    "undo": [
+      "rm -f /usr/share/polkit-1/actions/org.tuxthrottle.policy",
+      "systemctl try-restart polkit >/dev/null 2>&1 || true"
+    ]
+  },
+  "NvidiaShaderCache": {
+    "Content": "NVIDIA: stop shader-cache pruning (kills the every-launch recompile)",
+    "Description": "The NVIDIA Linux driver prunes its shader disk cache between sessions, so many games do a FULL shader recompile on every launch — 100% CPU for 10–15 min and stutter until it finishes. Drops env vars into /etc/environment.d/ that give the cache a large fixed budget and disable the cleanup pass (__GL_SHADER_DISK_CACHE=1, ..._PATH, ..._SIZE, ..._SKIP_CLEANUP=1). The path + size come from the Setup Games → “Shader / pipeline cache storage” box (~/.config/tuxthrottle/shadercache.json) if you've set one, else ~/.cache/tuxthrottle-shaders/nv-shader-cache at 80 GB. Re-apply this tweak after changing that location. Takes effect on next login. Reversible.",
+    "category": "GPU",
+    "risk": "safe",
+    "requires_vendor": "nvidia",
+    "check": "grep -q SKIP_CLEANUP /etc/environment.d/90-tuxthrottle-nv-shadercache.conf 2>/dev/null",
+    "reinstall_if": [
+      "/etc/environment.d/90-tuxthrottle-nv-shadercache.conf"
+    ],
+    "apply": [
+      "install -d /etc/environment.d",
+      "CFG=/home/{USER}/.config/tuxthrottle/shadercache.json; D=$(grep -oE '\"dir\"[ ]*:[ ]*\"[^\"]+\"' \"$CFG\" 2>/dev/null | sed -E 's/.*:[ ]*\"//; s/\"$//'); D=${D:-/home/{USER}/.cache/tuxthrottle-shaders}; case \"$D\" in \"~/\"*) D=/home/{USER}/${D#\\~/} ;; \"~\") D=/home/{USER} ;; esac; G=$(grep -oE '\"max_size_gb\"[ ]*:[ ]*[0-9]+' \"$CFG\" 2>/dev/null | grep -oE '[0-9]+$'); G=${G:-80}; NVDIR=\"$D/nv-shader-cache\"; install -d -o {USER} -g {USER} \"$NVDIR\"; printf '%s\\n' '# TuxThrottle: keep the NVIDIA shader disk cache instead of recompiling every launch' '__GL_SHADER_DISK_CACHE=1' \"__GL_SHADER_DISK_CACHE_PATH=$NVDIR\" \"__GL_SHADER_DISK_CACHE_SIZE=$((G*1000000000))\" '__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1' > /etc/environment.d/90-tuxthrottle-nv-shadercache.conf"
+    ],
+    "undo": [
+      "rm -f /etc/environment.d/90-tuxthrottle-nv-shadercache.conf"
+    ]
+  },
+  "NvidiaDynamicBoost": {
+    "Content": "NVIDIA: enable Dynamic Boost (nvidia-powerd)",
+    "Description": "nvidia-powerd arbitrates the shared CPU/GPU power budget on Ryzen+RTX laptops (Dynamic Boost). If it isn't running the dGPU is capped near its base clock and you lose a chunk of gaming performance. Enables + starts nvidia-powerd.service (ships with the NVIDIA driver). Reversible.",
+    "category": "GPU",
+    "risk": "safe",
+    "requires_vendor": "nvidia",
+    "check": "systemctl is-active --quiet nvidia-powerd.service",
+    "apply": [
+      "systemctl enable --now nvidia-powerd.service"
+    ],
+    "undo": [
+      "systemctl disable --now nvidia-powerd.service 2>/dev/null || true"
+    ]
+  },
+  "SplitLockMitigateOff": {
+    "Content": "Disable split-lock detection (removes a big stall penalty in some games)",
+    "Description": "The kernel's split-lock detector stalls a thread hard (tens of ms) whenever a misaligned locked memory op crosses a cache line — a pattern some games / anti-cheats hit, costing 20–40% FPS. Sets kernel.split_lock_mitigate=0 via /etc/sysctl.d/, applied now and at boot. Only matters on CPUs that support split-lock detection (Intel Tremont+, AMD Zen 4+) — a harmless no-op on the Ryzen 7 5800H (Zen 3), which has no such sysctl. No downside on a personal gaming machine. Reversible.",
+    "category": "Performance",
+    "risk": "safe",
+    "check": "v=$(sysctl -n kernel.split_lock_mitigate 2>/dev/null); [ -z \"$v\" ] || [ \"$v\" = \"0\" ]",
+    "reinstall_if": [
+      "/etc/sysctl.d/99-tuxthrottle-splitlock.conf"
+    ],
+    "apply": [
+      "printf 'kernel.split_lock_mitigate = 0\\n' > /etc/sysctl.d/99-tuxthrottle-splitlock.conf",
+      "sysctl -w kernel.split_lock_mitigate=0 2>/dev/null || true"
+    ],
+    "undo": [
+      "rm -f /etc/sysctl.d/99-tuxthrottle-splitlock.conf",
+      "sysctl -w kernel.split_lock_mitigate=1 2>/dev/null || true"
+    ]
+  },
+  "SchedExtGaming": {
+    "Content": "sched-ext: run the scx_lavd low-latency scheduler (Steam Deck's)",
+    "Description": "Installs scx-scheds and runs scx_lavd --performance — the sched_ext scheduler Valve ships on the Steam Deck, tuned for low frame-time variance under gaming load. Needs kernel 6.12+ with sched_ext (Nobara/Fedora 43+ has it). Runs as tuxthrottle-scx.service (also at boot). CAVEAT: on some kernels (seen on Nobara 7.2 with scx_lavd 1.1.3) scx_lavd starves systemd kworkers and the sched_ext stall watchdog kills it every 1–3 min, and a compositor caught in one of those 30 s stalls can crash the KDE session (power management vanishes). Guards: the unit is capped at 3 restarts / 2 min, and Apply watches 75 s after enabling — if scx_lavd stalls in that window it backs itself out completely and leaves you on the stable stock scheduler (Apply reports failure). The kernel also reverts to its default scheduler the instant the service stops. Reversible, no reboot. **CONFIRMED to hard-freeze this Dell G15 on kernel 7.2 — do not enable.** If scx keeps coming back after undo, Nobara's own on-demand loader is the cause: `sudo systemctl disable --now --mask scx_loader.service`. Not in any preset; never marked recommended.",
+    "category": "Performance",
+    "risk": "advanced",
+    "check": "systemctl is-active --quiet tuxthrottle-scx.service && [ -e /sys/kernel/sched_ext/root/ops ]",
+    "reinstall_if": [
+      "/etc/systemd/system/tuxthrottle-scx.service"
+    ],
+    "apply": [
+      "command -v scx_lavd >/dev/null 2>&1 || dnf install -y scx-scheds",
+      "test -e /sys/kernel/sched_ext || { echo 'TuxThrottle: this kernel has no sched_ext (need 6.12+)'; exit 1; }",
+      "printf '%s\\n' '[Unit]' 'Description=TuxThrottle: scx_lavd sched-ext scheduler' 'ConditionPathExists=/sys/kernel/sched_ext' 'After=multi-user.target' 'StartLimitIntervalSec=120' 'StartLimitBurst=3' '' '[Service]' 'Type=simple' 'ExecStart=/usr/bin/scx_lavd --performance' 'Restart=on-failure' 'RestartSec=5' 'Nice=-5' '' '[Install]' 'WantedBy=multi-user.target' > /etc/systemd/system/tuxthrottle-scx.service",
+      "systemctl daemon-reload",
+      "systemctl enable --now tuxthrottle-scx.service",
+      "for k in $(seq 1 25); do [ -e /sys/kernel/sched_ext/root/ops ] && break; sleep 1; done",
+      "[ -e /sys/kernel/sched_ext/root/ops ] || { echo 'TuxThrottle: scx_lavd did not attach in 25s — see journalctl -u tuxthrottle-scx'; systemctl disable --now tuxthrottle-scx.service 2>/dev/null; rm -f /etc/systemd/system/tuxthrottle-scx.service; systemctl daemon-reload; exit 1; }",
+      "echo 'TuxThrottle: scx_lavd attached — watching 75s for the sched_ext stall watchdog (some kernels starve kworkers under scx_lavd)…'; _n0=$(systemctl show tuxthrottle-scx.service -p NRestarts --value); sleep 75; _n1=$(systemctl show tuxthrottle-scx.service -p NRestarts --value); if [ \"$_n1\" != \"$_n0\" ] || ! systemctl is-active --quiet tuxthrottle-scx.service || ! [ -e /sys/kernel/sched_ext/root/ops ]; then echo 'TuxThrottle: scx_lavd stalled on this kernel (sched_ext runnable-task-stall watchdog) — backing out, leaving you on the stable stock scheduler. Do not re-enable until scx-scheds / the kernel is updated.'; systemctl disable --now tuxthrottle-scx.service 2>/dev/null; rm -f /etc/systemd/system/tuxthrottle-scx.service; systemctl daemon-reload; exit 1; fi; echo 'TuxThrottle: scx_lavd stable over the watch window.'"
+    ],
+    "undo": [
+      "systemctl disable --now tuxthrottle-scx.service 2>/dev/null || true",
+      "rm -f /etc/systemd/system/tuxthrottle-scx.service",
+      "systemctl daemon-reload"
+    ]
+  },
+  "KwinAllowTearing": {
+    "Content": "KDE: allow screen tearing for games (lower input latency)",
+    "Description": "Sets kwinrc [Compositing] AllowTearing=true so a fullscreen game can present frames immediately instead of waiting for the compositor's vsync — lower input latency, higher effective FPS. KWin only tears for apps that explicitly ask (tearing-control protocol / Vulkan immediate present); everything else is unaffected. Reversible.",
+    "category": "KDE (Desktop GUI Tweaks)",
+    "risk": "safe",
+    "check": "[ \"$(sudo -u {USER} -H kreadconfig6 --file kwinrc --group Compositing --key AllowTearing 2>/dev/null)\" = \"true\" ]",
+    "apply": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus bash -lc 'command -v kwriteconfig6 >/dev/null 2>&1 || { echo \"TuxThrottle: this tweak needs KDE Plasma 6\"; exit 1; }; kwriteconfig6 --file kwinrc --group Compositing --key AllowTearing true; { qdbus-qt6 org.kde.KWin /KWin reconfigure || qdbus org.kde.KWin /KWin reconfigure || dbus-send --session --type=method_call --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure; } 2>/dev/null || true'"
+    ],
+    "undo": [
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus bash -lc 'kwriteconfig6 --file kwinrc --group Compositing --key AllowTearing --delete; { qdbus-qt6 org.kde.KWin /KWin reconfigure || qdbus org.kde.KWin /KWin reconfigure || dbus-send --session --type=method_call --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure; } 2>/dev/null || true'"
+    ]
+  },
+  "AcpiBacklightNvidiaWmiEc": {
+    "Content": "Fix broken screen-brightness control (acpi_backlight=nvidia_wmi_ec)",
+    "Description": "Since kernel 6.1 the backlight handoff changed and brightness keys / the slider stop working on some Optimus G15 configs. Adds acpi_backlight=nvidia_wmi_ec to the kernel command line (grubby, all kernels), restoring brightness control via the NVIDIA WMI EC interface. ONLY apply if your brightness control is actually broken; needs a reboot. Reversible.",
+    "category": "Stability",
+    "risk": "advanced",
+    "check": "grep -q acpi_backlight=nvidia_wmi_ec /proc/cmdline",
+    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q acpi_backlight=nvidia_wmi_ec",
+    "apply": [
+      "grubby --update-kernel=ALL --args=\"acpi_backlight=nvidia_wmi_ec\""
+    ],
+    "undo": [
+      "grubby --update-kernel=ALL --remove-args=\"acpi_backlight=nvidia_wmi_ec\""
+    ]
+  },
+  "AmdPstateActive": {
+    "Content": "Ensure amd_pstate runs in 'active' (EPP) mode",
+    "Description": "amd_pstate has three modes; 'active' (EPP-driven) is what lets Cezanne (Ryzen 7 5800H) boost properly and follow the platform power profile. Adds amd_pstate=active to the kernel command line if it isn't already the running mode. No-op where the kernel already defaults to active (recent Fedora/Nobara). Needs a reboot. Reversible.",
+    "category": "Performance",
+    "risk": "advanced",
+    "requires_vendor": "amd",
+    "check": "[ \"$(cat /sys/devices/system/cpu/amd_pstate/status 2>/dev/null)\" = \"active\" ]",
+    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q amd_pstate=active",
+    "apply": [
+      "grubby --update-kernel=ALL --args=\"amd_pstate=active\""
+    ],
+    "undo": [
+      "grubby --update-kernel=ALL --remove-args=\"amd_pstate=active\""
+    ]
   },
   "DellBatteryThreshold": {
     "Content": "Dell battery threshold (libsmbios)",
@@ -764,5 +1026,238 @@
       "dnf remove -y libsmbios || true"
     ],
     "recommended": true
+  },
+  "NvidiaRuntimePM": {
+    "Content": "NVIDIA: fine-grained runtime power management (dGPU D3cold when idle)",
+    "Description": "Sets the nvidia module option NVreg_DynamicPowerManagement=0x02 so the RTX 3050 Ti fully powers down (D3cold) whenever nothing is using it — it frees its ~40 MiB of VRAM and ~5 W, and wakes automatically for a PRIME-offloaded game or DaVinci Resolve. Without it the dGPU idles 'active' the whole session. Writes /etc/modprobe.d/tuxthrottle-nvidia-rtd3.conf and rebuilds the initramfs; needs a reboot. Reversible.",
+    "category": "GPU",
+    "risk": "advanced",
+    "requires_vendor": "nvidia",
+    "check": "[ \"$(cat /sys/module/nvidia/parameters/NVreg_DynamicPowerManagement 2>/dev/null)\" = \"2\" ]",
+    "check_pending": "test -f /etc/modprobe.d/tuxthrottle-nvidia-rtd3.conf",
+    "reinstall_if": [
+      "/etc/modprobe.d/tuxthrottle-nvidia-rtd3.conf"
+    ],
+    "apply": [
+      "printf 'options nvidia \"NVreg_DynamicPowerManagement=0x02\"\\n' > /etc/modprobe.d/tuxthrottle-nvidia-rtd3.conf",
+      "command -v dracut >/dev/null 2>&1 && dracut --force || update-initramfs -u || true"
+    ],
+    "undo": [
+      "rm -f /etc/modprobe.d/tuxthrottle-nvidia-rtd3.conf",
+      "command -v dracut >/dev/null 2>&1 && dracut --force || update-initramfs -u || true"
+    ]
+  },
+  "KernelUltraCmdline": {
+    "Content": "Kernel Boot Params: aggressive extras (mitigations off, PCIe/NVMe latency)",
+    "Description": "The spicier kernel cmdline args the curated set deliberately leaves out — opt in only if you want max speed and accept the trade-offs. mitigations=off (drops ALL CPU speculative-execution mitigations — ~5–15% back in syscall/scheduler-heavy workloads on this Zen 3; you lose Spectre/Meltdown/Retbleed protection, fine on a single-user gaming box, NOT on a shared/work machine). nvme_core.default_ps_max_latency_us=0 (disables NVMe APST power-saving — lower I/O latency AND fixes the APST dropout bug this ADATA IM2P33F3 SSD is prone to). pcie_aspm=off (no PCIe link power management — lower latency to the dGPU/NVMe, more power + heat). amdgpu.ppfeaturemask=0xffffffff (unlocks the iGPU PowerPlay table so CoreCtrl/LACT can tune it). iommu=pt (IOMMU in passthrough mode — near-zero DMA-translation overhead, protection kept for non-passthrough devices). zswap.enabled=0 (turn off zswap — it and zram both running is redundant; zram wins). Requires reboot. Reversible.",
+    "category": "Performance",
+    "risk": "advanced",
+    "check": "grep -q 'mitigations=off' /proc/cmdline",
+    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q 'mitigations=off'",
+    "apply": [
+      "grubby --update-kernel=ALL --args=\"mitigations=off nvme_core.default_ps_max_latency_us=0 pcie_aspm=off amdgpu.ppfeaturemask=0xffffffff iommu=pt zswap.enabled=0\""
+    ],
+    "undo": [
+      "grubby --update-kernel=ALL --remove-args=\"mitigations=off nvme_core.default_ps_max_latency_us=0 pcie_aspm=off amdgpu.ppfeaturemask=0xffffffff iommu=pt zswap.enabled=0\""
+    ]
+  },
+  "VmWritebackSysctl": {
+    "Content": "VM writeback + reclaim sysctls (no flush hitches)",
+    "Description": "Writes /etc/sysctl.d/99-tuxthrottle-vm.conf. Bounds dirty-page writeback to 320 MB / 128 MB (dirty_bytes / dirty_background_bytes) instead of the % default, so a big buffered write can't build up hundreds of MB and then stall the game when the kernel flushes it. page-cluster=0 (best with zram — no read-ahead on swap-in). watermark_scale_factor=125 + watermark_boost_factor=0 (kick background reclaim earlier and don't over-reclaim, avoiding sudden allocation stalls under memory pressure). Applied now and at boot. Reversible.",
+    "category": "Performance",
+    "risk": "safe",
+    "check": "grep -q 'vm.dirty_bytes' /etc/sysctl.d/99-tuxthrottle-vm.conf 2>/dev/null",
+    "reinstall_if": [
+      "/etc/sysctl.d/99-tuxthrottle-vm.conf"
+    ],
+    "apply": [
+      "printf 'vm.dirty_bytes=335544320\\nvm.dirty_background_bytes=134217728\\nvm.page-cluster=0\\nvm.watermark_scale_factor=125\\nvm.watermark_boost_factor=0\\n' > /etc/sysctl.d/99-tuxthrottle-vm.conf",
+      "sysctl --system >/dev/null"
+    ],
+    "undo": [
+      "rm -f /etc/sysctl.d/99-tuxthrottle-vm.conf",
+      "sysctl --system >/dev/null"
+    ],
+    "recommended": true
+  },
+  "NvidiaAggressiveModule": {
+    "Content": "NVIDIA: aggressive module options (PAT, no mem-zeroing, ReBAR, max PowerMizer)",
+    "Description": "Writes /etc/modprobe.d/99-tuxthrottle-nvidia-aggr.conf and rebuilds the initramfs (reboot needed). NVreg_UsePageAttributeTable=1 (write-combined CPU mappings of GPU memory — faster CPU→GPU transfers, a long-standing free win). NVreg_InitializeSystemMemoryAllocations=0 (don't pre-zero system memory handed to the GPU — quicker allocations; minor info-leak-between-your-own-processes trade). NVreg_EnableResizableBar=1 (ask the driver to use Resizable BAR if the platform allows any window — no-op if not). NVreg_RegistryDwords PowerMizer set to force maximum performance level while on AC — the dGPU holds high clocks instead of ramping. RUNS THE GPU HOTTER: the G15's cooling is already marginal, watch temps; pair with the aggressive fan curve. requires an NVIDIA GPU. Reversible.",
+    "category": "GPU",
+    "risk": "advanced",
+    "requires_vendor": "nvidia",
+    "check": "grep -q UsePageAttributeTable /etc/modprobe.d/99-tuxthrottle-nvidia-aggr.conf 2>/dev/null",
+    "check_pending": "test -f /etc/modprobe.d/99-tuxthrottle-nvidia-aggr.conf",
+    "reinstall_if": [
+      "/etc/modprobe.d/99-tuxthrottle-nvidia-aggr.conf"
+    ],
+    "apply": [
+      "printf 'options nvidia NVreg_UsePageAttributeTable=1 NVreg_InitializeSystemMemoryAllocations=0 NVreg_EnableResizableBar=1 NVreg_RegistryDwords=\"PowerMizerEnable=0x1;PerfLevelSrc=0x3333;PowerMizerDefaultAC=0x1\"\\n' > /etc/modprobe.d/99-tuxthrottle-nvidia-aggr.conf",
+      "command -v dracut >/dev/null 2>&1 && dracut --force || update-initramfs -u || true"
+    ],
+    "undo": [
+      "rm -f /etc/modprobe.d/99-tuxthrottle-nvidia-aggr.conf",
+      "command -v dracut >/dev/null 2>&1 && dracut --force || update-initramfs -u || true"
+    ]
+  },
+  "GpuGamingEnv": {
+    "Content": "GPU gaming env vars (RADV GPL, glthread, NVIDIA threaded/low-latency)",
+    "Description": "Writes /etc/environment.d/95-tuxthrottle-gpu-gaming.conf (takes effect next login). RADV_PERFTEST=gpl,nggc,sam (graphics-pipeline-library = far less in-game shader stutter on the AMD iGPU, NGG culling, Smart Access Memory path). mesa_glthread=true (offload GL calls to a worker thread — big win for CPU-bound OpenGL titles). __GL_THREADED_OPTIMIZATIONS=1 (same for the NVIDIA GL driver). __GL_YIELD=USLEEP (sleep instead of busy-spinning while waiting on the GPU — frees a core). __GL_MaxFramesAllowed=2 (cap the render-ahead queue — lower input lag; set to 1 for the absolute minimum at some FPS cost). __GL_VRR_ALLOWED=1 (let G-Sync/VRR engage). Reversible.",
+    "category": "GPU",
+    "risk": "advanced",
+    "check": "grep -q RADV_PERFTEST /etc/environment.d/95-tuxthrottle-gpu-gaming.conf 2>/dev/null",
+    "reinstall_if": [
+      "/etc/environment.d/95-tuxthrottle-gpu-gaming.conf"
+    ],
+    "apply": [
+      "install -d /etc/environment.d",
+      "printf '%s\\n' '# TuxThrottle: GPU gaming env' 'RADV_PERFTEST=gpl,nggc,sam' 'mesa_glthread=true' '__GL_THREADED_OPTIMIZATIONS=1' '__GL_YIELD=USLEEP' '__GL_MaxFramesAllowed=2' '__GL_VRR_ALLOWED=1' > /etc/environment.d/95-tuxthrottle-gpu-gaming.conf"
+    ],
+    "undo": [
+      "rm -f /etc/environment.d/95-tuxthrottle-gpu-gaming.conf"
+    ]
+  },
+  "ServiceMaskGaming": {
+    "Content": "Mask idle background services (CUPS, Avahi, ModemManager, SSSD, updatedb)",
+    "Description": "Masks daemons that do nothing on a personal gaming laptop but still wake up, poll, and hold RAM: cups (printing), avahi-daemon (mDNS/Bonjour discovery), ModemManager (there's no modem), sssd + sssd-kcm (enterprise auth — unused off a domain), and the plocate-updatedb.timer (the weekly whole-disk index scan). Frees a bit of RAM and stops the periodic CPU/I-O blips. `undo` unmasks them. Skip this if you actually print or use network file-share discovery.",
+    "category": "Performance",
+    "risk": "advanced",
+    "check": "systemctl is-enabled cups.service 2>/dev/null | grep -q masked",
+    "apply": [
+      "systemctl disable --now cups.service cups.socket cups.path avahi-daemon.service avahi-daemon.socket ModemManager.service sssd.service sssd-kcm.socket plocate-updatedb.timer 2>/dev/null || true",
+      "systemctl mask cups.service cups.socket cups.path avahi-daemon.service avahi-daemon.socket ModemManager.service sssd.service sssd-kcm.socket plocate-updatedb.timer 2>/dev/null || true"
+    ],
+    "undo": [
+      "systemctl unmask cups.service cups.socket cups.path avahi-daemon.service avahi-daemon.socket ModemManager.service sssd.service sssd-kcm.socket plocate-updatedb.timer 2>/dev/null || true",
+      "systemctl daemon-reload"
+    ]
+  },
+  "AnanicyCpp": {
+    "Content": "ananicy-cpp: auto nice / ionice / scheduling rules",
+    "Description": "Installs and enables ananicy-cpp — a lightweight daemon that applies per-process priority rules from a shipped ruleset: games and the compositor get a better nice level, real-time scheduling where safe, and idle-class I/O for background junk (trackers, updaters, compilers). Set-and-forget; it just keeps the foreground game ahead of everything else. `undo` disables the service (leaves the package). Nobara ships the package + rules.",
+    "category": "Performance",
+    "risk": "safe",
+    "check": "systemctl is-active ananicy-cpp.service 2>/dev/null | grep -q '^active'",
+    "apply": [
+      "rpm -q ananicy-cpp >/dev/null 2>&1 || dnf install -y ananicy-cpp",
+      "systemctl enable --now ananicy-cpp.service"
+    ],
+    "undo": [
+      "systemctl disable --now ananicy-cpp.service 2>/dev/null || true"
+    ],
+    "recommended": true
+  },
+  "IrqThreadsRt": {
+    "Content": "Real-time priority for GPU / NVMe IRQ threads (RISKY)",
+    "Description": "The curated cmdline already turns hardware IRQ handlers into kernel threads (threadirqs). This gives the amdgpu, nvidia and nvme IRQ threads SCHED_FIFO real-time priority (50 for the GPUs, 45 for NVMe) so a fully-loaded CPU can never delay a GPU-done or storage-complete interrupt — smoother frame pacing under CPU load. **RISK: real-time IRQ scheduling has bitten this machine — under any scheduler stress (an alt scheduler stalling, a driver hiccup, an I/O-hung disk) an RT IRQ thread can monopolise a CPU and freeze the box. Advanced / experiment only; not in any preset; leave off unless you know you want it.** Installs /usr/local/bin/tuxthrottle-irq-rt + a boot service that re-chrt's the threads each boot. No-op if threadirqs isn't on the cmdline. `undo` removes the service and drops the threads back to SCHED_OTHER live.",
+    "category": "Performance",
+    "risk": "advanced",
+    "check": "systemctl is-enabled tuxthrottle-irq-rt.service 2>/dev/null | grep -q enabled",
+    "reinstall_if": [
+      "/usr/local/bin/tuxthrottle-irq-rt",
+      "/etc/systemd/system/tuxthrottle-irq-rt.service"
+    ],
+    "apply": [
+      "cat > /usr/local/bin/tuxthrottle-irq-rt <<'SH'\n#!/usr/bin/env bash\n# Real-time priority for GPU + NVMe threaded IRQ handlers (TuxThrottle).\ngrep -qw threadirqs /proc/cmdline || { echo 'threadirqs not on cmdline - no-op'; exit 0; }\nset_rt() {\n  local pat=$1 prio=$2 f pid name\n  for f in /proc/[0-9]*/comm; do\n    read -r name < \"$f\" 2>/dev/null || continue\n    [[ $name =~ $pat ]] || continue\n    pid=${f%/comm}; pid=${pid##*/}\n    chrt -f -p \"$prio\" \"$pid\" 2>/dev/null && echo \"rt fifo:$prio  $name ($pid)\"\n  done\n}\nset_rt '^irq/[0-9]+-(amdgpu|nvidia)' 50\nset_rt '^irq/[0-9]+-nvme' 45\nSH",
+      "chmod +x /usr/local/bin/tuxthrottle-irq-rt",
+      "cat > /etc/systemd/system/tuxthrottle-irq-rt.service <<'UNIT'\n[Unit]\nDescription=Real-time priority for GPU/NVMe IRQ threads (TuxThrottle)\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStartPre=/usr/bin/sleep 5\nExecStart=/usr/local/bin/tuxthrottle-irq-rt\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "systemctl daemon-reload",
+      "systemctl enable --now tuxthrottle-irq-rt.service"
+    ],
+    "undo": [
+      "systemctl disable --now tuxthrottle-irq-rt.service 2>/dev/null || true",
+      "rm -f /etc/systemd/system/tuxthrottle-irq-rt.service /usr/local/bin/tuxthrottle-irq-rt",
+      "systemctl daemon-reload",
+      "for p in $(ps -eLo lwp,comm | awk '/irq\\//{print $1}'); do chrt -o -p 0 \"$p\" 2>/dev/null || true; done"
+    ]
+  },
+  "GameModeQuietIni": {
+    "Content": "Feral GameMode: quiet tuning (renice / ioprio, no loud profile)",
+    "Description": "Installs gamemode and writes an /etc/gamemode.ini that applies only the non-audible optimisations when a game launches via gamemoderun: renice the game up, best-effort I/O priority, soft-realtime scheduling, inhibit the screensaver, and set the CPU *governor* to performance (pins clocks, fans still follow temperature). It does NOT run any platform_profile / G-Mode / fan-boost script — so no fan roar. This REPLACES the louder 'GameMode -> Game Mode bridge' tweak's config (they both own /etc/gamemode.ini — enable one, not both). `undo` removes the file (GameMode falls back to its built-in defaults).",
+    "category": "Performance",
+    "risk": "safe",
+    "check": "grep -q 'softrealtime=auto' /etc/gamemode.ini 2>/dev/null && ! grep -q 'gaming-performance' /etc/gamemode.ini 2>/dev/null",
+    "reinstall_if": [
+      "/etc/gamemode.ini"
+    ],
+    "apply": [
+      "rpm -q gamemode >/dev/null 2>&1 || dnf install -y gamemode",
+      "printf '%s\\n' '# TuxThrottle: quiet GameMode tuning (no platform_profile / fan changes)' '[general]' 'renice=10' 'ioprio=0' 'softrealtime=auto' 'inhibit_screensaver=1' 'desiredgov=performance' 'defaultgov=schedutil' '' '[cpu]' 'park_cores=no' 'pin_cores=no' > /etc/gamemode.ini"
+    ],
+    "undo": [
+      "rm -f /etc/gamemode.ini"
+    ],
+    "recommended": true
+  },
+  "SteamClientIgpu": {
+    "Content": "Steam: run the client on the iGPU (fixes steamwebhelper crash-loop)",
+    "Description": "Nobara/Fedora ship /usr/share/applications/steam.desktop with PrefersNonDefaultGPU=true + X-KDE-RunOnDiscreteGpu=true. On a muxless Optimus laptop (G15 5515 — the panel is wired to the iGPU) that launches the whole Steam *client* with the NVIDIA PRIME-offload environment, and the embedded-Chromium 'steamwebhelper' GPU subprocess then fails to initialise GL on the dGPU and aborts in a loop ('GPU process launch failed: error_code=1002 ... GPU process isn't usable. Goodbye.', SIGTRAP) — you get no usable Steam window, just DrKonqi crash dialogs. This writes a user-level ~/.local/share/applications/steam.desktop shadow forcing both keys false so the client renders on the iGPU. Individual games still PRIME-offload to the NVIDIA GPU via their own launch options — only the store/library/friends UI moves. Fully quit and relaunch Steam from the app menu after applying. Reversible (removes the shadow).",
+    "category": "Gaming",
+    "risk": "safe",
+    "requires_vendor": "nvidia",
+    "recommended": true,
+    "check": "grep -q 'X-TuxThrottle-SteamIgpu' /home/{USER}/.local/share/applications/steam.desktop 2>/dev/null || ! grep -q '^PrefersNonDefaultGPU=true' /usr/share/applications/steam.desktop 2>/dev/null",
+    "reinstall_if": [
+      "/home/{USER}/.local/share/applications/steam.desktop"
+    ],
+    "apply": [
+      "sudo -u {USER} -H python3 {TOOLKIT_DIR}/tuxthrottle_steamperf.py igpu-on"
+    ],
+    "undo": [
+      "sudo -u {USER} -H python3 {TOOLKIT_DIR}/tuxthrottle_steamperf.py igpu-off"
+    ]
+  },
+  "KernelVerboseBoot": {
+    "Content": "Verbose boot — show the scrolling kernel + systemd log",
+    "Description": "Turns the boot into the classic full-detail scroll instead of the graphical splash. Drops 'quiet splash' and adds loglevel=7 (every kernel message on the console), printk.time=1 ([seconds] timestamp per line), systemd.show_status=1 + systemd.status_unit_format=combined (every 'Starting/Started <unit> - <description>' line), plymouth.enable=0. These only change what's DISPLAYED — kernel messages already live in a RAM ring buffer and systemd-journald captures the lot regardless, so there are no extra SSD writes. No disk encryption on this machine. Needs a reboot; fully reversible. Add 'systemd.log_level=debug' or 'debug' by hand for even more (that one does grow the journal).",
+    "category": "Stability",
+    "risk": "safe",
+    "check": "grep -qw 'plymouth.enable=0' /proc/cmdline",
+    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q 'plymouth.enable=0'",
+    "apply": [
+      "grubby --update-kernel=ALL --remove-args=\"quiet splash rhgb\" --args=\"loglevel=7 printk.time=1 systemd.show_status=1 systemd.status_unit_format=combined plymouth.enable=0\""
+    ],
+    "undo": [
+      "grubby --update-kernel=ALL --remove-args=\"loglevel=7 printk.time=1 systemd.show_status=1 systemd.status_unit_format=combined plymouth.enable=0\" --args=\"quiet splash\""
+    ]
+  },
+  "NtfsForceMount": {
+    "Content": "NTFS data drives: mount even when Windows left them 'dirty'",
+    "Description": "Windows Fast Startup / hibernation leaves an NTFS volume marked dirty, and the kernel ntfs3 driver then REFUSES to mount it ('volume is dirty and force flag is not set') — with 'nofail' in fstab the boot just skips it, so on Linux the drive (and any Steam library / Proton prefixes on it) silently vanishes. This adds 'force' to the ntfs3 options for every NTFS line in /etc/fstab (kernel mounts it anyway; ntfs3 is journaling-aware so this is the normal fix), installs ntfs-3g for the 'ntfsfix' tool, clears the dirty bit on any currently-unmounted NTFS device, and remounts. Real cure: turn off 'Fast Startup' in Windows (Control Panel -> Power Options) so it stops happening. /etc/fstab backed up to /etc/fstab.tuxthrottle-bak; 'undo' restores it.",
+    "category": "Stability",
+    "risk": "advanced",
+    "check": "awk '$3==\"ntfs3\" && $4 !~ /(^|,)force(,|$)/{bad=1} END{exit bad}' /etc/fstab",
+    "reinstall_if": [
+      "/etc/fstab.tuxthrottle-bak"
+    ],
+    "apply": [
+      "rpm -q ntfs-3g >/dev/null 2>&1 || dnf install -y ntfs-3g",
+      "[ -f /etc/fstab.tuxthrottle-bak ] || cp -a /etc/fstab /etc/fstab.tuxthrottle-bak",
+      "sed -i -E '/[[:space:]]ntfs3[[:space:]]/{/[,[:space:]]force[,[:space:]]/!s/([[:space:]]ntfs3[[:space:]]+)/\\1force,/}' /etc/fstab",
+      "systemctl daemon-reload",
+      "for u in $(awk '$3==\"ntfs3\"{print $1}' /etc/fstab); do d=$(blkid -U \"${u#UUID=}\" 2>/dev/null || echo \"$u\"); [ -b \"$d\" ] && ! findmnt -S \"$d\" >/dev/null 2>&1 && ntfsfix -d \"$d\" >/dev/null 2>&1 || true; done",
+      "mount -a 2>/dev/null || true"
+    ],
+    "undo": [
+      "[ -f /etc/fstab.tuxthrottle-bak ] && mv -f /etc/fstab.tuxthrottle-bak /etc/fstab || sed -i -E 's/([[:space:]]ntfs3[[:space:]]+)force,/\\1/' /etc/fstab",
+      "systemctl daemon-reload"
+    ],
+    "recommended": true
+  },
+  "SteamAutostartMountWait": {
+    "Content": "Steam autostart: wait for external drives to mount first",
+    "Description": "A 'nofail' external drive in /etc/fstab (an NTFS/exFAT Steam library, a Proton-prefix drive, ...) can still be mid-mount a few seconds after login, but a Steam autostart entry fires immediately — Steam then briefly logs 'Staging library folder not found' / 'Install library folder not found' for that library until the mount catches up (harmless once it does, but looks like a broken install in the meantime). This installs a small wrapper script and prefixes the Exec= line of ~/.config/autostart/steam.desktop with it, so Steam's autostart waits (up to 10s) for every 'nofail' fstab mountpoint to actually be mounted before launching. No-op if you have no 'nofail' drives, or no Steam autostart entry yet — enable Steam's own 'Start automatically' or the Game Tools low-resource-mode autostart first. autostart file backed up to steam.desktop.tuxthrottle-mountwait-bak (a separate backup from Steam low-resource mode's own, so the two don't clobber each other); 'undo' restores it.",
+    "category": "Stability",
+    "risk": "safe",
+    "check": "AS=/home/{USER}/.config/autostart/steam.desktop; [ -f \"$AS\" ] && grep -q tuxthrottle-wait-mounts \"$AS\"",
+    "apply": [
+      "install -m 0755 {TOOLKIT_DIR}/tuxthrottle_wait_mounts.sh /usr/local/bin/tuxthrottle-wait-mounts",
+      "AS=/home/{USER}/.config/autostart/steam.desktop; if [ -f \"$AS\" ] && ! grep -q tuxthrottle-wait-mounts \"$AS\"; then cp -a \"$AS\" \"$AS.tuxthrottle-mountwait-bak\"; sed -i 's|^Exec=|Exec=/usr/local/bin/tuxthrottle-wait-mounts |' \"$AS\"; fi"
+    ],
+    "undo": [
+      "AS=/home/{USER}/.config/autostart/steam.desktop; if [ -f \"$AS.tuxthrottle-mountwait-bak\" ]; then mv -f \"$AS.tuxthrottle-mountwait-bak\" \"$AS\"; elif [ -f \"$AS\" ]; then sed -i 's|^Exec=/usr/local/bin/tuxthrottle-wait-mounts |Exec=|' \"$AS\"; fi",
+      "rm -f /usr/local/bin/tuxthrottle-wait-mounts"
+    ],
+    "recommended": false
   }
 }

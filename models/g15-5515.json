@@ -1,0 +1,68 @@
+{
+  "id": "g15-5515",
+  "name": "Dell G15 5515 (Ryzen Edition)",
+  "match": {
+    "product_name": ["Dell G15 5515"],
+    "board_name": ["0R3CDX"]
+  },
+  "cpu": {
+    "vendor": "amd",
+    "codename": "Cezanne",
+    "model": "Ryzen 7 5800H",
+    "hwmon": "k10temp",
+    "ryzenadj": true,
+    "stock_ppt_w": [65, 65, 54],
+    "notes": "SMU floors STAPM near the slow limit; keep STAPM >= slow."
+  },
+  "igpu": { "driver": "amdgpu", "pci": "1002:1638" },
+  "dgpu": {
+    "vendor": "nvidia",
+    "model": "GeForce RTX 3050 Ti Mobile (GA107)",
+    "pci": "10de:25a0",
+    "power_limit_locked": true,
+    "hybrid": "vga_switcheroo / EnvyControl"
+  },
+  "fans": {
+    "hwmon": "alienware_wmi",
+    "rpm_inputs": ["fan1_input", "fan2_input"],
+    "rpm_max": 4700,
+    "count": 2,
+    "labels": ["CPU Fan", "GPU Fan"],
+    "additive_boost": ["fan1_boost", "fan2_boost"],
+    "pwm_hwmon": "dell_smm",
+    "pwm": ["pwm1", "pwm2"],
+    "pwm_enable": ["pwm1_enable", "pwm2_enable"],
+    "pwm_floor": 77,
+    "platform_profile_path": "/sys/firmware/acpi/platform_profile",
+    "platform_profiles": ["balanced", "performance", "custom"]
+  },
+  "game_mode": {
+    "mechanism": "platform_profile",
+    "value": "performance",
+    "driver": "alienware-wmi"
+  },
+  "keyboard": {
+    "rgb": "openrgb",
+    "openrgb_device": "Dell G Series LED Controller",
+    "usb": "187c:0550",
+    "zones": 1,
+    "effects": ["spectrum"],
+    "brightness_on": 100,
+    "notes": "Single controllable zone; raw-HID animation spam can hard-hang the MCU."
+  },
+  "gkey": {
+    "device": "AT Translated Set 2 keyboard",
+    "evdev": "/dev/input/event2",
+    "keycode_fnlock_off": "KEY_PERFORMANCE",
+    "keycode_fnlock_on": "KEY_F9"
+  },
+  "battery": {
+    "sysfs_threshold": false,
+    "method": "libsmbios",
+    "smbios_battery_ctl": true,
+    "interval": [50, 100],
+    "min_gap": 5
+  },
+  "tweaks_skip": [],
+  "notes": "The reference platform. Every config/*.json check/apply command is written against this board; other models must add their own model file and gate entries with \"models\": [ ... ]."
+}

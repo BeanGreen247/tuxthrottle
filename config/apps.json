@@ -5,7 +5,7 @@
     "category": "GPU",
     "manager": "dnf",
     "requires_vendor": "nvidia",
-    "check": "rpm -qa 2>/dev/null | grep -qE '^(akmod-nvidia|nvidia-driver)-' || lsmod | grep -q '^nvidia '",
+    "check": "rpm -q akmod-nvidia nvidia-driver xorg-x11-drv-nvidia 2>/dev/null | grep -qv 'is not installed' || lsmod | grep -q '^nvidia '",
     "install": [
       "dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda"
     ],

@@ -17,6 +17,46 @@
     "tweaks": ["CstateFix", "UsbAutosuspend", "MouseAccelFlat", "Swappiness", "ZramTune", "PowerProfileScripts", "ControllerUdev"],
     "apps": ["NvidiaDriver", "GameModeMangoHud", "LmSensors", "OBSStudio", "Discord", "Sunshine"]
   },
+  "MaximumPerformance": {
+    "Content": "Maximum Performance (aggressive)",
+    "Description": "Everything turned up for gaming and GPU-heavy work on this G15, security trade-offs accepted. Curated + aggressive kernel cmdline (mitigations off, PCIe/NVMe latency, iGPU PowerPlay), full VM/network/scheduler sysctls, forced CPU performance governor + amd_pstate active, NVIDIA Dynamic Boost + clock lock + shader-cache-keep + aggressive module options (PAT, ReBAR, max PowerMizer), GPU gaming env (RADV GPL, glthread, low render-ahead), KWin tuned for tearing/low-latency, RT priority on the GPU/NVMe IRQ threads, quiet GameMode tuning (renice/ioprio only), ananicy-cpp, Baloo off, idle services masked, raised resource limits. FANS / THERMAL ARE NOT TOUCHED — this preset does not enable the fan-curve daemon, the GameMode→performance-profile bridge, or any loud thermal profile; the machine will just spin up on its own more under load (especially the dGPU with max PowerMizer), which is normal. Set a fan curve / thermal profile yourself on the Fans tab, or hit G-Mode when you want it, if you want more cooling. Several entries need a reboot; every one is individually reversible.",
+    "tweaks": [
+      "CstateFix",
+      "Swappiness",
+      "ZramTune",
+      "BalooDisable",
+      "GamingResourceLimits",
+      "NetLatencySysctl",
+      "VmWritebackSysctl",
+      "SplitLockMitigateOff",
+      "CpuMaxPerformance",
+      "AmdPstateActive",
+      "NvmeIoTune",
+      "WifiPowersaveOff",
+      "KernelGamingCmdline",
+      "KernelUltraCmdline",
+      "KwinGamingCompositor",
+      "KwinAllowTearing",
+      "GameModeQuietIni",
+      "AnanicyCpp",
+      "ServiceMaskGaming",
+      "AmdgpuPerfScripts",
+      "NvidiaMaxPerf",
+      "NvidiaDynamicBoost",
+      "NvidiaClockLock",
+      "NvidiaShaderCache",
+      "NvidiaAggressiveModule",
+      "GpuGamingEnv"
+    ],
+    "apps": [
+      "NvidiaDriver",
+      "GameModeMangoHud",
+      "Gamescope",
+      "LmSensors",
+      "Nvtop",
+      "Btop"
+    ]
+  },
   "GameLaunchers": {
     "Content": "Game Launchers",
     "Description": "One click to install the full launcher stack: Steam, Lutris, Heroic (Epic/GOG), Prism Launcher (Minecraft), itch, plus Proton management (ProtonUp-Qt) and save backups (Ludusavi). Safe Baseline tweaks included.",

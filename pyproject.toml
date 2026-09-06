@@ -1,0 +1,31 @@
+# TuxThrottle is not a packaged Python distribution (it installs as a tree to
+# /opt via install.sh — see packaging/tuxthrottle.spec for the RPM). This file
+# only carries lint/type-check config for CI (.github/workflows/ci.yml).
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["tasks", "clients/plasmoid"]
+
+[tool.ruff.lint]
+# Pragmatic set for a stdlib-heavy systems tool with a big single-file GUI.
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+    "E501",    # long lines — many are wrapped config/heredoc strings
+    "E702",    # semicolon-joined statements — a deliberate style in the GUI
+    "E741",    # ambiguous names (l, I) — short scopes / colour maths
+    "B008",    # function call in an argument default (argparse `type=`)
+    "B905",    # zip(..., strict=) — added in 3.10, not always wanted here
+    "SIM105",  # contextlib.suppress — explicit try/except/pass reads fine
+    "SIM115",  # open() without a context manager — many are one-shot reads
+    "UP031",   # %-formatting — left as-is in older modules
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = false

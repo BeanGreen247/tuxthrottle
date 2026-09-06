@@ -81,6 +81,12 @@ do_install() {
     fi
     python3 -c 'import ttkbootstrap' 2>/dev/null && c_ok "ttkbootstrap OK" || { c_err "ttkbootstrap still not importable"; exit 1; }
 
+    # textual + rich — the headless/SSH-friendly TUI (tuxthrottle_tui.py).
+    # Both are packaged for Fedora/Nobara, unlike ttkbootstrap.
+    python3 -c 'import textual, rich' 2>/dev/null \
+        || dnf install -y -q python3-textual python3-rich \
+        || c_warn "python3-textual/python3-rich not installed — the TUI (tuxthrottle --tui) won't run"
+
     # optional extras — a failure here is a warning, not a stop
     python3 -c 'import PySide6' 2>/dev/null || dnf install -y -q python3-pyside6 \
         || c_warn "python3-pyside6 not installed — the tray monitor (tray_monitor.py) won't run"
@@ -98,23 +104,24 @@ do_install() {
     if command -v rsync >/dev/null 2>&1; then
         rsync -a --exclude='.git' --exclude='.github' --exclude='__pycache__' \
               --exclude='.pytest_cache' --exclude='tests' --exclude='tasks' \
-              --exclude='install.sh' "$SRC"/ "$LIBDIR"/
+              --exclude='packaging' --exclude='install.sh' "$SRC"/ "$LIBDIR"/
     else
         cp -a "$SRC"/. "$LIBDIR"/
         rm -rf "$LIBDIR/.git" "$LIBDIR/.github" "$LIBDIR/.pytest_cache" \
-               "$LIBDIR/tests" "$LIBDIR/tasks" "$LIBDIR/install.sh"
+               "$LIBDIR/tests" "$LIBDIR/tasks" "$LIBDIR/packaging" "$LIBDIR/install.sh"
     fi
     find "$LIBDIR" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
     chmod -R a+rX "$LIBDIR"
     # stamp the version so the Diagnostics / About page can show it (no .git in
-    # /opt). Always re-derive: `git describe` if $SRC is a repo, else fall back
-    # to a .version the source tree carries (rsync'd from a dev machine).
+    # /opt). Date-based YY.MM.DD keyed to the last commit day (Xylonic-style):
+    # last git commit date when $SRC is a checkout → the committed VERSION file
+    # (source tarball / rsync without .git). A stray $SRC/.version is ignored —
+    # it is a deploy artefact, not a source of truth.
     _ver=""
     if git -C "$SRC" rev-parse --git-dir >/dev/null 2>&1; then
-        _ver="$(git -C "$SRC" describe --tags --always --dirty 2>/dev/null \
-                || git -C "$SRC" rev-parse --short HEAD 2>/dev/null || true)"
+        _ver="$(git -C "$SRC" log -1 --format=%cd --date=format:%y.%m.%d 2>/dev/null || true)"
     fi
-    [[ -z "$_ver" && -s "$SRC/.version" ]] && _ver="$(cat "$SRC/.version")"
+    [[ -z "$_ver" ]] && _ver="$(tr -d '[:space:]' < "$SRC/VERSION" 2>/dev/null || true)"
     [[ -n "$_ver" ]] && printf '%s\n' "$_ver" > "$LIBDIR/.version"
     [[ -s "$LIBDIR/.version" ]] && c_ok "version $(cat "$LIBDIR/.version")"
     c_ok "copied $(find "$LIBDIR" -type f | wc -l) files"
@@ -135,6 +142,16 @@ exec /usr/bin/python3 "${LIBDIR}/tuxthrottlectl.py" "\$@"
 EOF
     chmod 0755 "$CTL"
     c_ok "CLI: ${CTL}"
+
+    # ---- tray launcher (tuxthrottle-tray) -----------------------------
+    TRAY="$(dirname "$BIN")/tuxthrottle-tray"
+    cat > "$TRAY" <<EOF
+#!/usr/bin/env bash
+# TuxThrottle system-tray monitor + quick launcher (unprivileged)
+exec /usr/bin/python3 "${LIBDIR}/tray_monitor.py" "\$@"
+EOF
+    chmod 0755 "$TRAY"
+    c_ok "tray launcher: ${TRAY}"
 
     # ---- icon -----------------------------------------------------------
     for s in "${ICON_SIZES[@]}"; do

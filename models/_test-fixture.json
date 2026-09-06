@@ -1,0 +1,34 @@
+{
+  "id": "_test-fixture",
+  "name": "TuxThrottle test fixture (not a real board)",
+  "match": { "product_name": [], "board_name": [] },
+  "cpu": { "vendor": "intel", "hwmon": "coretemp", "ryzenadj": false },
+  "igpu": { "pci": null },
+  "dgpu": { "pci": null, "vendor": null },
+  "fans": {
+    "hwmon": "acme_ec",
+    "pwm_hwmon": "acme_pwm",
+    "count": 3,
+    "pwm_floor": 90,
+    "platform_profile_path": "/sys/firmware/acpi/platform_profile",
+    "platform_profiles": ["low-power", "balanced", "performance"]
+  },
+  "game_mode": { "mechanism": "platform_profile", "value": "performance" },
+  "keyboard": {
+    "rgb": "openrgb",
+    "openrgb_device": "Acme Keyboard",
+    "usb": "1a2b:3c4d",
+    "zones": 1,
+    "effects": ["spectrum"],
+    "brightness_on": 100
+  },
+  "gkey": {
+    "device": "Acme Vendor Keys",
+    "evdev": "/dev/input/event9",
+    "keycode_fnlock_off": "KEY_PROG1",
+    "keycode_fnlock_on": "KEY_F9"
+  },
+  "battery": { "sysfs_threshold": true, "method": "sysfs" },
+  "tweaks_skip": ["RyzenAdjTDP", "RyzenCurveOptimizer"],
+  "_note": "Underscore-prefixed so sensors._model_files() never auto-matches it. Select it explicitly with TUXTHROTTLE_MODEL=_test-fixture for dev/testing the non-5515 code paths."
+}

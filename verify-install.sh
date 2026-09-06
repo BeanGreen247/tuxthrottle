@@ -41,11 +41,38 @@ grep -qi 'tuxthrottle\|G15 5515' /tmp/tt_report.txt && ok "--report produced a s
 hdr "python modules"
 python3 -c "import sys; sys.path.insert(0,'/opt/tuxthrottle'); import tuxthrottle_kbd, sensors; print(1)" >/dev/null 2>&1 \
     && ok "tuxthrottle_kbd + sensors import" || no "module import error"
-python3 /opt/tuxthrottle/tuxthrottle_kbd.py rainbow-test >/dev/null 2>&1 \
-    && python3 /opt/tuxthrottle/tuxthrottle_kbd.py gradient-test >/dev/null 2>&1 \
-    && ok "kbd self-tests pass" || no "kbd self-tests fail"
+python3 /opt/tuxthrottle/tuxthrottle_kbd.py --help >/dev/null 2>&1 \
+    && ok "tuxthrottle_kbd CLI responds" || no "tuxthrottle_kbd CLI error"
+python3 /opt/tuxthrottle/tuxthrottle_shadercache.py show >/dev/null 2>&1 \
+    && ok "tuxthrottle_shadercache CLI responds" || no "tuxthrottle_shadercache CLI error"
+python3 -c "import sys; sys.path.insert(0,'/opt/tuxthrottle'); import sensors, json; \
+[getattr(sensors,f) for f in ('battery_health_info','battery_charge_mode','nvidia_powerd_status','amd_pstate_mode','vrr_status')]; \
+d=json.load(open('/opt/tuxthrottle/config/tweaks.json')); \
+assert all(k in d for k in ('NvidiaShaderCache','SchedExtGaming','SplitLockMitigateOff','KwinAllowTearing')), 'gaming tweaks missing'" >/dev/null 2>&1 \
+    && ok "gaming helpers + tweaks present" || no "gaming helpers/tweaks missing"
 grep -rIl 'dellg15' /opt/tuxthrottle --include='*.py' >/dev/null 2>&1 \
     && no "'dellg15' still in /opt/tuxthrottle/*.py" || ok "no 'dellg15' token in installed .py"
+
+hdr "tier-3 modules"
+for f in /opt/tuxthrottle/tuxthrottle_control.py /opt/tuxthrottle/tuxthrottle_co_stress.py \
+         /opt/tuxthrottle/models/g15-5515.json /opt/tuxthrottle/clients/waybar/tuxthrottle-waybar; do
+    [ -e "$f" ] && ok "exists $f" || no "missing $f"
+done
+python3 -c "import sys; sys.path.insert(0,'/opt/tuxthrottle'); import tuxthrottle_control, tuxthrottle_co_stress, sensors; assert sensors.model_id()=='g15-5515', sensors.model_id(); print(1)" >/dev/null 2>&1 \
+    && ok "control + co_stress import; model_id=g15-5515" || no "tier-3 module import / model detect failed"
+tuxthrottlectl daemon status >/dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] || [ "$rc" = 1 ] && ok "'tuxthrottlectl daemon status' runs (rc=$rc)" || no "'tuxthrottlectl daemon status' crashed (rc=$rc)"
+tuxthrottlectl collect-model 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'fans' in d and '_todo' in d" >/dev/null 2>&1 \
+    && ok "'tuxthrottlectl collect-model' emits a valid scaffold" || no "'tuxthrottlectl collect-model' failed"
+python3 -c "import sys,os; sys.path.insert(0,'/opt/tuxthrottle'); os.environ['TUXTHROTTLE_MODEL']='_test-fixture'; import sensors; assert sensors.model_id()=='_test-fixture' and sensors._pwm_floor()==90" >/dev/null 2>&1 \
+    && ok "TUXTHROTTLE_MODEL override + profile-routed accessors work" || no "TUXTHROTTLE_MODEL override failed"
+if [ -f /usr/share/polkit-1/actions/org.tuxthrottle.policy ]; then
+    pkaction --action-id org.tuxthrottle.manage >/dev/null 2>&1 \
+        && ok "polkit: org.tuxthrottle.manage action registered" \
+        || no "PolkitTuxthrottlectl installed but polkitd didn't load the action"
+else
+    ok "polkit action not installed (PolkitTuxthrottlectl tweak is opt-in)"
+fi
 
 hdr "GUI — Report a Bug page"
 XAUTHORITY=$(ls -t /run/user/1000/xauth* 2>/dev/null | head -1) DISPLAY=:0 python3 - <<'PY' 2>&1 | sed 's/^/  /'

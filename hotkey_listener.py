@@ -39,10 +39,17 @@ except ImportError:
     sys.exit(1)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sensors import toggle_game_mode_external  # noqa: E402
+from sensors import model_profile, toggle_game_mode_external  # noqa: E402
 
-TARGET_KEYCODE = ecodes.KEY_PERFORMANCE  # 701
-DEVICE_NAME_HINTS = ("AT Translated Set 2 keyboard",)
+# The dedicated key + its keyboard node come from the model profile
+# (models/<slug>.json → "gkey"), defaulting to the 5515's values. We still
+# only ever act on the Fn-Lock-OFF keycode so a real F-key press is never
+# hijacked.
+_GKEY = model_profile().get("gkey") or {}
+TARGET_KEYCODE = getattr(ecodes, _GKEY.get("keycode_fnlock_off") or "",
+                         ecodes.KEY_PERFORMANCE)  # 701 on the 5515
+DEVICE_NAME_HINTS = tuple(dict.fromkeys(
+    h for h in (_GKEY.get("device"), "AT Translated Set 2 keyboard") if h))
 
 MODE = os.environ.get("TUXTHROTTLE_HOTKEY_MODE", "single").strip().lower()
 try:

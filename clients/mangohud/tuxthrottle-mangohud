@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""MangoHud custom-line bridge for TuxThrottle.
+
+Prints ONE short line for MangoHud's `exec=` directive — the current
+platform-profile, CPU package power + temp, and (if the dGPU is awake) its
+temp. Reads `tuxthrottlectl status --json` so it works whether the daemon is
+up (socket / D-Bus) or not (direct sensor reads).
+
+    $ tuxthrottle-mangohud
+    TT perf  42W  71C  | GPU 63C
+
+Wire it into ~/.config/MangoHud/MangoHud.conf:
+
+    exec=/opt/tuxthrottle/clients/mangohud/tuxthrottle-mangohud
+    exec_name=TuxThrottle
+
+MangoHud runs `exec` about once a second; this script caps its own work with
+short timeouts and prints a stable-width-ish line so the HUD doesn't jitter.
+`--once` / no args behave the same (MangoHud calls it fresh each time).
+"""
+import json
+import shutil
+import subprocess
+import sys
+
+CTL = shutil.which("tuxthrottlectl") or "/opt/tuxthrottle/tuxthrottlectl.py"
+_PROF_ABBR = {"balanced": "bal", "performance": "perf", "power-saver": "save",
+              "quiet": "quiet", "low-power": "save", "custom": "cust"}
+
+
+def _status() -> dict:
+    cmd = [sys.executable, CTL, "status", "--json"] if CTL.endswith(".py") \
+        else [CTL, "status", "--json"]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=8)
+        return json.loads(r.stdout) if r.returncode == 0 and r.stdout else {}
+    except (subprocess.SubprocessError, ValueError, OSError):
+        return {}
+
+
+def main() -> int:
+    st = _status()
+    if not st:
+        print("TT n/a")
+        return 0
+    prof = (st.get("platform_profile") or "?").lower()
+    seg = [f"TT {_PROF_ABBR.get(prof, prof[:4])}"]
+
+    cpu = st.get("cpu") or {}
+    pw, temp = cpu.get("power_w"), cpu.get("temp_c")
+    if isinstance(pw, (int, float)):
+        seg.append(f"{pw:.0f}W")
+    if isinstance(temp, (int, float)):
+        seg.append(f"{temp:.0f}C")
+
+    line = "  ".join(seg)
+    dgpu = (st.get("dgpu") or {}).get("temp_c")
+    if isinstance(dgpu, (int, float)):
+        line += f"  | GPU {dgpu:.0f}C"
+    print(line)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

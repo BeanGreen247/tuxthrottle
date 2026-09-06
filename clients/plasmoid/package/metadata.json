@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "KPlugin": {
+        "Id": "org.tuxthrottle.plasmoid",
+        "Name": "TuxThrottle",
+        "Description": "CPU / GPU temperature and a one-click power-profile switch, from tuxthrottlectl",
+        "Icon": "tuxthrottle",
+        "Version": "0.1.0",
+        "License": "MIT",
+        "Category": "System Information",
+        "Authors": [
+            { "Name": "BeanGreen247", "Email": "mozdrent@gmail.com" }
+        ],
+        "Website": "https://github.com/BeanGreen247/tuxthrottle"
+    }
+}

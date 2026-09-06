@@ -17,6 +17,9 @@ Usage:
     python3 tuxthrottle_prefix_relocate.py <appid>            # do the move
     python3 tuxthrottle_prefix_relocate.py <appid> --check    # exit 0 if OK,
                                                               # 1 if it needs moving
+    python3 tuxthrottle_prefix_relocate.py <appid> --relevant # exit 0 if the game
+                                                              # is on a colon-hostile
+                                                              # (non-Steam) drive at all
     python3 tuxthrottle_prefix_relocate.py --scan             # list every prefix
                                                               # and its status
     python3 tuxthrottle_prefix_relocate.py --all              # relocate every
@@ -199,6 +202,24 @@ def relocate_one(root: Path, appid: str, lib: Path | None = None) -> None:
     shutil.move(str(src), str(dst))
     os.symlink(str(dst), str(src))
     print(f"  done — {src} is now a symlink to {dst}")
+
+
+def do_relevant(root: Path, appid: str) -> int:
+    """exit 0 if the "move the Proton prefix" step is worth showing for this
+    game — its Steam library is a colon-hostile FS (NTFS/exFAT), i.e. a drive
+    that is not the native Steam/OS drive — so it either needs the move or has
+    already had it. exit 1 when the game sits on a colon-friendly drive (same
+    filesystem as Steam, or another Linux disk) and the step is pointless."""
+    lib = library_for_appid(root, appid)
+    if lib is None:
+        return 1
+    status, _ = classify(lib, appid)
+    if status in ("symlink", "needs-fix"):
+        return 0
+    if status == "absent":
+        # prefix not built yet — show only if the library drive rejects ':'
+        return 0 if not colon_ok(lib) else 1
+    return 1  # "ok"
 
 
 def do_one(root: Path, appid: str, check: bool) -> int:
@@ -493,9 +514,11 @@ def main() -> int:
             sys.exit("Steam is running — close Steam and the game first, then retry.")
         return pull_saves_one(root, args[0])
     if not args or not args[0].isdigit():
-        sys.exit("usage: tuxthrottle_prefix_relocate.py <appid> [--check] | --scan "
-                 "| --all | --saves-scan | --saves <appid> | --saves-all "
+        sys.exit("usage: tuxthrottle_prefix_relocate.py <appid> [--check|--relevant] "
+                 "| --scan | --all | --saves-scan | --saves <appid> | --saves-all "
                  "| --saves-import <appid>")
+    if "--relevant" in sys.argv:
+        return do_relevant(root, args[0])
     return do_one(root, args[0], "--check" in sys.argv)
 
 
