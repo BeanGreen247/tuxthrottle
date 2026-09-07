@@ -1023,13 +1023,27 @@ class GamesTabMixin:
             w.destroy()
         keep = [] if force else [v.get() for v in self._mh_gpu_vars]
         prefill = list(prefill or [])
-        pci = getattr(self, "_mh_gpu_pci", [])
+        fallback_pci = list(getattr(self, "_mh_gpu_pci", []))
         self._mh_gpu_vars = []
         multi = self._mh_gpu_count > 1
+        vals = [(keep[i] if i < len(keep) and keep[i]
+                 else prefill[i] if i < len(prefill) else "")
+                for i in range(self._mh_gpu_count)]
+        # Re-pair each row's name with the card it actually names. A config
+        # loaded in a different order than gpu_devices() reports would leave
+        # the name on row i glued to card i's PCI, so gpu_list swaps the two
+        # stats lines. Match by name → keep the positional guess only when the
+        # matcher can't place a row.
+        try:
+            matched = sensors.gpu_label_pci_map(vals)
+        except Exception:  # noqa: BLE001
+            matched = []
+        pci = [(matched[i] if i < len(matched) and matched[i]
+                else fallback_pci[i] if i < len(fallback_pci) else "")
+               for i in range(self._mh_gpu_count)]
+        self._mh_gpu_pci = pci
         for i in range(self._mh_gpu_count):
-            val = (keep[i] if i < len(keep) and keep[i]
-                   else prefill[i] if i < len(prefill) else "")
-            var = tk.StringVar(value=val)
+            var = tk.StringVar(value=vals[i])
             self._mh_gpu_vars.append(var)
             row = tb.Frame(box); row.pack(anchor="w", fill="x", pady=1)
             tb.Label(row, text=(f"GPU {i} name:" if multi else "GPU name:"),
@@ -1590,10 +1604,12 @@ class GamesTabMixin:
             "gpu_text": (",".join(gpus) if gpus else None),
             # list every GPU index the machine has, so MangoHud prints each
             # card's own name/stats (that's how you tell two same GPUs apart).
-            # MangoHud numbers GPUs by /sys/class/drm/cardN (iGPU usually card0),
-            # the reverse of our discrete-first rows — so emit the real MangoHud
-            # indices in *our* row order, else gpu_list=0,1 pins the dGPU label
-            # on the iGPU's stats line (the "GPU ids are swapped" bug).
+            # MangoHud numbers GPUs by ascending /sys/class/drm/renderD* (iGPU
+            # usually renderD128), which on hybrid laptops is neither cardN nor
+            # our row order — so emit the real MangoHud indices in *our* row
+            # order (each row's PCI is name-matched to a card), else gpu_list=
+            # 0,1 pins the dGPU label on the iGPU's stats line (the "GPU ids
+            # are swapped" bug).
             "gpu_list": self._mh_gpu_list(n_gpu),
             "width": width,                     # fit the longest label (or None)
         }

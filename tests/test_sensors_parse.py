@@ -247,6 +247,57 @@ def test_gpu_names_empty_without_tools(monkeypatch):
     assert sensors.gpu_names() == []
 
 
+# --- gpu_label_pci_map: keep each MangoHud label glued to the right card ----
+
+LSPCI_DMM = (
+    '0000:01:00.0 "VGA compatible controller" "NVIDIA Corporation" '
+    '"GA107M [GeForce RTX 3050 Ti Mobile]" -ra1 -p00 "Dell" "Device 0a6e"\n'
+    '0000:06:00.0 "VGA compatible controller" '
+    '"Advanced Micro Devices, Inc. [AMD/ATI]" '
+    '"Cezanne [Radeon Vega Series / Radeon Vega Mobile Series]" -rc5 -p00 '
+    '"Dell" "Device 0a6e"\n'
+    '0000:03:00.0 "Ethernet controller" "Realtek" "RTL8125" -r05 "Dell" "x"\n'
+)
+
+
+def _lspci_only(monkeypatch, out=LSPCI_DMM):
+    monkeypatch.setattr(sensors, "which",
+                        lambda c: "/usr/bin/lspci" if c == "lspci" else None)
+    monkeypatch.setattr(subprocess, "run", _fake_run(out))
+
+
+def test_label_map_swapped_config_order(monkeypatch):
+    # gpu_text loaded from a config as iGPU-first, detection is dGPU-first:
+    # each label must still resolve to its own card, not row-position order.
+    _lspci_only(monkeypatch)
+    got = sensors.gpu_label_pci_map(["Radeon Vega Series", "RTX 3050 Ti M"])
+    assert got == ["0000:06:00.0", "0000:01:00.0"]
+
+
+def test_label_map_follows_label_order(monkeypatch):
+    _lspci_only(monkeypatch)
+    got = sensors.gpu_label_pci_map(["RTX 3050 Ti M", "Radeon Vega Series"])
+    assert got == ["0000:01:00.0", "0000:06:00.0"]
+
+
+def test_label_map_unmatched_is_blank(monkeypatch):
+    _lspci_only(monkeypatch)
+    assert sensors.gpu_label_pci_map(["Potato", "Radeon Vega"]) == \
+        ["", "0000:06:00.0"]
+
+
+def test_label_map_each_pci_used_once(monkeypatch):
+    _lspci_only(monkeypatch)
+    # two NVIDIA-ish labels, one NVIDIA card → second falls through to blank
+    got = sensors.gpu_label_pci_map(["GeForce RTX 3050", "RTX 3050 Ti"])
+    assert got[0] == "0000:01:00.0" and got[1] == ""
+
+
+def test_label_map_no_lspci(monkeypatch):
+    monkeypatch.setattr(sensors, "which", lambda c: None)
+    assert sensors.gpu_label_pci_map(["RTX 3050", "Radeon"]) == ["", ""]
+
+
 # --- touchpad (KWin InputDevice D-Bus) ------------------------------------
 
 _TOUCHPAD_TREE = """\

@@ -420,6 +420,110 @@ def gpu_devices() -> list:
     return devs
 
 
+def _gpu_lspci_blobs() -> dict:
+    """{normalised PCI addr: lowercased 'vendor device subsystem' text} for
+    every GPU lspci can see. Richer than gpu_devices()' cleaned name and, being
+    pure lspci, it never wakes a runtime-suspended card. Names come straight
+    from the live pci.ids database — nothing GPU-specific is hard-coded here."""
+    out: dict = {}
+    if not which("lspci"):
+        return out
+    try:
+        r = subprocess.run(["lspci", "-Dmm"], capture_output=True,
+                           text=True, timeout=6)
+    except (OSError, subprocess.SubprocessError):
+        return out
+    for ln in (r.stdout or "").splitlines():
+        if not ln.strip():
+            continue
+        slot = ln.split(None, 1)[0]
+        parts = re.findall(r'"([^"]*)"', ln)
+        if len(parts) < 3:
+            continue
+        cls = parts[0].lower()
+        if not ("vga compatible controller" in cls or "3d controller" in cls
+                or "display controller" in cls):
+            continue
+        out[_norm_pci(slot)] = " ".join(parts[1:]).lower()
+    return out
+
+
+def _tok(text: str) -> set:
+    """Word/number tokens (≥2 chars) of a GPU name or label, lowercased."""
+    return {t for t in re.findall(r"[a-z0-9]+", (text or "").lower())
+            if len(t) > 1}
+
+
+def _gpu_name_candidates(devices=None) -> list:
+    """[{'pci', 'tokens'}] for every GPU actually present, built live from the
+    hardware: the card list is sysfs DRM (drm_gpus) ∪ lspci, and each card's
+    identifying tokens are whatever lspci's pci.ids lookup — plus any nvidia-smi
+    / caller-supplied marketing name — says for that exact PCI address. No
+    static vendor tables or keyword lists; add a GPU nobody's heard of and it
+    still resolves."""
+    blobs = _gpu_lspci_blobs()
+    order: list = list(blobs)
+    try:
+        for g in drm_gpus():
+            p = _norm_pci(g.get("pci", ""))
+            if p and p not in order:
+                order.append(p)
+    except Exception:  # noqa: BLE001
+        pass
+    named: dict = {}
+    for d in (devices or []):
+        p = _norm_pci(d.get("pci", ""))
+        if p:
+            named[p] = (named.get(p, "") + " " + d.get("name", "")).strip()
+            if p not in order:
+                order.append(p)
+    return [{"pci": p, "tokens": _tok(blobs.get(p, "") + " " + named.get(p, ""))}
+            for p in order]
+
+
+def gpu_label_pci_map(labels: list, devices=None) -> list:
+    """Best-effort PCI address for each MangoHud `gpu_text` label.
+
+    A label typed by the user — or read back from a MangoHud.conf whose
+    `gpu_text` order no longer matches detection order — must stay glued to the
+    card it actually names, or `gpu_list` pins the wrong stats line under it
+    (the "GPU labels are swapped" bug on hybrid laptops).
+
+    Matching is fully data-driven: each label is scored against every present
+    card by shared tokens, weighting each shared token by how *rare* it is
+    across the cards on this machine (a token unique to one card discriminates;
+    boilerplate like the vendor name or "mobile"/"series" that every card
+    shares barely moves the score). Highest score wins, each PCI used at most
+    once, '' when nothing overlaps (caller keeps its positional guess)."""
+    cand = _gpu_name_candidates(devices)
+    n = len(cand)
+    if not n:
+        return ["" for _ in labels]
+    df: dict = {}
+    for c in cand:
+        for t in c["tokens"]:
+            df[t] = df.get(t, 0) + 1
+
+    used: set = set()
+    out: list = []
+    for label in labels:
+        ltoks = _tok(label)
+        best, best_score = "", 0.0
+        for c in cand:
+            if not c["pci"] or c["pci"] in used:
+                continue
+            # 1 point per shared token + a bonus for tokens few cards carry
+            score = sum(1.0 + (n - df[t]) for t in (ltoks & c["tokens"]))
+            if score > best_score:
+                best, best_score = c["pci"], score
+        if best and best_score > 0:
+            used.add(best)
+            out.append(best)
+        else:
+            out.append("")
+    return out
+
+
 def read_igpu_clock_temp() -> str:
     clock, temp = read_igpu_clock_temp_values()
     c = f"{clock} MHz" if clock is not None else "?"
