@@ -654,6 +654,15 @@ class GamesTabMixin:
                       "storage” above.").pack(anchor="w")
         self._lo = {
             "mangohud": tk.BooleanVar(value=True),
+            # MangoHud's normal LD_PRELOAD hook misses some OpenGL loaders
+            # (older Wine/Proton D3D9→OpenGL titles); MANGOHUD_DLSYM=1 makes
+            # it hook via dlsym instead, which those games need to show the
+            # overlay at all
+            "mh_dlsym": tk.BooleanVar(value=False),
+            # anti-cheat-safe strips implicit Vulkan layers + sets MANGOHUD=0;
+            # this keeps the explicit `mangohud` wrapper anyway (off by
+            # default — some anti-cheats still flag the LD_PRELOAD)
+            "ac_keep_mh": tk.BooleanVar(value=False),
             "gamemode": tk.BooleanVar(value=True),
             "gamescope": tk.BooleanVar(value=False),
             "prime": tk.BooleanVar(value=self.has_nvidia),
@@ -678,6 +687,13 @@ class GamesTabMixin:
         self._lo_fps = tk.StringVar(value="")
         row = tb.Frame(lf); row.pack(anchor="w", pady=(8, 2))
         for key, label in (("mangohud", "MangoHud overlay"),
+                           ("mh_dlsym", "MangoHud OpenGL support "
+                                        "(MANGOHUD_DLSYM=1 — needed if the "
+                                        "overlay doesn't show on an OpenGL game)"),
+                           ("ac_keep_mh", "Still show MangoHud when "
+                                          "“Anti-cheat safe” is on (⚠ can still "
+                                          "get the LD_PRELOAD flagged — off "
+                                          "by default)"),
                            ("gamemode", "Feral GameMode"),
                            ("prime", "Render on the NVIDIA dGPU (PRIME offload)"),
                            ("nvcache", "Keep NVIDIA shader cache"),
@@ -828,11 +844,17 @@ class GamesTabMixin:
         if self._lo["ntsync"].get():
             env.append("PROTON_USE_NTSYNC=1")
         anticheat = self._lo["anticheat"].get()
+        keep_mh = anticheat and self._lo["ac_keep_mh"].get()
         if anticheat:
-            env += ["MANGOHUD=0", "DISABLE_VKBASALT=1",
-                    "VK_LOADER_LAYERS_DISABLE=~implicit~"]
+            env += ["DISABLE_VKBASALT=1", "VK_LOADER_LAYERS_DISABLE=~implicit~"]
+            if not keep_mh:
+                env.append("MANGOHUD=0")
         if self._lo["gamemode"].get():
             wrap.append("gamemoderun")
+        if self._lo["mangohud"].get() and (not anticheat or keep_mh):
+            if self._lo["mh_dlsym"].get():
+                env.append("MANGOHUD_DLSYM=1")
+            wrap.append("mangohud")
         if self._lo["gamescope"].get():
             gs = ["gamescope"]
             if self._lo_w.get().strip().isdigit():
@@ -842,10 +864,22 @@ class GamesTabMixin:
             if self._lo_fps.get().strip().isdigit():
                 gs += ["-r", self._lo_fps.get().strip()]
             gs += ["-f", "--"]
-            wrap += gs
-        if self._lo["mangohud"].get() and not anticheat:
-            wrap.append("mangohud")
-        self._lo_out.set(" ".join(env + wrap + ["%command%"]))
+            # the PRIME/DXVK/etc env vars must be scoped to AFTER gamescope's
+            # `--` (i.e. onto the wrapped game, not onto gamescope itself) —
+            # gamescope is a nested Wayland compositor; forcing it onto the
+            # NVIDIA-only vendor library via __GLX_VENDOR_LIBRARY_NAME/PRIME
+            # offload breaks its own backend/glamor GPU selection and can
+            # crash gamescope's internal Xwayland outright (seen on the G15:
+            # xwl_glamor_init abort, "headless backend" fallback) instead of
+            # just affecting the game as intended.
+            # gamescope execs its child directly (no shell), so a bare
+            # `VAR=value` after its `--` isn't parsed as an assignment — it's
+            # tried as the program to run and fails with "No such file or
+            # directory". `env` is what actually applies the assignments here.
+            out = gs + (["env"] + env if env else []) + wrap + ["%command%"]
+        else:
+            out = env + wrap + ["%command%"]
+        self._lo_out.set(" ".join(out))
 
     def _mh_conf_path(self) -> "Path":
         try:

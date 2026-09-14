@@ -83,11 +83,28 @@ def library_for_appid(root: Path, appid: str) -> Path | None:
             best = path
     if best:
         return Path(best)
+    # libraryfolders.vdf's "apps" block can be stale/empty (Steam hasn't
+    # rewritten it, or a leftover appmanifest sits in a library the game was
+    # never fully installed to) — fall back to picking whichever candidate
+    # library actually holds the game, biggest reported SizeOnDisk first,
+    # so a stale zero-byte appmanifest in the default library doesn't win
+    # over the real install on another drive.
+    candidates: list[tuple[int, bool, Path]] = []
     for lib in all_libraries(root):
-        if (lib / "steamapps" / f"appmanifest_{appid}.acf").is_file() or \
-           (lib / "steamapps" / "compatdata" / appid).exists():
-            return lib
-    return None
+        acf = lib / "steamapps" / f"appmanifest_{appid}.acf"
+        has_compat = (lib / "steamapps" / "compatdata" / appid).exists()
+        if acf.is_file():
+            size = 0
+            m = re.search(r'"SizeOnDisk"\s*"(\d+)"', acf.read_text(errors="replace"))
+            if m:
+                size = int(m.group(1))
+            candidates.append((size, has_compat, lib))
+        elif has_compat:
+            candidates.append((0, True, lib))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda c: (c[0], c[1]), reverse=True)
+    return candidates[0][2]
 
 
 def appid_name(root: Path, appid: str) -> str:
