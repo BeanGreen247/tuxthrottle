@@ -354,5 +354,116 @@
         "manual": true
       }
     ]
+  },
+  "SWBF2Classic": {
+    "Content": "Star Wars Battlefront II (Classic, 2005)",
+    "Tab": "SWBF2 Classic",
+    "order": 5,
+    "appid": "6060",
+    "Description": "Star Wars Battlefront II (2005) — the Classic release on Steam, AppID 6060 — via Proton. It's a 32-bit DirectX 9 title from 2005 with no anti-cheat, so it doesn't need the BattlEye/EAC handling the GTA entries do — a plain gamemoderun mangohud %command% (+ PRIME offload on the hybrid G15) is normally enough. CONFIRMED on the G15 (2026-09-14, Proton Experimental, NVIDIA driver 595.91.07): the loading screen flashes then the game dies with `err:vulkan:vkDestroySwapchainKHR Exception 0xc0000005 in Unix call` inside `libnvidia-glcore.so`, right after DXVK logs `Presenter: Got VK_SUBOPTIMAL_KHR, recreating swapchain` — the game's window grows from its initial 800×600 Vulkan surface to the real desktop size, and NVIDIA's 32-bit proprietary driver segfaults recreating the swapchain for that resize, inside the Steam Linux Runtime container. Step 9 below (gamescope) fixes this by giving the game one fixed-size surface so that resize never happens; step 10 (wined3d) is the fallback if gamescope isn't enough — it bypasses DXVK/Vulkan for this title's D3D9 renderer entirely. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted.",
+    "steps": [
+      {
+        "id": "steam",
+        "title": "1 · Install Steam (native)",
+        "desc": "Native RPM Steam (RPM Fusion) — the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
+        "check": "rpm -q steam >/dev/null 2>&1",
+        "run": "dnf install -y steam"
+      },
+      {
+        "id": "tools",
+        "title": "2 · Install GameMode, MangoHud, vkBasalt, gamescope",
+        "desc": "Per-game performance profile (GameMode), the FPS/frametime overlay (MangoHud + GOverlay to configure it), post-process layer (vkBasalt) and the gamescope micro-compositor. Also adds you to the gamemode group.",
+        "check": "rpm -q gamemode mangohud vkBasalt gamescope goverlay >/dev/null 2>&1",
+        "run": "dnf install -y gamemode mangohud vkBasalt gamescope goverlay && usermod -aG gamemode {USER}"
+      },
+      {
+        "id": "protontricks",
+        "title": "3 · Install Protontricks",
+        "desc": "winetricks for Steam/Proton prefixes — used later to drop vcrun2005/xact/d3dx9 into Battlefront II's prefix if audio or video is missing, and to flip the prefix to Windows XP/7 if the launcher renders wrong.",
+        "check": "rpm -q protontricks >/dev/null 2>&1 || sudo -u {USER} flatpak info com.github.Matoking.protontricks >/dev/null 2>&1",
+        "run": "dnf install -y protontricks"
+      },
+      {
+        "id": "protonup",
+        "title": "4 · Install ProtonUp-Qt",
+        "desc": "GUI to manage GE-Proton / wine-GE versions per launcher. Installed as a Flatpak for {USER}. Old titles like this one sometimes run better on an older GE-Proton than on the newest Proton Experimental — this lets you keep several installed side by side.",
+        "check": "flatpak info net.davidotek.pupgui2 >/dev/null 2>&1 || sudo -u {USER} flatpak info net.davidotek.pupgui2 >/dev/null 2>&1",
+        "run": "dnf install -y flatpak && flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo && sudo -u {USER} flatpak install -y --noninteractive flathub net.davidotek.pupgui2"
+      },
+      {
+        "id": "geproton",
+        "title": "5 · Install the latest GE-Proton",
+        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub and unpacks it into Steam's compatibilitytools.d for {USER}. Restart Steam afterwards so it shows up under Compatibility. If the newest GE-Proton doesn't get this game running, use ProtonUp-Qt (step 4) to also grab an older GE-Proton or plain Proton 7-8 — this title is old enough that a slightly older Proton sometimes behaves better than the newest one.",
+        "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
+        "run": "su - {USER} -c 'set -e; d=\"$HOME/.local/share/Steam/compatibilitytools.d\"; [ -d \"$HOME/.steam/root\" ] && d=\"$HOME/.steam/root/compatibilitytools.d\"; mkdir -p \"$d\"; url=$(curl -fsSL https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep -oP \"https://[^\\x22]+GE-Proton[^\\x22]+tar[.]gz\" | head -1); test -n \"$url\"; echo \"Downloading $url\"; curl -fL \"$url\" -o /tmp/geproton.tar.gz; tar -xzf /tmp/geproton.tar.gz -C \"$d\"; rm -f /tmp/geproton.tar.gz; echo \"compatibilitytools.d now holds:\"; ls -1 \"$d\"'"
+      },
+      {
+        "id": "prefixfs",
+        "title": "5b · Keep the Proton prefix off NTFS / exFAT",
+        "desc": "If Star Wars Battlefront II lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there — creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
+        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
+        "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
+      },
+      {
+        "id": "steamplay",
+        "title": "6 · Enable Steam Play for all titles  (manual)",
+        "desc": "In Steam: Settings → Compatibility → turn on “Enable Steam Play for all other titles” and pick the GE-Proton from step 5. Restart Steam when it asks. This can't be scripted safely while Steam is running.",
+        "manual": true
+      },
+      {
+        "id": "compat",
+        "title": "7 · Force a compatibility tool on Battlefront II  (manual)",
+        "desc": "Steam Library → right-click Star Wars Battlefront II → Properties → Compatibility → tick “Force the use of a specific Steam Play compatibility tool” → choose the GE-Proton from step 5. If it still won't launch, try a plain Proton 7 or 8 instead — this 2005 title sometimes runs worse on the newest Proton/GE-Proton than on an older one.",
+        "manual": true
+      },
+      {
+        "id": "launchopts",
+        "title": "8 · Set the launch options  (manual)",
+        "desc": "Properties → General → Launch Options. Paste the string below (Copy button) — no anti-cheat here, so a plain gamemoderun mangohud %command% is enough. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU on the hybrid G15 — drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). Build a fuller string (shader cache, gamescope, etc.) on the Game Tools tab's launch-options builder instead if you want more of those toggles.",
+        "manual": true,
+        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun mangohud %command%"
+      },
+      {
+        "id": "gamescope",
+        "title": "9 · Crashes on the loading screen: wrap it in gamescope  (manual)",
+        "desc": "CONFIRMED fix for a reproducible crash on the G15: the game starts its Vulkan swapchain at 800×600, then resizes to the desktop resolution, and NVIDIA's proprietary driver segfaults recreating that swapchain (`vkDestroySwapchainKHR Exception 0xc0000005`, right after DXVK logs `Got VK_SUBOPTIMAL_KHR, recreating swapchain`) — captured with PROTON_LOG=1 in $HOME/steam-6060.log. gamescope (installed in step 2) gives the game one fixed-size surface up front so that resize — and the crash — never happens. Replace the launch options from step 8 with the string below (Copy button); `-f` runs gamescope fullscreen at your desktop's native resolution. TWO gotchas found the hard way on the G15: (1) the PRIME/NVIDIA env vars must go AFTER gamescope's `--` — putting them before gamescope forces gamescope's own nested Xwayland onto the NVIDIA-only vendor path too and crashes IT instead (xwl_glamor_init abort, falls back to a headless backend); (2) gamescope execs its child directly with no shell, so a bare `VAR=value` after `--` isn't parsed as an env assignment — it's tried as the program to run and fails (\"No such file or directory\") — `env` is what actually applies them.",
+        "manual": true,
+        "copy": "gamescope -f -- env __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun mangohud %command%"
+      },
+      {
+        "id": "wined3d",
+        "title": "10 · Still crashing: force wined3d  (manual)",
+        "desc": "If gamescope (step 9) doesn't fix it, add PROTON_USE_WINED3D=1 into the `env` list right after gamescope's `--` (same place as the other env vars) and relaunch. This bypasses DXVK/Vulkan for this title's legacy fixed-function Direct3D 9 renderer entirely (trading some speed for the older, more compatible OpenGL-backed wined3d path), so the NVIDIA Vulkan swapchain bug in step 9's description can't happen at all.",
+        "manual": true,
+        "copy": "gamescope -f -- env PROTON_USE_WINED3D=1 __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun mangohud %command%"
+      },
+      {
+        "id": "prefixdeps",
+        "title": "11 · Missing audio / video codecs  (manual)",
+        "desc": "Only needed if the intro movies don't play or menu audio is missing/crackly. Launch Battlefront II once first so Proton creates the prefix, quit, then run the command below (Copy) — it drops vcrun2005 and xact (DirectSound/XACT audio) into AppID {APPID}'s prefix non-interactively.",
+        "manual": true,
+        "copy": "su - {USER} -c 'protontricks --no-bwrap {APPID} -q vcrun2005 xact'"
+      },
+      {
+        "id": "firstrun",
+        "title": "12 · First launch  (manual)",
+        "desc": "Start Star Wars Battlefront II from Steam. If the loading screen flashes and it dies, use step 9's gamescope launch string first — that's the confirmed fix for this game's crash on the G15. Still failing after that? Try step 10 (wined3d). For any other crash, enable PROTON_LOG=1 in the launch options (steam-6060.log lands in $HOME) so the real error can be pinned down instead of guessed at.",
+        "manual": true
+      },
+      {
+        "id": "widescreen",
+        "title": "13 · Widescreen menus + stretched HUD  (manual)",
+        "desc": "This 2005 game's menus and Galactic Conquest screen are hardcoded to 800×600 — forcing a higher resolution makes gameplay render correctly (Hor+) but leaves menus pixelated/stretched and the HUD/crosshair misaligned (documented on PCGamingWiki). Two things fix it: (1) add a resolution launch argument (append it into the `env` list right after gamescope's `--`, alongside the other flags from step 9/10) — `-resolution 1920 1080` (swap in your desktop's actual resolution); this only works up to 16:9/16:10, which covers the G15's panel. (2) Install the community mod “Star Wars Battlefront II Remastered” (HD interface mod, ModDB) — it fixes the stretched/pixelated menus at forced resolutions, includes the Unofficial v1.3 Patch and AI Hero script, and adds a proper settings page (so don't also install v1.3 separately). Since it's a Windows installer, run it inside the same Proton prefix with protontricks-launch (Copy button below) — point it at the top-level “Star Wars Battlefront II Classic” folder when it asks, NOT the GameData or addon subfolder.",
+        "manual": true,
+        "copy": "su - {USER} -c 'protontricks-launch --appid {APPID} /path/to/BF2_Remaster_Installer.exe'"
+      },
+      {
+        "id": "fov",
+        "title": "14 · Narrow field of view (FOV)  (manual)",
+        "desc": "The retail FOV is fixed and can feel narrow. The Unofficial v1.3 Patch (already included if you installed step 13's Remastered mod — install it standalone from ModDB otherwise) adds a “Fake Console”: pause the game in a match, open Fake Console from the pause menu, and set your FOV value there. Higher FOV values can show incomplete first-person hand/weapon models — that's a known limitation of the patch, not a sign something's broken.",
+        "manual": true
+      }
+    ]
   }
 }

@@ -1126,3 +1126,11 @@ resolved from `PKEXEC_UID`/`SUDO_UID` since the whole app runs elevated.
   new model file (the file + the `models:` gate are the groundwork).
 - The Curve Optimizer offset can't be read back from `ryzenadj`, so its
   "current" value is only ever what the tool last wrote to `co.json`.
+
+## Support
+
+If this project is useful to you, consider supporting its development via PayPal:
+
+[![Donate with PayPal](.github/paypal-qr.png)](https://paypal.me/beangreen2471)
+
+**PayPal:** https://paypal.me/beangreen2471
