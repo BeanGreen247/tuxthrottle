@@ -69,7 +69,7 @@ and are never applied from %post.
 %install
 install -d %{buildroot}%{appdir}
 # ship the runnable tree; leave dev-only bits out (mirrors install.sh)
-cp -a *.py config assets %{buildroot}%{appdir}/
+cp -a *.py tuxthrottle_*.sh config assets %{buildroot}%{appdir}/
 install -m 0644 README.md CLAUDE.md LICENSE %{buildroot}%{appdir}/ 2>/dev/null || :
 printf '%%s\n' "%{version}-%{release}" > %{buildroot}%{appdir}/.version
 

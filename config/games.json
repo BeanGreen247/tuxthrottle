@@ -465,5 +465,69 @@
         "manual": true
       }
     ]
+  },
+  "OsuLazer": {
+    "Content": "osu!lazer (native AppImage)",
+    "Tab": "osu!lazer",
+    "order": 6,
+    "appid": "",
+    "Description": "osu!lazer is a native Linux build (AppImage), not a Steam/Proton game, so this card sets up TuxThrottle's osu! launcher instead of Steam launch options. Every launch goes through gamemoderun (+ mangohud when the overlay is on) with: the power profile switched to performance and back, mouse acceleration flattened in KWin while playing, driver vsync off with a single pre-rendered frame and NVIDIA threaded-GL off, the persistent NVIDIA shader cache / DXVK state cache in TuxThrottle's shader-cache folder, and PipeWire pinned to a 256-frame quantum (~5 ms instead of the default 1024 = ~21 ms) so hitsounds line up. On the hybrid G15 it renders on the NVIDIA dGPU through PRIME offload (__NV_PRIME_RENDER_OFFLOAD / __VK_LAYER_NV_optimus / __GLX_VENDOR_LIBRARY_NAME) with the OpenGL renderer. lazer updates itself in place from the main menu, so there is no update step. Work through the steps top to bottom.",
+    "steps": [
+      {
+        "id": "tools",
+        "title": "1 · Install GameMode + MangoHud",
+        "desc": "The launcher refuses to start osu! without GameMode (gamemoderun); MangoHud is the optional FPS/frametime overlay. Also adds you to the gamemode group.",
+        "check": "rpm -q gamemode mangohud >/dev/null 2>&1",
+        "run": "dnf install -y gamemode mangohud && usermod -aG gamemode {USER}"
+      },
+      {
+        "id": "install",
+        "title": "2 · Download osu!lazer + install the launcher",
+        "desc": "Reuses an osu! AppImage that's already set up (launcher config, ~/Applications, ~/Downloads, ~/.local/bin, ~) and otherwise downloads the latest release straight from github.com/ppy/osu into ~/Applications/osu.AppImage. Then installs the launcher to ~/.local/bin/osu-lazer-launcher and adds “osu!” to the Games menu and the desktop, registered for osu:// links and .osz/.osk/.osr files. Close osu! first.",
+        "check": "su - {USER} -c 'test -x ~/.local/bin/osu-lazer-launcher && ~/.local/bin/osu-lazer-launcher doctor 2>&1 | grep -q \"^:: AppImage:\"'",
+        "run": "su - {USER} -c 'bash {TOOLKIT_DIR}/tuxthrottle_osu_launcher.sh install || bash {TOOLKIT_DIR}/tuxthrottle_osu_launcher.sh install --download'"
+      },
+      {
+        "id": "g15conf",
+        "title": "3 · Low-latency launcher config (dGPU, shader cache, audio, overlay)",
+        "desc": "Writes the launcher config: USE_DGPU=yes (NVIDIA PRIME offload), SHADER_CACHE_DIR = TuxThrottle's shader-cache folder (Game Tools → Shader cache), LOW_LATENCY_AUDIO=yes with AUDIO_QUANTUM=256 (drop to 128 for less, raise to 512 if audio crackles), SHOW_MANGOHUD=yes, FLAT_MOUSE=yes, PERFORMANCE_PROFILE=yes, DISABLE_DRIVER_VSYNC=yes. Edit ~/.config/osu-lazer-launcher/config to change any of them later.",
+        "check": "su - {USER} -c 'grep -q \"^USE_DGPU=yes\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^SHADER_CACHE_DIR=\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^LOW_LATENCY_AUDIO=yes\" $HOME/.config/osu-lazer-launcher/config'",
+        "run": "su - {USER} -c 'set -e; c=$HOME/.config/osu-lazer-launcher/config; sc=$(cd {TOOLKIT_DIR} && python3 -c \"import tuxthrottle_shadercache as s; print(s.cache_dir())\"); for kv in USE_DGPU=yes \"SHADER_CACHE_DIR=\\\"$sc\\\"\" LOW_LATENCY_AUDIO=yes AUDIO_QUANTUM=256 SHOW_MANGOHUD=yes FLAT_MOUSE=yes PERFORMANCE_PROFILE=yes DISABLE_DRIVER_VSYNC=yes; do k=${kv%%=*}; if grep -q \"^$k=\" \"$c\"; then sed -i \"s|^$k=.*|$kv|\" \"$c\"; else echo \"$kv\" >> \"$c\"; fi; done; ~/.local/bin/osu-lazer-launcher doctor'"
+      },
+      {
+        "id": "tearing",
+        "title": "4 · Let KWin tear for fullscreen games",
+        "desc": "Same as the KDE “allow screen tearing” tweak: kwinrc [Compositing] AllowTearing=true, so osu! in fullscreen can flip frames immediately instead of waiting for the compositor's next vblank. Only apps that ask for tearing are affected.",
+        "check": "[ \"$(sudo -u {USER} -H kreadconfig6 --file kwinrc --group Compositing --key AllowTearing 2>/dev/null)\" = \"true\" ]",
+        "run": "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus bash -lc 'kwriteconfig6 --file kwinrc --group Compositing --key AllowTearing true; { qdbus-qt6 org.kde.KWin /KWin reconfigure || dbus-send --session --type=method_call --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure; } 2>/dev/null || true'"
+      },
+      {
+        "id": "firstrun",
+        "title": "5 · First launch  (manual)",
+        "desc": "Start osu! once from the Games menu (or run osu-lazer-launcher) so it creates its data folder, pick the OpenGL renderer under Settings → Graphics (the tested one for PRIME offload; the launcher warns if Vulkan is set), then quit. Crash output lands in ~/.cache/osu-lazer-launcher/last.log. The launcher falls back to the AMD iGPU automatically if the NVIDIA GL shaders fail to compile.",
+        "manual": true,
+        "copy": "osu-lazer-launcher doctor"
+      },
+      {
+        "id": "settings",
+        "title": "6 · Competitive game settings",
+        "desc": "Edits game.ini / framework.ini (backups next to each file): frame limiter Unlimited, fullscreen, multi-threaded execution, 100 % background dim, blur / hit lighting / star fountains / beatmap skins-colours-hitsounds off, key overlay on, in-game leaderboard off, mouse buttons + wheel disabled during play. Refuses while osu! is running (lazer rewrites both files on exit).",
+        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_osu_settings.py --check'",
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_osu_settings.py'"
+      },
+      {
+        "id": "skins",
+        "title": "7 · Import skins / beatmaps  (manual)",
+        "desc": "Double-click a .osk skin or .osz beatmap (or drag it onto the osu! window) — step 2 registered the file types. Skin folders in ~/Downloads can be zipped and renamed to .osk first.",
+        "manual": true
+      },
+      {
+        "id": "dpi",
+        "title": "8 · Measure your mouse's real DPI  (manual, optional)",
+        "desc": "Needs evtest and sudo: move the mouse 10.16 cm three times and it prints the hardware DPI, so the in-game sensitivity can stay at 1.0 with raw input.",
+        "manual": true,
+        "copy": "osu-lazer-launcher measure-dpi"
+      }
+    ]
   }
 }
