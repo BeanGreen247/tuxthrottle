@@ -527,6 +527,13 @@
         "desc": "Needs evtest and sudo: move the mouse 10.16 cm three times and it prints the hardware DPI, so the in-game sensitivity can stay at 1.0 with raw input.",
         "manual": true,
         "copy": "osu-lazer-launcher measure-dpi"
+      },
+      {
+        "id": "diag",
+        "title": "9 · Latency diagnostics  (manual, optional)",
+        "desc": "Live terminal dashboard of everything that adds latency: osu!'s real PipeWire quantum, xruns and ALSA buffer, an output-latency estimate, which GPU it renders on and whether it's throttling, osu!'s frame limiter / window mode, power profile, refresh rate + KWin tearing, mouse polling rate, IRQ / realtime priorities and the launcher config, each with what to change. Run it in a terminal while osu! is open (r refresh, s save report, q quit).",
+        "manual": true,
+        "copy": "osu-lazer-launcher diag"
       }
     ]
   }

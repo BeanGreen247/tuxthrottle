@@ -9,6 +9,7 @@
 #       Launch osu! with every tweak below, then restore the system when osu! exits.
 #   osu-lazer-launcher doctor        Show what was detected and what will be applied.
 #   osu-lazer-launcher measure-dpi   Measure a mouse's hardware DPI (needs evtest + sudo).
+#   osu-lazer-launcher diag [--once] Live latency/performance diagnostics TUI (TuxThrottle's tuxthrottle_osu_diag.py).
 #   osu-lazer-launcher uninstall     Remove everything "install" added (the AppImage is kept).
 #
 # What "run" does:
@@ -344,6 +345,14 @@ EOF
     [[ ":$PATH:" == *":$HOME/.local/bin:"* ]] || warn "~/.local/bin is not in PATH; the menu entry still works"
 }
 
+cmd_diag() {
+    local d
+    for d in "$(dirname "$(readlink -f "$0")")" /opt/tuxthrottle; do
+        [[ -f "$d/tuxthrottle_osu_diag.py" ]] && exec python3 "$d/tuxthrottle_osu_diag.py" "$@"
+    done
+    die "tuxthrottle_osu_diag.py not found (it ships with TuxThrottle: github.com/BeanGreen247/tuxthrottle)"
+}
+
 cmd_uninstall() {
     local desk; desk="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
     rm -f "$DESKTOP_FILE" "$desk/$APP_ID.desktop" "$ICON_FILE" "$BIN"
@@ -378,6 +387,7 @@ case "${1:-run}" in
     install) shift; cmd_install "${1:-}" ;;
     doctor) cmd_doctor ;;
     measure-dpi) cmd_measure_dpi ;;
+    diag) shift; cmd_diag "$@" ;;
     uninstall) cmd_uninstall ;;
     -h|--help|help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//' ;;
     *) cmd_run "$@" ;;
