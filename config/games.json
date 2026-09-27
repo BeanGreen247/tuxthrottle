@@ -471,14 +471,14 @@
     "Tab": "osu!lazer",
     "order": 6,
     "appid": "",
-    "Description": "osu!lazer is a native Linux build (AppImage), not a Steam/Proton game, so this card sets up TuxThrottle's osu! launcher instead of Steam launch options. Every launch goes through gamemoderun (+ mangohud when the overlay is on) with: the power profile switched to performance and back, mouse acceleration flattened in KWin while playing, driver vsync off with a single pre-rendered frame and NVIDIA threaded-GL off, the persistent NVIDIA shader cache / DXVK state cache in TuxThrottle's shader-cache folder, and PipeWire pinned to a 256-frame quantum (~5 ms instead of the default 1024 = ~21 ms) so hitsounds line up. On the hybrid G15 it renders on the NVIDIA dGPU through PRIME offload (__NV_PRIME_RENDER_OFFLOAD / __VK_LAYER_NV_optimus / __GLX_VENDOR_LIBRARY_NAME) with the OpenGL renderer. lazer updates itself in place from the main menu, so there is no update step. Work through the steps top to bottom.",
+    "Description": "osu!lazer is a native Linux build (AppImage), not a Steam/Proton game, so this card sets up TuxThrottle's osu! launcher instead of Steam launch options. Every launch goes through gamemoderun with the MangoHud overlay forced off (even though it's enabled globally) and: the power profile switched to performance and back, mouse acceleration flattened in KWin while playing, driver vsync off with a single pre-rendered frame and NVIDIA threaded-GL off, the persistent NVIDIA shader cache / DXVK state cache in TuxThrottle's shader-cache folder, and PipeWire pinned to a 256-frame quantum (~5 ms instead of the default 1024 = ~21 ms) so hitsounds line up. On the hybrid G15 it renders on the NVIDIA dGPU through PRIME offload (__NV_PRIME_RENDER_OFFLOAD / __VK_LAYER_NV_optimus / __GLX_VENDOR_LIBRARY_NAME) with the OpenGL renderer. lazer updates itself in place from the main menu, so there is no update step. Work through the steps top to bottom.",
     "steps": [
       {
         "id": "tools",
-        "title": "1 · Install GameMode + MangoHud",
-        "desc": "The launcher refuses to start osu! without GameMode (gamemoderun); MangoHud is the optional FPS/frametime overlay. Also adds you to the gamemode group.",
-        "check": "rpm -q gamemode mangohud >/dev/null 2>&1",
-        "run": "dnf install -y gamemode mangohud && usermod -aG gamemode {USER}"
+        "title": "1 · Install GameMode",
+        "desc": "The launcher refuses to start osu! without GameMode (gamemoderun). Also adds you to the gamemode group.",
+        "check": "rpm -q gamemode >/dev/null 2>&1",
+        "run": "dnf install -y gamemode && usermod -aG gamemode {USER}"
       },
       {
         "id": "install",
@@ -489,10 +489,10 @@
       },
       {
         "id": "g15conf",
-        "title": "3 · Low-latency launcher config (dGPU, shader cache, audio, overlay)",
-        "desc": "Writes the launcher config: USE_DGPU=yes (NVIDIA PRIME offload), SHADER_CACHE_DIR = TuxThrottle's shader-cache folder (Game Tools → Shader cache), LOW_LATENCY_AUDIO=yes with AUDIO_QUANTUM=256 (drop to 128 for less, raise to 512 if audio crackles), SHOW_MANGOHUD=yes, FLAT_MOUSE=yes, PERFORMANCE_PROFILE=yes, DISABLE_DRIVER_VSYNC=yes. Edit ~/.config/osu-lazer-launcher/config to change any of them later.",
-        "check": "su - {USER} -c 'grep -q \"^USE_DGPU=yes\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^SHADER_CACHE_DIR=\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^LOW_LATENCY_AUDIO=yes\" $HOME/.config/osu-lazer-launcher/config'",
-        "run": "su - {USER} -c 'set -e; c=$HOME/.config/osu-lazer-launcher/config; sc=$(cd {TOOLKIT_DIR} && python3 -c \"import tuxthrottle_shadercache as s; print(s.cache_dir())\"); for kv in USE_DGPU=yes \"SHADER_CACHE_DIR=\\\"$sc\\\"\" LOW_LATENCY_AUDIO=yes AUDIO_QUANTUM=256 SHOW_MANGOHUD=yes FLAT_MOUSE=yes PERFORMANCE_PROFILE=yes DISABLE_DRIVER_VSYNC=yes; do k=${kv%%=*}; if grep -q \"^$k=\" \"$c\"; then sed -i \"s|^$k=.*|$kv|\" \"$c\"; else echo \"$kv\" >> \"$c\"; fi; done; ~/.local/bin/osu-lazer-launcher doctor'"
+        "title": "3 · Low-latency launcher config (dGPU, shader cache, audio, no overlay)",
+        "desc": "Writes the launcher config: USE_DGPU=yes (NVIDIA PRIME offload), SHADER_CACHE_DIR = TuxThrottle's shader-cache folder (Game Tools → Shader cache), LOW_LATENCY_AUDIO=yes with AUDIO_QUANTUM=256 (drop to 128 for less, raise to 512 if audio crackles), SHOW_MANGOHUD=no (MangoHud stays off for osu!), FLAT_MOUSE=yes, PERFORMANCE_PROFILE=yes, DISABLE_DRIVER_VSYNC=yes. Edit ~/.config/osu-lazer-launcher/config to change any of them later.",
+        "check": "su - {USER} -c 'grep -q \"^USE_DGPU=yes\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^SHADER_CACHE_DIR=\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^LOW_LATENCY_AUDIO=yes\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^SHOW_MANGOHUD=no\" $HOME/.config/osu-lazer-launcher/config'",
+        "run": "su - {USER} -c 'set -e; c=$HOME/.config/osu-lazer-launcher/config; sc=$(cd {TOOLKIT_DIR} && python3 -c \"import tuxthrottle_shadercache as s; print(s.cache_dir())\"); for kv in USE_DGPU=yes \"SHADER_CACHE_DIR=\\\"$sc\\\"\" LOW_LATENCY_AUDIO=yes AUDIO_QUANTUM=256 SHOW_MANGOHUD=no FLAT_MOUSE=yes PERFORMANCE_PROFILE=yes DISABLE_DRIVER_VSYNC=yes; do k=${kv%%=*}; if grep -q \"^$k=\" \"$c\"; then sed -i \"s|^$k=.*|$kv|\" \"$c\"; else echo \"$kv\" >> \"$c\"; fi; done; ~/.local/bin/osu-lazer-launcher doctor'"
       },
       {
         "id": "tearing",
