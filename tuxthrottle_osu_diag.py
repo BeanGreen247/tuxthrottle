@@ -126,6 +126,46 @@ def ms(frames: float, rate: float) -> float:
     return frames * 1000.0 / rate if rate else 0.0
 
 
+def thread_load(pid: int, window: float = 1.0) -> dict[str, tuple[str, float, float, float]]:
+    """osu!'s main threads over `window` s: (policy, CPU ms/s, involuntary switches/s, voluntary/s).
+    Threads sharing a name (osu! has several "Audio" threads) are summed."""
+    def snap() -> dict[str, tuple[str, int, int, int]]:
+        d = {}
+        for t in Path(f"/proc/{pid}/task").iterdir():
+            try:
+                comm = read(t / "comm")
+                st = read(t / "status")
+                vol = int(re.search(r"^voluntary_ctxt_switches:\s+(\d+)", st, re.M).group(1))
+                inv = int(re.search(r"^nonvoluntary_ctxt_switches:\s+(\d+)", st, re.M).group(1))
+                d[t.name] = (comm.split(" (")[0].strip(), vol, inv, int(read(t / "schedstat").split()[0]))
+            except (OSError, AttributeError, ValueError, IndexError):
+                pass
+        return d
+    try:
+        a = snap()
+        t0 = time.monotonic()
+        time.sleep(window)
+        b = snap()
+    except OSError:
+        return {}
+    dt = time.monotonic() - t0
+    pols = {}
+    for line in run(["ps", "-L", "-o", "tid=,cls=,rtprio=,ni=", "-p", str(pid)]).splitlines():
+        f = line.split()
+        if len(f) == 4:
+            pols[f[0]] = f"{f[1]}{'' if f[2] == '-' else ' ' + f[2]}, nice {f[3]}"
+    agg: dict[str, list] = {}
+    for tid, (name, vol, inv, ns) in b.items():
+        if name not in ("Draw", "Update", "Input", "Audio") or tid not in a:
+            continue
+        g = agg.setdefault(name, [pols.get(tid, "?"), 0.0, 0.0, 0.0])
+        g[1] += (ns - a[tid][3]) / 1e6 / dt
+        g[2] += (inv - a[tid][2]) / dt
+        g[3] += (vol - a[tid][1]) / dt
+    order = ("Input", "Audio", "Update", "Draw")
+    return {k: tuple(agg[k]) for k in order if k in agg}
+
+
 # ---------------------------------------------------------------- collectors
 def check_osu(pid: int | None, env: dict[str, str]) -> list[Check]:
     s = "osu! process"
@@ -143,21 +183,15 @@ def check_osu(pid: int | None, env: dict[str, str]) -> list[Check]:
                      "SHOW_MANGOHUD=no in the launcher config." if mh else ""))
     out.append(Check(s, "GameMode", "yes" if "gamemode" in pre else "no",
                      OK if "gamemode" in pre else WARN, "" if "gamemode" in pre else "Run via gamemoderun."))
-    threads = run(["ps", "-L", "-o", "tid=,cls=,rtprio=,ni=,pcpu=,comm=", "-p", str(pid)])
-    agg: dict[str, list] = {}
-    for line in threads.splitlines():
-        p = line.split(None, 5)
-        if len(p) < 6:
-            continue
-        name = p[5].split(" (")[0].strip()
-        if name in ("Draw", "Update", "Input", "Audio"):
-            a = agg.setdefault(name, [p[1], p[2], p[3], 0.0])
-            a[3] += float(p[4].replace(",", ".") or 0)
-    for name in ("Draw", "Update", "Input", "Audio"):
-        if name in agg:
-            cls, rt, ni, cpu = agg[name]
-            pol = f"{cls}{'' if rt == '-' else ' ' + rt}, nice {ni}"
-            out.append(Check(s, f"{name} thread", f"{pol}, {cpu:.0f}% CPU", INFO))
+    for name, (pol, cpu_ms, preempt, sleeps) in thread_load(pid).items():
+        busy = cpu_ms / 10  # ms of CPU per second -> % of one core
+        out.append(Check(s, f"{name} thread", f"{busy:.0f}% of a core, {preempt:.0f} preemptions/s, "
+                         f"{sleeps:.0f} sleeps/s, {pol}",
+                         WARN if preempt > 500 else INFO,
+                         "Often kicked off its CPU: close background load or raise osu!'s priority."
+                         if preempt > 500 else ""))
+    out.append(Check(s, "exact Input/Audio/Update/Draw fps", "in-game only (Ctrl+F11)", INFO,
+                     "osu! doesn't export its frame counters; the thread rows above are measured from /proc."))
     return out
 
 
