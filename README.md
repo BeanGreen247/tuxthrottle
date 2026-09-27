@@ -440,6 +440,27 @@ ordered `steps` list (`check` / `run` / `manual` / `copy`; `{USER}`,
 > so you connect to a session and get kicked. No Proton/prefix change fixes
 > a server-side block.
 
+## osu!lazer tools (work on any Linux PC)
+
+These two files don't depend on the G15 or on the rest of TuxThrottle. Copy them anywhere, or use the
+**Setup Games → osu!lazer** card, which installs `osu-lazer-launcher` as a thin wrapper around the copy in
+`/opt/tuxthrottle`, so a TuxThrottle update reaches it with no re-install.
+
+- **`tuxthrottle_osu_launcher.sh`** (`install [AppImage|--download]`, `run`, `doctor`, `diag`, `measure-dpi`,
+  `uninstall`): runs the official osu!lazer AppImage through GameMode with the power profile on performance,
+  mouse acceleration flattened (KWin / GNOME), driver vsync off with one pre-rendered frame, NVIDIA threaded-GL
+  off, a persistent shader cache, MangoHud blocked, PipeWire pinned to `AUDIO_QUANTUM` (256) plus a small
+  pipewire-alsa buffer (`PIPEWIRE_ALSA`, see ppy/osu-framework#6647), and optional NVIDIA PRIME offload.
+  Everything it changes is restored when osu! exits. Settings: `~/.config/osu-lazer-launcher/config`.
+- **`tuxthrottle_osu_diag.py`** (`osu-lazer-launcher diag`, or `--once` / `--json`): live Textual dashboard of
+  osu!'s real PipeWire quantum, xruns, ALSA buffer and an output-latency estimate, the GPU it renders on and
+  its throttling state, per-thread CPU load and preemptions for osu!'s Input / Audio / Update / Draw threads,
+  osu!'s frame limiter / window / execution mode, power profile, refresh rate, KWin tearing, mouse polling,
+  IRQ / realtime priorities and the launcher config, each marked ok / warning / problem with what to change.
+  osu! doesn't export its own fps counters, so the exact per-thread rates stay in-game (Ctrl+F11).
+- **`tuxthrottle_osu_settings.py`**: applies competitive game.ini / framework.ini settings with backups
+  (`--check`, `--dry-run`).
+
 ## The Game Tools tab
 
 Steam / Proton helpers that apply to *any* game, split out of Setup Games so
