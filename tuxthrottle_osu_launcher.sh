@@ -23,7 +23,8 @@
 #   * persistent NVIDIA GL shader cache + DXVK state cache under SHADER_CACHE_DIR (no recompiles on launch)
 #   * NVIDIA threaded GL optimisations off (osu!framework already threads its own draw/update; the driver
 #     worker thread adds a queued frame)
-#   * low-latency audio: PipeWire quantum pinned to AUDIO_QUANTUM for osu! (default 1024 = ~21 ms at 48 kHz)
+#   * low-latency audio: PipeWire quantum pinned to AUDIO_QUANTUM for osu! (default 1024 = ~21 ms at 48 kHz),
+#     plus a small pipewire-alsa buffer (PIPEWIRE_ALSA, ALSA_PERIOD_FRAMES x ALSA_PERIODS)
 #
 # Config: ~/.config/osu-lazer-launcher/config (created by "install", plain KEY=value lines).
 set -euo pipefail
@@ -48,6 +49,9 @@ SHADER_CACHE_DIR="${SHADER_CACHE_DIR:-$HOME/.cache/osu-lazer-launcher/shader-cac
 SHADER_CACHE_SIZE="${SHADER_CACHE_SIZE:-120000000000}"
 LOW_LATENCY_AUDIO="${LOW_LATENCY_AUDIO:-yes}"  # yes | no
 AUDIO_QUANTUM="${AUDIO_QUANTUM:-256}"          # PipeWire frames per period (256 @ 48 kHz = 5.3 ms)
+PW_ALSA_TUNE="${PW_ALSA_TUNE:-yes}"            # yes = small pipewire-alsa buffer for osu! (PIPEWIRE_ALSA)
+ALSA_PERIOD_FRAMES="${ALSA_PERIOD_FRAMES:-128}"
+ALSA_PERIODS="${ALSA_PERIODS:-2}"
 # shellcheck disable=SC1090
 [[ -f "$CONF_FILE" ]] && . "$CONF_FILE"
 
@@ -108,12 +112,19 @@ no_mangohud() {
 latency_env() {
     if [[ "$DISABLE_DRIVER_VSYNC" == yes ]]; then
         # NVIDIA and Mesa driver vsync off; NVIDIA: at most 1 pre-rendered frame, no threaded-GL queue.
-        echo __GL_SYNC_TO_VBLANK=0 vblank_mode=0 __GL_MaxFramesAllowed=1 __GL_THREADED_OPTIMIZATIONS=0 mesa_glthread=false
+        printf '%s\n' __GL_SYNC_TO_VBLANK=0 vblank_mode=0 __GL_MaxFramesAllowed=1 __GL_THREADED_OPTIMIZATIONS=0 \
+            mesa_glthread=false
     fi
     if [[ "$LOW_LATENCY_AUDIO" == yes ]]; then
         # BASS -> ALSA -> pipewire-alsa honours PIPEWIRE_LATENCY (and pipewire-pulse via PULSE_LATENCY_MSEC).
         local rate; rate="$(pw-metadata -n settings 0 clock.rate 2>/dev/null | grep -oP "value:'\K[0-9]+" || true)"
-        echo PIPEWIRE_LATENCY="$AUDIO_QUANTUM/${rate:-48000}" PULSE_LATENCY_MSEC=$(( AUDIO_QUANTUM * 1000 / ${rate:-48000} + 1 ))
+        rate="${rate:-48000}"
+        printf '%s\n' "PIPEWIRE_LATENCY=$AUDIO_QUANTUM/$rate" "PULSE_LATENCY_MSEC=$(( AUDIO_QUANTUM * 1000 / rate + 1 ))"
+        if [[ "$PW_ALSA_TUNE" == yes ]]; then
+            # ppy/osu-framework#6647: shrink the pipewire-alsa plugin's own buffer (F32 stereo = 8 bytes/frame).
+            local pb=$(( ALSA_PERIOD_FRAMES * 8 ))
+            echo "PIPEWIRE_ALSA={ alsa.format=F32_LE alsa.channels=2 alsa.rate=$rate alsa.period-bytes=$pb alsa.buffer-bytes=$(( pb * ALSA_PERIODS )) }"
+        fi
     fi
 }
 
@@ -122,7 +133,7 @@ shader_env() {
     mkdir -p "$SHADER_CACHE_DIR/nv-shader-cache" "$SHADER_CACHE_DIR/dxvk-state-cache" 2>/dev/null || true
     # GL/Vulkan shader disk cache (NVIDIA) + DXVK state cache; the PROTON_* pair only matters if osu! is ever
     # launched through Proton (e.g. added to Steam as a non-Steam game with a compatibility tool forced).
-    echo __GL_SHADER_DISK_CACHE=1 "__GL_SHADER_DISK_CACHE_PATH=$SHADER_CACHE_DIR/nv-shader-cache" \
+    printf '%s\n' __GL_SHADER_DISK_CACHE=1 "__GL_SHADER_DISK_CACHE_PATH=$SHADER_CACHE_DIR/nv-shader-cache" \
          "__GL_SHADER_DISK_CACHE_SIZE=$SHADER_CACHE_SIZE" __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 \
          DXVK_STATE_CACHE=1 "DXVK_STATE_CACHE_PATH=$SHADER_CACHE_DIR/dxvk-state-cache" \
          PROTON_LOG=0 PROTON_USE_NTSYNC=1
@@ -195,7 +206,7 @@ cmd_run() {
     flatten_mouse
     no_mangohud
     set_overlay
-    local extra_env; mapfile -t extra_env < <(shader_env | tr ' ' '\n'; latency_env | tr ' ' '\n')
+    local extra_env; mapfile -t extra_env < <(shader_env; latency_env)
     if [[ ${#gpu_env[@]} -gt 0 ]]; then
         say "rendering on dedicated GPU"
         grep -q '^Renderer = Vulkan' "${XDG_DATA_HOME:-$HOME/.local/share}/osu/framework.ini" 2>/dev/null \
@@ -227,7 +238,7 @@ cmd_doctor() {
     say "GPU: $(lspci 2>/dev/null | grep -iE 'vga|3d|display' | sed 's/^[^:]*: //' | paste -sd ';' -)"
     [[ ${#gpu_env[@]} -gt 0 ]] && say "dGPU env: ${gpu_env[*]}" || say "dGPU env: none (single GPU or USE_DGPU=no)"
     say "latency env: $(latency_env | paste -sd " " -)"
-    say "shader cache env: $(shader_env)"
+    say "shader cache env: $(shader_env | paste -sd " " -)"
     set_overlay; say "overlay: ${overlay_cmd[*]:-none (MangoHud forced off)}"
     have powerprofilesctl && say "power profile now: $(powerprofilesctl get)" || warn "powerprofilesctl not found (profile switch skipped)"
     if busctl --user status org.kde.KWin >/dev/null 2>&1; then say "desktop: KDE Plasma (mouse accel via KWin)"
@@ -277,12 +288,15 @@ SHOW_MANGOHUD=no           # no = force the MangoHud overlay off | yes = run thr
 SHADER_CACHE_DIR="$HOME/.cache/osu-lazer-launcher/shader-cache"   # NVIDIA GL + DXVK caches
 LOW_LATENCY_AUDIO=yes      # pin the PipeWire quantum for osu! (lower audio latency)
 AUDIO_QUANTUM=256          # 128 = even lower, raise to 512 if you hear crackling
+PW_ALSA_TUNE=yes           # small pipewire-alsa buffer (ALSA_PERIOD_FRAMES x ALSA_PERIODS)
+ALSA_PERIOD_FRAMES=128
+ALSA_PERIODS=2
 EOF
     fi
     # older configs: add any key that is missing, with its current value
     local k
     for k in USE_DGPU FLAT_MOUSE PERFORMANCE_PROFILE DISABLE_DRIVER_VSYNC SHOW_MANGOHUD SHADER_CACHE_DIR \
-             LOW_LATENCY_AUDIO AUDIO_QUANTUM; do
+             LOW_LATENCY_AUDIO AUDIO_QUANTUM PW_ALSA_TUNE ALSA_PERIOD_FRAMES ALSA_PERIODS; do
         grep -q "^$k=" "$CONF_FILE" || echo "$k=\"${!k}\"" >> "$CONF_FILE"
     done
     install -m 755 "$(readlink -f "$0")" "$BIN"
