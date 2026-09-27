@@ -415,5 +415,388 @@
     "install": [
       "dnf install -y ntfs-3g ntfsprogs"
     ]
+  },
+  "RepoFlathub": {
+    "Content": "Flathub (system-wide)",
+    "Description": "The main Flatpak app store. Every Flatpak entry in TuxThrottle installs from it (emulators, Sober, Chiaki-ng, \u2026).",
+    "category": "Repos",
+    "manager": "shell",
+    "check": "flatpak remotes --system 2>/dev/null | grep -q '^flathub'",
+    "install": [
+      "dnf install -y flatpak",
+      "flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+    ]
+  },
+  "RepoFlathubBeta": {
+    "Content": "Flathub Beta",
+    "Description": "Pre-release builds from Flathub: newer emulator / launcher builds before they reach stable. Adding the remote changes nothing on its own; pick the beta branch per app in Discover or with flatpak install flathub-beta <id>.",
+    "category": "Repos",
+    "manager": "shell",
+    "check": "flatpak remotes --system 2>/dev/null | grep -q '^flathub-beta'",
+    "install": [
+      "dnf install -y flatpak",
+      "flatpak remote-add --system --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo"
+    ]
+  },
+  "RepoTerra": {
+    "Content": "Terra (Fyra Labs)",
+    "Description": "Nobara ships this enabled. It's where LACT, Vesktop, Faugus Launcher, ProtonPlus, RPCS3, OpenTabletDriver, xpadneo, CoolerControl and Heroic come from as native RPMs. This entry re-enables it if it was switched off, or installs terra-release if the repo file is missing.",
+    "category": "Repos",
+    "manager": "shell",
+    "check": "dnf repolist --enabled 2>/dev/null | grep -q '^terra '",
+    "install": [
+      "if [ -f /etc/yum.repos.d/terra.repo ]; then dnf config-manager setopt terra.enabled=1; else dnf install -y --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release terra-gpg-keys; fi"
+    ]
+  },
+  "RepoNobaraUpdates": {
+    "Content": "Nobara updates repo",
+    "Description": "Nobara's own repos carry Lutris, umu-launcher, wine-staging, winetricks, gamescope-session, xone, GOverlay and MangoJuice (RPM Fusion content is merged in). This re-enables nobara and nobara-updates if either was switched off.",
+    "category": "Repos",
+    "manager": "shell",
+    "check": "dnf repolist --enabled 2>/dev/null | grep -q '^nobara-updates ' && dnf repolist --enabled 2>/dev/null | grep -q '^nobara '",
+    "install": [
+      "dnf config-manager setopt nobara.enabled=1 nobara-updates.enabled=1"
+    ]
+  },
+  "FaugusLauncher": {
+    "Content": "Faugus Launcher",
+    "Description": "Simple umu-launcher/Proton front-end for non-Steam Windows games (Battle.net, EA app, Ubisoft Connect, standalone .exe).",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "faugus-launcher",
+    "check": "rpm -q faugus-launcher >/dev/null 2>&1",
+    "binary": "faugus-launcher",
+    "provides": [
+      "flatpak info io.github.Faugus.faugus-launcher >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info io.github.Faugus.faugus-launcher >/dev/null 2>&1"
+    ],
+    "flatpak_id": "io.github.Faugus.faugus-launcher"
+  },
+  "ProtonPlus": {
+    "Content": "ProtonPlus",
+    "Description": "Install/manage GE-Proton, Proton-CachyOS, Wine-GE, DXVK/VKD3D builds for Steam, Lutris, Heroic and Bottles from one window (a newer alternative to ProtonUp-Qt).",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "protonplus",
+    "check": "rpm -q protonplus >/dev/null 2>&1",
+    "binary": "protonplus",
+    "provides": [
+      "flatpak info com.vysp3r.ProtonPlus >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info com.vysp3r.ProtonPlus >/dev/null 2>&1"
+    ],
+    "flatpak_id": "com.vysp3r.ProtonPlus"
+  },
+  "UmuLauncher": {
+    "Content": "umu-launcher",
+    "Description": "Runs any Windows game in the Steam Runtime + Proton outside Steam (what Lutris, Heroic and Faugus use under the hood). Includes the protonfixes database.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "umu-launcher",
+    "check": "rpm -q umu-launcher >/dev/null 2>&1",
+    "binary": "umu-run"
+  },
+  "WineStaging": {
+    "Content": "Wine (staging) + winetricks",
+    "Description": "System Wine for installers and tools that don't need Proton, plus winetricks for DLLs/fonts.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "wine-staging",
+    "check": "rpm -q wine-staging >/dev/null 2>&1",
+    "binary": "wine",
+    "install": [
+      "dnf install -y wine-staging winetricks"
+    ]
+  },
+  "SteamTinkerLaunch": {
+    "Content": "SteamTinkerLaunch",
+    "Description": "Per-game Steam launch wrapper: ReShade, vkBasalt, mod managers (Vortex/MO2), custom commands and gamescope settings via a GUI instead of launch-option strings.",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "steamtinkerlaunch",
+    "check": "rpm -q steamtinkerlaunch >/dev/null 2>&1",
+    "binary": "steamtinkerlaunch"
+  },
+  "MangoJuice": {
+    "Content": "MangoJuice",
+    "Description": "Modern GTK MangoHud configurator (an alternative to GOverlay).",
+    "category": "Gaming",
+    "manager": "dnf",
+    "package": "mangojuice",
+    "check": "rpm -q mangojuice >/dev/null 2>&1",
+    "binary": "mangojuice",
+    "provides": [
+      "flatpak info io.github.radiolamp.mangojuice >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info io.github.radiolamp.mangojuice >/dev/null 2>&1"
+    ],
+    "flatpak_id": "io.github.radiolamp.mangojuice"
+  },
+  "SGDBoop": {
+    "Content": "SGDBoop",
+    "Description": "One-click SteamGridDB artwork for non-Steam shortcuts in your Steam library.",
+    "category": "Gaming",
+    "manager": "flatpak",
+    "package": "com.steamgriddb.SGDBoop",
+    "check": "false",
+    "flatpak_id": "com.steamgriddb.SGDBoop"
+  },
+  "Sober": {
+    "Content": "Sober (Roblox)",
+    "Description": "Runs the Android build of Roblox natively on Linux (Roblox's Windows client blocks Wine/Proton).",
+    "category": "Gaming",
+    "manager": "flatpak",
+    "package": "org.vinegarhq.Sober",
+    "check": "false",
+    "flatpak_id": "org.vinegarhq.Sober"
+  },
+  "RetroArch": {
+    "Content": "RetroArch",
+    "Description": "Multi-system emulator frontend (libretro cores): NES through PS1/N64 and arcade.",
+    "category": "Emulation",
+    "manager": "dnf",
+    "package": "retroarch",
+    "check": "rpm -q retroarch >/dev/null 2>&1",
+    "binary": "retroarch",
+    "provides": [
+      "flatpak info org.libretro.RetroArch >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info org.libretro.RetroArch >/dev/null 2>&1"
+    ],
+    "flatpak_id": "org.libretro.RetroArch"
+  },
+  "DolphinEmu": {
+    "Content": "Dolphin",
+    "Description": "GameCube / Wii emulator.",
+    "category": "Emulation",
+    "manager": "dnf",
+    "package": "dolphin-emu",
+    "check": "rpm -q dolphin-emu >/dev/null 2>&1",
+    "binary": "dolphin-emu",
+    "provides": [
+      "flatpak info org.DolphinEmu.dolphin-emu >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info org.DolphinEmu.dolphin-emu >/dev/null 2>&1"
+    ],
+    "flatpak_id": "org.DolphinEmu.dolphin-emu"
+  },
+  "RPCS3": {
+    "Content": "RPCS3",
+    "Description": "PlayStation 3 emulator.",
+    "category": "Emulation",
+    "manager": "dnf",
+    "package": "rpcs3",
+    "check": "rpm -q rpcs3 >/dev/null 2>&1",
+    "binary": "rpcs3",
+    "provides": [
+      "flatpak info net.rpcs3.RPCS3 >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info net.rpcs3.RPCS3 >/dev/null 2>&1"
+    ],
+    "flatpak_id": "net.rpcs3.RPCS3"
+  },
+  "PCSX2": {
+    "Content": "PCSX2",
+    "Description": "PlayStation 2 emulator.",
+    "category": "Emulation",
+    "manager": "flatpak",
+    "package": "net.pcsx2.PCSX2",
+    "check": "false",
+    "flatpak_id": "net.pcsx2.PCSX2"
+  },
+  "DuckStation": {
+    "Content": "DuckStation",
+    "Description": "PlayStation 1 emulator.",
+    "category": "Emulation",
+    "manager": "flatpak",
+    "package": "org.duckstation.DuckStation",
+    "check": "false",
+    "flatpak_id": "org.duckstation.DuckStation"
+  },
+  "PPSSPP": {
+    "Content": "PPSSPP",
+    "Description": "PSP emulator.",
+    "category": "Emulation",
+    "manager": "flatpak",
+    "package": "org.ppsspp.PPSSPP",
+    "check": "false",
+    "flatpak_id": "org.ppsspp.PPSSPP"
+  },
+  "Cemu": {
+    "Content": "Cemu",
+    "Description": "Wii U emulator.",
+    "category": "Emulation",
+    "manager": "flatpak",
+    "package": "info.cemu.Cemu",
+    "check": "false",
+    "flatpak_id": "info.cemu.Cemu"
+  },
+  "Ryubing": {
+    "Content": "Ryubing (Ryujinx)",
+    "Description": "Nintendo Switch emulator, the maintained Ryujinx fork.",
+    "category": "Emulation",
+    "manager": "flatpak",
+    "package": "io.github.ryubing.Ryujinx",
+    "check": "false",
+    "flatpak_id": "io.github.ryubing.Ryujinx"
+  },
+  "Azahar": {
+    "Content": "Azahar",
+    "Description": "Nintendo 3DS emulator (Citra/Lime3DS successor).",
+    "category": "Emulation",
+    "manager": "flatpak",
+    "package": "org.azahar_emu.Azahar",
+    "check": "false",
+    "flatpak_id": "org.azahar_emu.Azahar"
+  },
+  "ShadPS4": {
+    "Content": "shadPS4",
+    "Description": "Early-stage PlayStation 4 emulator.",
+    "category": "Emulation",
+    "manager": "flatpak",
+    "package": "net.shadps4.shadPS4",
+    "check": "false",
+    "flatpak_id": "net.shadps4.shadPS4"
+  },
+  "Xemu": {
+    "Content": "xemu",
+    "Description": "Original Xbox emulator.",
+    "category": "Emulation",
+    "manager": "flatpak",
+    "package": "app.xemu.xemu",
+    "check": "false",
+    "flatpak_id": "app.xemu.xemu"
+  },
+  "Flycast": {
+    "Content": "Flycast",
+    "Description": "Dreamcast / Naomi / Atomiswave emulator.",
+    "category": "Emulation",
+    "manager": "flatpak",
+    "package": "org.flycast.Flycast",
+    "check": "false",
+    "flatpak_id": "org.flycast.Flycast"
+  },
+  "OpenTabletDriver": {
+    "Content": "OpenTabletDriver",
+    "Description": "User-mode drawing-tablet driver with low-latency absolute mapping; the standard for osu! tablet players. Enable the user service afterwards: systemctl --user enable --now opentabletdriver.",
+    "category": "Input & Controllers",
+    "manager": "dnf",
+    "package": "opentabletdriver",
+    "check": "rpm -q opentabletdriver >/dev/null 2>&1",
+    "binary": "otd-gui"
+  },
+  "Xpadneo": {
+    "Content": "xpadneo (Xbox wireless over Bluetooth)",
+    "Description": "Kernel driver for Xbox One/Series controllers over Bluetooth: rumble, correct button mapping, battery level. DKMS/akmod build, so reboot after install.",
+    "category": "Input & Controllers",
+    "manager": "dnf",
+    "package": "xpadneo",
+    "check": "rpm -q xpadneo >/dev/null 2>&1"
+  },
+  "Xone": {
+    "Content": "xone (Xbox wireless dongle)",
+    "Description": "Kernel driver for the Microsoft Xbox Wireless USB adapter and wired Xbox controllers. akmod build, so reboot after install.",
+    "category": "Input & Controllers",
+    "manager": "dnf",
+    "package": "xone",
+    "check": "rpm -q xone >/dev/null 2>&1"
+  },
+  "SteamDevices": {
+    "Content": "Steam controller udev rules",
+    "Description": "udev rules so Steam Controller, Steam Deck, DualShock/DualSense and Valve Index hardware work without root.",
+    "category": "Input & Controllers",
+    "manager": "dnf",
+    "package": "steam-devices",
+    "check": "rpm -q steam-devices >/dev/null 2>&1"
+  },
+  "InputRemapper": {
+    "Content": "Input Remapper",
+    "Description": "Remap keys, mouse buttons and gamepad buttons per device, including macros. Enable the service afterwards: systemctl enable --now input-remapper.",
+    "category": "Input & Controllers",
+    "manager": "dnf",
+    "package": "input-remapper",
+    "check": "rpm -q input-remapper >/dev/null 2>&1",
+    "binary": "input-remapper-gtk"
+  },
+  "Piper": {
+    "Content": "Piper",
+    "Description": "Configure gaming mice (DPI steps, polling rate, button mapping, LEDs) through libratbag. Logitech, SteelSeries, Roccat and others.",
+    "category": "Input & Controllers",
+    "manager": "dnf",
+    "package": "piper",
+    "check": "rpm -q piper >/dev/null 2>&1",
+    "binary": "piper"
+  },
+  "Solaar": {
+    "Content": "Solaar",
+    "Description": "Logitech Unifying / Lightspeed / Bolt receiver manager: pairing, battery, DPI, onboard profiles.",
+    "category": "Input & Controllers",
+    "manager": "dnf",
+    "package": "solaar",
+    "check": "rpm -q solaar >/dev/null 2>&1",
+    "binary": "solaar"
+  },
+  "AntiMicroX": {
+    "Content": "AntiMicroX",
+    "Description": "Map gamepad buttons to keyboard/mouse input for games without controller support.",
+    "category": "Input & Controllers",
+    "manager": "dnf",
+    "package": "antimicrox",
+    "check": "rpm -q antimicrox >/dev/null 2>&1",
+    "binary": "antimicrox",
+    "provides": [
+      "flatpak info io.github.antimicrox.antimicrox >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info io.github.antimicrox.antimicrox >/dev/null 2>&1"
+    ],
+    "flatpak_id": "io.github.antimicrox.antimicrox"
+  },
+  "LACT": {
+    "Content": "LACT (GPU control)",
+    "Description": "Linux GPU Control Application: clocks, power limit, fan curves and undervolt for AMD and NVIDIA. Enables its daemon (lactd) after install.",
+    "category": "GPU",
+    "manager": "dnf",
+    "package": "lact",
+    "check": "rpm -q lact >/dev/null 2>&1",
+    "binary": "lact",
+    "provides": [
+      "flatpak info io.github.ilya_zlobintsev.LACT >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info io.github.ilya_zlobintsev.LACT >/dev/null 2>&1"
+    ],
+    "flatpak_id": "io.github.ilya_zlobintsev.LACT",
+    "install": [
+      "dnf install -y lact",
+      "systemctl enable --now lactd"
+    ]
+  },
+  "CoolerControl": {
+    "Content": "CoolerControl",
+    "Description": "Fan and pump curves from any temperature sensor, with a GUI (liquidctl + hwmon devices).",
+    "category": "Monitoring",
+    "manager": "dnf",
+    "package": "coolercontrol",
+    "check": "rpm -q coolercontrol >/dev/null 2>&1",
+    "binary": "coolercontrol",
+    "install": [
+      "dnf install -y coolercontrol",
+      "systemctl enable --now coolercontrold"
+    ]
+  },
+  "Vesktop": {
+    "Content": "Vesktop (Discord)",
+    "Description": "Discord client with working Wayland screen-share and audio capture, plus Vencord plugins.",
+    "category": "Streaming",
+    "manager": "dnf",
+    "package": "vesktop",
+    "check": "rpm -q vesktop >/dev/null 2>&1",
+    "binary": "vesktop",
+    "provides": [
+      "flatpak info dev.vencord.Vesktop >/dev/null 2>&1",
+      "sudo -u {USER} flatpak info dev.vencord.Vesktop >/dev/null 2>&1"
+    ],
+    "flatpak_id": "dev.vencord.Vesktop"
+  },
+  "ChiakiNg": {
+    "Content": "Chiaki-ng",
+    "Description": "PlayStation 4/5 Remote Play client.",
+    "category": "Streaming",
+    "manager": "flatpak",
+    "package": "io.github.streetpea.Chiaki4deck",
+    "check": "false",
+    "flatpak_id": "io.github.streetpea.Chiaki4deck"
   }
 }
