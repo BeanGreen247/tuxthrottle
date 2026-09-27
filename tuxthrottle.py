@@ -110,7 +110,8 @@ except Exception:  # noqa: BLE001
                 return b0 + (temp - t0) / (t1 - t0) * (b1 - b0)
         return s[-1][1]
 
-CATEGORY_ORDER = ["Gaming", "GPU", "Power", "Performance", "KDE (Desktop GUI Tweaks)",
+CATEGORY_ORDER = ["Gaming", "Emulation", "Input & Controllers", "GPU", "Power", "Performance",
+                  "KDE (Desktop GUI Tweaks)", "Repos",
                   "Software", "Monitoring", "Streaming", "RGB"]
 THEME = "darkly"
 

@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install pytest ruff textual rich
+      - name: ruff
+        run: ruff check --output-format=github .
+      - name: bash syntax + shellcheck
+        run: |
+          bash -n osu-lazer-launcher.sh install.sh
+          shellcheck -S error osu-lazer-launcher.sh install.sh
+      - name: pytest
+        run: python -m pytest -q
+      - name: diag text report runs headless
+        run: python osu_lazer_diag.py --once

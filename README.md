@@ -440,6 +440,23 @@ ordered `steps` list (`check` / `run` / `manual` / `copy`; `{USER}`,
 > so you connect to a session and get kicked. No Proton/prefix change fixes
 > a server-side block.
 
+## osu!lazer tools (work on any Linux PC)
+
+The osu! pieces live in their own repo, **[osu-lazer-tools](https://github.com/BeanGreen247/osu-lazer-tools)**,
+bundled here as the `osu_lazer_tools/` module (a git subtree, so plain clones, `install.sh` and the RPM all
+carry it). None of it depends on the G15 or on the rest of TuxThrottle:
+
+- **`osu-lazer-launcher.sh`**: runs the official osu!lazer AppImage through GameMode with the power profile on
+  performance, mouse acceleration flattened, driver vsync off with one pre-rendered frame, NVIDIA threaded-GL
+  off, a persistent shader cache, MangoHud blocked, PipeWire pinned to a 256-frame quantum plus a small
+  pipewire-alsa buffer, and optional NVIDIA PRIME offload; everything is restored when osu! exits.
+- **`osu_lazer_diag.py`** (`osu-lazer-launcher diag`): live latency / performance dashboard with what to change.
+- **`osu_lazer_settings.py`**: competitive game.ini / framework.ini settings with backups.
+
+The **Setup Games → osu!lazer** card installs `osu-lazer-launcher` as a thin wrapper around
+`/opt/tuxthrottle/osu_lazer_tools/`, so a TuxThrottle update reaches it with no re-install. To update the
+module from its repo: `git subtree pull --prefix=osu_lazer_tools https://github.com/BeanGreen247/osu-lazer-tools.git main --squash`.
+
 ## The Game Tools tab
 
 Steam / Proton helpers that apply to *any* game, split out of Setup Games so

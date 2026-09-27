@@ -731,6 +731,7 @@ class SidebarNav(tb.Frame):
         # data-driven tweak categories (config/tweaks.json "category" values)
         "Performance": "▲", "GPU": "◈", "Power": "☉", "Stability": "▣",
         "Gaming": "♞", "KDE (Desktop GUI Tweaks)": "◧", "Software": "⬢",
+        "Emulation": "◉", "Input & Controllers": "✥", "Repos": "⛁",
     }
 
     def add(self, frame, text: str = "", *, kind: str = "normal",
