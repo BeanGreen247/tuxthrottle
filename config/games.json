@@ -471,7 +471,7 @@
     "Tab": "osu!lazer",
     "order": 6,
     "appid": "",
-    "Description": "osu!lazer is a native Linux build (AppImage), not a Steam/Proton game, so this card sets up TuxThrottle's osu! launcher instead of Steam launch options. Every launch goes through gamemoderun with the MangoHud overlay forced off (even though it's enabled globally) and: the power profile switched to performance and back, mouse acceleration flattened in KWin while playing, driver vsync off with a single pre-rendered frame and NVIDIA threaded-GL off, the persistent NVIDIA shader cache / DXVK state cache in TuxThrottle's shader-cache folder, and PipeWire pinned to a 256-frame quantum (~5 ms instead of the default 1024 = ~21 ms) so hitsounds line up. On the hybrid G15 it renders on the NVIDIA dGPU through PRIME offload (__NV_PRIME_RENDER_OFFLOAD / __VK_LAYER_NV_optimus / __GLX_VENDOR_LIBRARY_NAME) with the OpenGL renderer. lazer updates itself in place from the main menu, so there is no update step. Work through the steps top to bottom.",
+    "Description": "osu!lazer is a native Linux build (AppImage), not a Steam/Proton game, so this card sets up osu-lazer-tools (github.com/BeanGreen247/osu-lazer-tools, bundled in TuxThrottle as the osu_lazer_tools module) instead of Steam launch options. Every launch goes through gamemoderun with the MangoHud overlay forced off (even though it's enabled globally) and: the power profile switched to performance and back, mouse acceleration flattened in KWin while playing, driver vsync off with a single pre-rendered frame and NVIDIA threaded-GL off, the persistent NVIDIA shader cache / DXVK state cache in TuxThrottle's shader-cache folder, and PipeWire pinned to a 256-frame quantum (~5 ms instead of the default 1024 = ~21 ms) so hitsounds line up. On the hybrid G15 it renders on the NVIDIA dGPU through PRIME offload (__NV_PRIME_RENDER_OFFLOAD / __VK_LAYER_NV_optimus / __GLX_VENDOR_LIBRARY_NAME) with the OpenGL renderer. lazer updates itself in place from the main menu, so there is no update step. Work through the steps top to bottom.",
     "steps": [
       {
         "id": "tools",
@@ -484,8 +484,8 @@
         "id": "install",
         "title": "2 · Download osu!lazer + install the launcher",
         "desc": "Reuses an osu! AppImage that's already set up (launcher config, ~/Applications, ~/Downloads, ~/.local/bin, ~) and otherwise downloads the latest release straight from github.com/ppy/osu into ~/Applications/osu.AppImage. Then installs ~/.local/bin/osu-lazer-launcher as a thin wrapper that runs TuxThrottle's own copy (so a TuxThrottle update reaches osu! with no re-install; your settings stay in ~/.config/osu-lazer-launcher/config) and adds “osu!” to the Games menu and the desktop, registered for osu:// links and .osz/.osk/.osr files. Close osu! first.",
-        "check": "su - {USER} -c 'grep -qF \"{TOOLKIT_DIR}/tuxthrottle_osu_launcher.sh\" ~/.local/bin/osu-lazer-launcher && ~/.local/bin/osu-lazer-launcher doctor 2>&1 | grep -q \"^:: AppImage:\"'",
-        "run": "su - {USER} -c 'bash {TOOLKIT_DIR}/tuxthrottle_osu_launcher.sh install || bash {TOOLKIT_DIR}/tuxthrottle_osu_launcher.sh install --download'"
+        "check": "su - {USER} -c 'grep -qF \"{TOOLKIT_DIR}/osu_lazer_tools/osu-lazer-launcher.sh\" ~/.local/bin/osu-lazer-launcher && ~/.local/bin/osu-lazer-launcher doctor 2>&1 | grep -q \"^:: AppImage:\"'",
+        "run": "su - {USER} -c 'bash {TOOLKIT_DIR}/osu_lazer_tools/osu-lazer-launcher.sh install || bash {TOOLKIT_DIR}/osu_lazer_tools/osu-lazer-launcher.sh install --download'"
       },
       {
         "id": "g15conf",
@@ -512,8 +512,8 @@
         "id": "settings",
         "title": "6 · Competitive game settings",
         "desc": "Edits game.ini / framework.ini (backups next to each file): frame limiter Unlimited, fullscreen, multi-threaded execution, 100 % background dim, blur / hit lighting / star fountains / beatmap skins-colours-hitsounds off, key overlay on, in-game leaderboard off, mouse buttons + wheel disabled during play. Refuses while osu! is running (lazer rewrites both files on exit).",
-        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_osu_settings.py --check'",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_osu_settings.py'"
+        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/osu_lazer_tools/osu_lazer_settings.py --check'",
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/osu_lazer_tools/osu_lazer_settings.py'"
       },
       {
         "id": "skins",

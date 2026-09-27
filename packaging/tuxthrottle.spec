@@ -69,7 +69,8 @@ and are never applied from %post.
 %install
 install -d %{buildroot}%{appdir}
 # ship the runnable tree; leave dev-only bits out (mirrors install.sh)
-cp -a *.py tuxthrottle_*.sh config assets %{buildroot}%{appdir}/
+cp -a *.py tuxthrottle_*.sh config assets osu_lazer_tools %{buildroot}%{appdir}/
+rm -rf %{buildroot}%{appdir}/osu_lazer_tools/tests %{buildroot}%{appdir}/osu_lazer_tools/.github
 install -m 0644 README.md CLAUDE.md LICENSE %{buildroot}%{appdir}/ 2>/dev/null || :
 printf '%%s\n' "%{version}-%{release}" > %{buildroot}%{appdir}/.version
 
