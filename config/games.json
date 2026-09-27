@@ -483,8 +483,8 @@
       {
         "id": "install",
         "title": "2 · Download osu!lazer + install the launcher",
-        "desc": "Reuses an osu! AppImage that's already set up (launcher config, ~/Applications, ~/Downloads, ~/.local/bin, ~) and otherwise downloads the latest release straight from github.com/ppy/osu into ~/Applications/osu.AppImage. Then installs the launcher to ~/.local/bin/osu-lazer-launcher and adds “osu!” to the Games menu and the desktop, registered for osu:// links and .osz/.osk/.osr files. Close osu! first.",
-        "check": "su - {USER} -c 'test -x ~/.local/bin/osu-lazer-launcher && ~/.local/bin/osu-lazer-launcher doctor 2>&1 | grep -q \"^:: AppImage:\"'",
+        "desc": "Reuses an osu! AppImage that's already set up (launcher config, ~/Applications, ~/Downloads, ~/.local/bin, ~) and otherwise downloads the latest release straight from github.com/ppy/osu into ~/Applications/osu.AppImage. Then installs ~/.local/bin/osu-lazer-launcher as a thin wrapper that runs TuxThrottle's own copy (so a TuxThrottle update reaches osu! with no re-install; your settings stay in ~/.config/osu-lazer-launcher/config) and adds “osu!” to the Games menu and the desktop, registered for osu:// links and .osz/.osk/.osr files. Close osu! first.",
+        "check": "su - {USER} -c 'grep -qF \"{TOOLKIT_DIR}/tuxthrottle_osu_launcher.sh\" ~/.local/bin/osu-lazer-launcher && ~/.local/bin/osu-lazer-launcher doctor 2>&1 | grep -q \"^:: AppImage:\"'",
         "run": "su - {USER} -c 'bash {TOOLKIT_DIR}/tuxthrottle_osu_launcher.sh install || bash {TOOLKIT_DIR}/tuxthrottle_osu_launcher.sh install --download'"
       },
       {

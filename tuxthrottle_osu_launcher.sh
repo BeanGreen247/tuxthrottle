@@ -299,7 +299,23 @@ EOF
              LOW_LATENCY_AUDIO AUDIO_QUANTUM PW_ALSA_TUNE ALSA_PERIOD_FRAMES ALSA_PERIODS; do
         grep -q "^$k=" "$CONF_FILE" || echo "$k=\"${!k}\"" >> "$CONF_FILE"
     done
-    install -m 755 "$(readlink -f "$0")" "$BIN"
+    local self; self="$(readlink -f "$0")"
+    if [[ "$self" != "$HOME"/* ]]; then
+        # System copy (TuxThrottle in /opt): install a thin wrapper so updates to that copy apply
+        # immediately. Settings still come from ~/.config/osu-lazer-launcher/config.
+        cat > "$BIN" <<EOF
+#!/usr/bin/env bash
+# osu-lazer-launcher: thin wrapper installed by TuxThrottle. It runs the system copy below, so a TuxThrottle
+# update applies straight away; settings are read from ~/.config/osu-lazer-launcher/config.
+LAUNCHER="$self"
+[[ -f "\$LAUNCHER" ]] || { echo "osu-lazer-launcher: \$LAUNCHER is missing (TuxThrottle uninstalled?)." >&2; exit 1; }
+exec bash "\$LAUNCHER" "\$@"
+EOF
+        chmod 755 "$BIN"
+        say "launcher: thin wrapper -> $self"
+    else
+        install -m 755 "$self" "$BIN"
+    fi
 
     local icon=applications-games
     extract_icon "$app" && icon="$APP_ID" || warn "no icon found in the AppImage, using the generic games icon"
