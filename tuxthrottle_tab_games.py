@@ -713,7 +713,8 @@ class GamesTabMixin:
                                       "kernel 6.10+, ignored otherwise)"),
                            ("anticheat", "Anti-cheat safe — no injected Vulkan "
                                          "layers (MangoHud / vkBasalt / all "
-                                         "implicit layers off)")):
+                                         "implicit layers off) + Proton "
+                                         "BattlEye Runtime (GTA Online)")):
             tb.Checkbutton(row, text=label, variable=self._lo[key],
                            bootstyle="round-toggle",
                            command=self._lo_refresh).pack(anchor="w")
@@ -846,6 +847,11 @@ class GamesTabMixin:
         anticheat = self._lo["anticheat"].get()
         keep_mh = anticheat and self._lo["ac_keep_mh"].get()
         if anticheat:
+            # GE-Proton only loads BattlEye when pointed at the Steam tool
+            # (app 1161040) — absolute + quoted: the path has spaces and a
+            # quoted `~` doesn't expand
+            env.append(f'PROTON_BATTLEYE_RUNTIME="/home/{self.user}/.local/share/'
+                       'Steam/steamapps/common/Proton BattlEye Runtime"')
             env += ["DISABLE_VKBASALT=1", "VK_LOADER_LAYERS_DISABLE=~implicit~"]
             if not keep_mh:
                 env.append("MANGOHUD=0")
