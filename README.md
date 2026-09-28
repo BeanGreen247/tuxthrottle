@@ -1058,7 +1058,7 @@ toolkit's Software tab installs the tooling for both (`ProtonUp-Qt`,
    6b does this, backing up `/etc/hosts` first):
    ```
    0.0.0.0 paradiseenhanced-s1.battleye.com
-   0.0.0.0 paradise-s1.battleye.com
+   0.0.0.0 paradise-s1.battleye.com   # GTA V Legacy Online
    0.0.0.0 test-s1.battleye.com
    ```
    Restart Steam afterwards. That gets you into closed crew / closed friend / invite-only

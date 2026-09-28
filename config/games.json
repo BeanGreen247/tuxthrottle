@@ -60,8 +60,8 @@
         "id": "behosts",
         "title": "6b · Block BattlEye's servers in /etc/hosts",
         "desc": "Without this, GTA Online connects and BattlEye kicks you shortly after joining. Pointing paradiseenhanced-s1, paradise-s1 (GTA V Legacy) and test-s1 .battleye.com at 0.0.0.0 lets GTA Online load into closed crew / closed friend / invite-only sessions; PUBLIC sessions still kick you (“kicked by BattlEye”) — that part is server-side and no local fix changes it. Backs /etc/hosts up first. Remove the lines again to undo. Restart Steam (or reboot) afterwards so nothing keeps a cached lookup. Known quirk: opening the Steam overlay in-game can kill all game input until you restart the game — avoid Shift+Tab.",
-        "check": "grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+paradiseenhanced-s1\\.battleye\\.com' /etc/hosts && grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+test-s1\\.battleye\\.com' /etc/hosts",
-        "run": "cp -a /etc/hosts /etc/hosts.bak-gtav && printf '\\n# GTA V Enhanced Online on Proton: block BattlEye servers (closed crew/friend/invite-only sessions)\\n0.0.0.0 paradiseenhanced-s1.battleye.com\\n0.0.0.0 paradise-s1.battleye.com\\n0.0.0.0 test-s1.battleye.com\\n' >> /etc/hosts && grep battleye /etc/hosts"
+        "check": "grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+paradiseenhanced-s1\\.battleye\\.com([[:space:]]|$)' /etc/hosts && grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+paradise-s1\\.battleye\\.com([[:space:]]|$)' /etc/hosts && grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+test-s1\\.battleye\\.com([[:space:]]|$)' /etc/hosts",
+        "run": "cp -a /etc/hosts /etc/hosts.bak-gtav && grep -q '^# GTA V Online on Proton: BattlEye block' /etc/hosts || printf '\\n# GTA V Online on Proton: BattlEye block (closed crew/friend/invite-only sessions)\\n' >> /etc/hosts; for h in paradiseenhanced-s1 paradise-s1 test-s1; do grep -Eq \"^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+$h\\.battleye\\.com([[:space:]]|\\$)\" /etc/hosts || { c=''; [ $h = paradise-s1 ] && c=' # GTA V Legacy Online'; echo \"0.0.0.0 $h.battleye.com$c\" >> /etc/hosts; }; done; grep battleye /etc/hosts"
       },
       {
         "id": "sysctl",
