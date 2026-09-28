@@ -70,7 +70,9 @@ and are never applied from %post.
 install -d %{buildroot}%{appdir}
 # ship the runnable tree; leave dev-only bits out (mirrors install.sh)
 cp -a *.py tuxthrottle_*.sh config assets osu_lazer_tools %{buildroot}%{appdir}/
-rm -rf %{buildroot}%{appdir}/osu_lazer_tools/tests %{buildroot}%{appdir}/osu_lazer_tools/.github
+# only the osu! performance setup from the osu_lazer_tools subtree (mirrors install.sh)
+find %{buildroot}%{appdir}/osu_lazer_tools -mindepth 1 -maxdepth 1 ! -name osu-lazer-launcher.sh \
+    ! -name osu_lazer_diag.py ! -name osu_lazer_settings.py ! -name LICENSE -exec rm -rf {} +
 install -m 0644 README.md CLAUDE.md LICENSE %{buildroot}%{appdir}/ 2>/dev/null || :
 printf '%%s\n' "%{version}-%{release}" > %{buildroot}%{appdir}/.version
 

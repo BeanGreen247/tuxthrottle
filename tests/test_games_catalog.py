@@ -28,3 +28,15 @@ def test_bundled_helpers_exist():
 def test_osu_card_present():
     osu = GAMES["OsuLazer"]
     assert {s["id"] for s in osu["steps"]} >= {"install", "g15conf", "settings"}
+
+
+OSU_SHIPPED = {"osu-lazer-launcher.sh", "osu_lazer_diag.py", "osu_lazer_settings.py", "LICENSE"}
+
+
+def test_osu_card_only_uses_shipped_files():
+    """install.sh / the spec prune osu_lazer_tools down to the performance setup; the card must not need more."""
+    used = set(re.findall(r"osu_lazer_tools/([\w.\-]+)", json.dumps(GAMES["OsuLazer"])))
+    assert used <= OSU_SHIPPED
+    for f in (ROOT / "install.sh", ROOT / "packaging" / "tuxthrottle.spec"):
+        text = f.read_text()
+        assert all(f"! -name {name}" in text for name in OSU_SHIPPED), f.name

@@ -110,6 +110,11 @@ do_install() {
         rm -rf "$LIBDIR/.git" "$LIBDIR/.github" "$LIBDIR/.pytest_cache" \
                "$LIBDIR/tests" "$LIBDIR/tasks" "$LIBDIR/packaging" "$LIBDIR/install.sh"
     fi
+    # osu_lazer_tools is a subtree of the standalone osu-lazer-tools repo. TuxThrottle only ships its osu!
+    # performance setup (launcher, latency diag, competitive settings); the player/mapper/dev tools stay in
+    # that repo. Keep this list in sync with packaging/tuxthrottle.spec.
+    find "$LIBDIR/osu_lazer_tools" -mindepth 1 -maxdepth 1 ! -name osu-lazer-launcher.sh \
+        ! -name osu_lazer_diag.py ! -name osu_lazer_settings.py ! -name LICENSE -exec rm -rf {} + 2>/dev/null || true
     find "$LIBDIR" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
     chmod -R a+rX "$LIBDIR"
     # stamp the version so the Diagnostics / About page can show it (no .git in
