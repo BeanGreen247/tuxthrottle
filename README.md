@@ -452,10 +452,11 @@ ordered `steps` list (`check` / `run` / `manual` / `copy`; `{USER}`,
 `{TOOLKIT_DIR}`, `{APPID}` are substituted).
 
 > **GTA V Online note:** the walkthrough gets you a working prefix and
-> **Story Mode**. GTA *Online* (Enhanced, Steam AppID 3240220) is **not**
-> playable on Linux — Rockstar does not allow-list Proton for its BattlEye,
-> so you connect to a session and get kicked. No Proton/prefix change fixes
-> a server-side block.
+> **Story Mode**. GTA *Online* (Enhanced, Steam AppID 3240220) works in
+> **closed crew / closed friend / invite-only sessions** once step 6b blocks BattlEye's
+> servers in `/etc/hosts` and the launch options point GE-Proton at the
+> BattlEye Runtime. **Public sessions still kick you** ("kicked by
+> BattlEye"): Rockstar doesn't allow-list Proton, and that's server-side.
 
 ## osu!lazer (performance setup)
 
@@ -1043,16 +1044,28 @@ toolkit's Software tab installs the tooling for both (`ProtonUp-Qt`,
    isn't there).
 5. Launch options:
    ```
-   __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia MANGOHUD=0 DISABLE_VKBASALT=1 VK_LOADER_LAYERS_DISABLE=~implicit~ DXVK_ASYNC=1 gamemoderun %command%
+   PROTON_BATTLEYE_RUNTIME="/home/<you>/.local/share/Steam/steamapps/common/Proton BattlEye Runtime" __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia MANGOHUD=0 DISABLE_VKBASALT=1 VK_LOADER_LAYERS_DISABLE=~implicit~ DXVK_ASYNC=1 gamemoderun %command%
    ```
    `MANGOHUD=0` + `DISABLE_VKBASALT=1` + `VK_LOADER_LAYERS_DISABLE=~implicit~`
    turn off every injected Vulkan implicit layer (overlay / post-fx) — a clean
-   layer stack is what keeps BattlEye happy; `gamemoderun` is a plain wrapper
+   layer stack is what keeps BattlEye happy; `PROTON_BATTLEYE_RUNTIME` must be
+   an absolute path (a quoted `~` doesn't expand); `gamemoderun` is a plain wrapper
    so it stays. The three `__…OFFLOAD` / `optimus` / `GLX` vars render on the
    NVIDIA dGPU (drop them if you're in nvidia-only graphics mode). `DXVK_ASYNC=1`
    cuts shader stutter. BattlEye installs itself into the prefix on first launch
    — let it finish, then start again.
-6. If the Rockstar/Social Club window is black: switch GE-Proton version, or
+6. Block BattlEye's servers so Online gets past the kick (Setup Games step
+   6b does this, backing up `/etc/hosts` first):
+   ```
+   0.0.0.0 paradiseenhanced-s1.battleye.com
+   0.0.0.0 paradise-s1.battleye.com
+   0.0.0.0 test-s1.battleye.com
+   ```
+   Restart Steam afterwards. That gets you into closed crew / closed friend / invite-only
+   sessions; public sessions still kick. Don't open the Steam overlay in-game,
+   it can kill all game input until the game restarts. Use GE-Proton here,
+   since Valve's Proton / Experimental don't get past BattlEye.
+7. If the Rockstar/Social Club window is black: switch GE-Proton version, or
    add `PROTON_USE_WINED3D=0`; if sign-in loops, set the prefix to Windows 10
    (`protontricks <appid> --gui` → *win10*).
 

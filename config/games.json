@@ -4,7 +4,7 @@
     "Tab": "GTA V Online",
     "order": 1,
     "appid": "3240220",
-    "Description": "Grand Theft Auto V Enhanced / GTA Online on Nobara via Steam + Proton — Steam AppID 3240220 (the old 'GTA V Legacy' is 271590; set \"appid\" to that if you run the legacy copy). GTA Online is driven by BattlEye anti-cheat, so the prefix has to carry the Proton BattlEye Runtime and a recent GE-Proton. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted. This mirrors README “GTA V Online → Route A”.",
+    "Description": "Grand Theft Auto V Enhanced / GTA Online on Nobara via Steam + Proton — Steam AppID 3240220 (the old 'GTA V Legacy' is 271590; set \"appid\" to that if you run the legacy copy). GTA Online is driven by BattlEye anti-cheat, so the prefix has to carry the Proton BattlEye Runtime and a recent GE-Proton, and BattlEye's servers have to be blocked in /etc/hosts (step 6b). That gets GTA Online into closed crew / closed friend / invite-only sessions; public sessions still kick you. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted. This mirrors README “GTA V Online → Route A”.",
     "steps": [
       {
         "id": "steam",
@@ -57,6 +57,13 @@
         "run": "su - {USER} -c 'timeout 45 steam steam://install/1161040 >/dev/null 2>&1 || true'"
       },
       {
+        "id": "behosts",
+        "title": "6b · Block BattlEye's servers in /etc/hosts",
+        "desc": "Without this, GTA Online connects and BattlEye kicks you shortly after joining. Pointing paradiseenhanced-s1, paradise-s1 (GTA V Legacy) and test-s1 .battleye.com at 0.0.0.0 lets GTA Online load into closed crew / closed friend / invite-only sessions; PUBLIC sessions still kick you (“kicked by BattlEye”) — that part is server-side and no local fix changes it. Backs /etc/hosts up first. Remove the lines again to undo. Restart Steam (or reboot) afterwards so nothing keeps a cached lookup. Known quirk: opening the Steam overlay in-game can kill all game input until you restart the game — avoid Shift+Tab.",
+        "check": "grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+paradiseenhanced-s1\\.battleye\\.com' /etc/hosts && grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+test-s1\\.battleye\\.com' /etc/hosts",
+        "run": "cp -a /etc/hosts /etc/hosts.bak-gtav && printf '\\n# GTA V Enhanced Online on Proton: block BattlEye servers (closed crew/friend/invite-only sessions)\\n0.0.0.0 paradiseenhanced-s1.battleye.com\\n0.0.0.0 paradise-s1.battleye.com\\n0.0.0.0 test-s1.battleye.com\\n' >> /etc/hosts && grep battleye /etc/hosts"
+      },
+      {
         "id": "sysctl",
         "title": "7 · Raise vm.max_map_count",
         "desc": "Modern Proton titles (and GTA V with mods) can exhaust the default mmap limit and crash on load. Writes a persistent /etc/sysctl.d/80-gtav.conf and applies it now. Nobara often sets this already — the step is a no-op then.",
@@ -78,15 +85,15 @@
       {
         "id": "compat",
         "title": "10 · Force GE-Proton on GTA V  (manual)",
-        "desc": "Steam Library → right-click Grand Theft Auto V → Properties → Compatibility → tick “Force the use of a specific Steam Play compatibility tool” → choose the GE-Proton from step 5.",
+        "desc": "Steam Library → right-click Grand Theft Auto V → Properties → Compatibility → tick “Force the use of a specific Steam Play compatibility tool” → choose the GE-Proton from step 5. GTA Online needs GE-Proton — Valve's Proton / Proton Experimental don't get past BattlEye.",
         "manual": true
       },
       {
         "id": "launchopts",
         "title": "11 · Set the launch options  (manual)",
-        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). It keeps the Vulkan layer stack CLEAN for BattlEye — MANGOHUD=0 + DISABLE_VKBASALT=1 + VK_LOADER_LAYERS_DISABLE=~implicit~ turn off every injected implicit layer (overlay / post-fx), which is what avoids anti-cheat bans and startup crashes; gamemoderun is a plain wrapper (not a layer) so it stays. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU — drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). DXVK_ASYNC=1 cuts shader-compile stutter (GE-Proton's DXVK supports it). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder. BattlEye installs itself into the prefix on the first launch — let it finish, then start the game again.",
+        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). PROTON_BATTLEYE_RUNTIME points GE-Proton at the BattlEye Runtime from step 6 (absolute path, quoted because of the spaces — a quoted ~ does NOT expand, so don't shorten it to ~/…). It keeps the Vulkan layer stack CLEAN for BattlEye — MANGOHUD=0 + DISABLE_VKBASALT=1 + VK_LOADER_LAYERS_DISABLE=~implicit~ turn off every injected implicit layer (overlay / post-fx), which is what avoids anti-cheat bans and startup crashes; gamemoderun is a plain wrapper (not a layer) so it stays. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU — drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). DXVK_ASYNC=1 cuts shader-compile stutter (GE-Proton's DXVK supports it). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder. BattlEye installs itself into the prefix on the first launch — let it finish, then start the game again.",
         "manual": true,
-        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia MANGOHUD=0 DISABLE_VKBASALT=1 VK_LOADER_LAYERS_DISABLE=~implicit~ DXVK_ASYNC=1 gamemoderun %command%"
+        "copy": "PROTON_BATTLEYE_RUNTIME=\"/home/{USER}/.local/share/Steam/steamapps/common/Proton BattlEye Runtime\" __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia MANGOHUD=0 DISABLE_VKBASALT=1 VK_LOADER_LAYERS_DISABLE=~implicit~ DXVK_ASYNC=1 gamemoderun %command%"
       },
       {
         "id": "prefixdeps",
