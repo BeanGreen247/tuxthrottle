@@ -602,7 +602,10 @@ fair number of Wine/Proton and legacy-OpenGL games at startup**),
 (off by default — trades a little visual stutter risk for smoother shader
 compiles), Proton log off, and an **Anti-cheat safe** toggle (`MANGOHUD=0
 DISABLE_VKBASALT=1 VK_LOADER_LAYERS_DISABLE=~implicit~` — a clean Vulkan layer
-stack for BattlEye / EAC titles; also drops the `mangohud` wrapper). Produces a
+stack for BattlEye / EAC titles; also drops the `mangohud` wrapper, and adds
+`PROTON_BATTLEYE_RUNTIME="/home/<user>/.local/share/Steam/steamapps/common/Proton BattlEye Runtime"`
+so GE-Proton loads the Proton BattlEye Runtime, which GTA Online needs. The
+path is absolute because a quoted `~` doesn't expand). Produces a
 `[env] [wrappers] %command%` string with a **⧉ Copy** button, and a note: if a
 game won't launch, clear the options and add them back a few at a time.
 
