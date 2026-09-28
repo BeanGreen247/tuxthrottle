@@ -20,9 +20,15 @@ jobs:
         run: ruff check --output-format=github .
       - name: bash syntax + shellcheck
         run: |
-          bash -n osu-lazer-launcher.sh install.sh
-          shellcheck -S error osu-lazer-launcher.sh install.sh
+          bash -n osu-lazer-launcher.sh install.sh osu-tools.sh osu-dev.sh
+          shellcheck -S error osu-lazer-launcher.sh install.sh osu-tools.sh osu-dev.sh
       - name: pytest
         run: python -m pytest -q
       - name: diag text report runs headless
         run: python osu_lazer_diag.py --once
+      - name: tools run headless
+        run: |
+          bash osu-tools.sh help
+          python osu_input.py tablet 80 45 --screen 1920x1080
+          python osu_report.py sessions
+          python osu_backup.py list
