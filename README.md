@@ -8,10 +8,11 @@ A checkbox-driven GUI + tray monitor for Dell gaming laptops on Nobara Linux
 (dnf), built the same way as [WinUtil](https://winutil.christitus.com/)-style
 Windows tweak tools: data-driven JSON config, live status detection per
 item, reversible tweaks, one-directional app installs, and one-click
-presets. Plus a keyboard-RGB tab, a fan/thermal tab, an updates tab, a
-**Setup Games** tab with click-through per-game setup walkthroughs (GTA V
-Online first), and a diagnostics tab that dumps hardware + OS info for bug
-reports.
+presets. Plus keyboard-RGB, fan/thermal, power-limit, display, battery, VRAM
+and updates tabs, a **Setup Games** tab with click-through per-game setup
+walkthroughs (GTA V Online, the GTA Trilogy Definitive Editions, Star Wars
+Battlefront II Classic and osu!lazer), and a Report a Bug tab that dumps
+hardware + OS info for bug reports.
 
 <p align="center">
   <img src="assets/screenshot-about.png" alt="TuxThrottle running on a Dell G15 5515" width="900"/>
@@ -155,8 +156,12 @@ The window is a **left sidebar nav** (gaming-BIOS style, ASUS/Acer-ish),
 re-skinned from ttkbootstrap `darkly` into a near-black palette that picks up
 your **KDE accent colour** automatically (with a WCAG contrast fallback if
 your accent would be unreadable on the dark panels). Pages: Dashboard,
-Keyboard, Fans, Presets, Updates, then one page per tweak/app category
-(Gaming first). Long operations (Apply Selected, presets, updates) put up a
+Keyboard, Touchpad, Fans, Power & Limits, Display, Battery, VRAM, Profiles,
+Presets, Updates, Setup Games, Game Tools, then one page per tweak/app
+category (Gaming, Emulation, Input & Controllers, GPU, Power, Performance,
+KDE, Repos, Software, Monitoring, Streaming, RGB), with About and Report a
+Bug pinned to the foot of the rail. Only the Dashboard is built at start-up;
+every other page is built the first time you open it. Long operations (Apply Selected, presets, updates) put up a
 modal overlay with an **overall** progress bar, a **current-task** bar
 (showing "downloading / installing / …" parsed from the live output) and an
 elapsed timer.
@@ -295,6 +300,16 @@ straight from the kernel `power_supply` sysfs, so it works on any laptop. The
 charge-limit control from Power & Limits is repeated here so the longevity
 knobs sit on one page.
 
+## The VRAM tab
+
+For laptops whose integrated GPU shares a small slice of RAM as video memory, which the KDE/Wayland desktop
+tends to fill. It shows live VRAM use per GPU and which processes hold it, and has **Free VRAM now** /
+**Restart compositor** buttons. A **budget tier** (Regular / Medium / Extreme) strips desktop effects to shrink
+the compositor's footprint; Regular restores the exact KWin/Plasma values captured before the first change.
+You can also pick which GPU the compositor renders on, and let the NVIDIA dGPU power down when idle (runtime
+PM). Tier and GPU changes take effect after logging out and back in. All of it is plain KWin/Plasma config, so
+it works on AMD, NVIDIA or Intel graphics.
+
 ## The Profiles tab
 
 A **profile** is a named snapshot of the *whole* power surface — thermal
@@ -412,8 +427,10 @@ after any Check/Update.
 ## The Setup Games tab
 
 Click-through setup walkthroughs for games that need more than "install and
-run" on Linux. A top tab-strip has one page per game (**GTA V Online**
-first); each page is an ordered list of step cards:
+run" on Linux. A top tab-strip has one page per game: **GTA V Online**,
+**GTA III / Vice City / San Andreas (Definitive Edition)**, **Star Wars
+Battlefront II (Classic, 2005)** and **osu!lazer**. Each page is an ordered
+list of step cards:
 
 - A status pill per step — **done ✓** / **to do** (a `check` command decides)
   / **manual** / **optional**.
@@ -440,11 +457,15 @@ ordered `steps` list (`check` / `run` / `manual` / `copy`; `{USER}`,
 > so you connect to a session and get kicked. No Proton/prefix change fixes
 > a server-side block.
 
-## osu!lazer tools (work on any Linux PC)
+## osu!lazer (performance setup)
 
-The osu! pieces live in their own repo, **[osu-lazer-tools](https://github.com/BeanGreen247/osu-lazer-tools)**,
-bundled here as the `osu_lazer_tools/` module (a git subtree, so plain clones, `install.sh` and the RPM all
-carry it). None of it depends on the G15 or on the rest of TuxThrottle:
+The **Setup Games → osu!lazer** page sets osu!lazer up for low latency in nine steps: install GameMode, get the
+official AppImage (reusing one you already have) and install the launcher, write a low-latency launcher config
+(dGPU, shader cache, audio, no overlay), let KWin tear for fullscreen games, first launch, competitive game
+settings, then the manual extras: importing skins/beatmaps, measuring your mouse's real DPI, and the latency
+diagnostics. The pieces come from **[osu-lazer-tools](https://github.com/BeanGreen247/osu-lazer-tools)**, my
+standalone osu!-on-Linux repo, bundled here as the `osu_lazer_tools/` git subtree. TuxThrottle only installs
+the performance part of it:
 
 - **`osu-lazer-launcher.sh`**: runs the official osu!lazer AppImage through GameMode with the power profile on
   performance, mouse acceleration flattened, driver vsync off with one pre-rendered frame, NVIDIA threaded-GL
@@ -453,9 +474,15 @@ carry it). None of it depends on the G15 or on the rest of TuxThrottle:
 - **`osu_lazer_diag.py`** (`osu-lazer-launcher diag`): live latency / performance dashboard with what to change.
 - **`osu_lazer_settings.py`**: competitive game.ini / framework.ini settings with backups.
 
-The **Setup Games → osu!lazer** card installs `osu-lazer-launcher` as a thin wrapper around
-`/opt/tuxthrottle/osu_lazer_tools/`, so a TuxThrottle update reaches it with no re-install. To update the
-module from its repo: `git subtree pull --prefix=osu_lazer_tools https://github.com/BeanGreen247/osu-lazer-tools.git main --squash`.
+The other osu-lazer-tools helpers (replay analysis, tapping test, tablet check, skin checker, backups, mapset
+checker, mapping tools, source-build helper) are for players and mappers on any Linux PC and have nothing to
+do with tuning this laptop, so `install.sh` and the RPM leave them out. Get them from the osu-lazer-tools repo.
+
+The card installs `osu-lazer-launcher` as a thin wrapper around `/opt/tuxthrottle/osu_lazer_tools/`, so a
+TuxThrottle update reaches it with no re-install. To update the module from its repo:
+`git subtree pull --prefix=osu_lazer_tools https://github.com/BeanGreen247/osu-lazer-tools.git main --squash`.
+If the card ever needs another file from the module, add it to the keep-list in both `install.sh` and
+`packaging/tuxthrottle.spec` (`tests/test_games_catalog.py` checks this).
 
 ## The Game Tools tab
 
