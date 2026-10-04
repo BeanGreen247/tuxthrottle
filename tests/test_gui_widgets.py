@@ -1,13 +1,13 @@
-"""tuxthrottle_gui_widgets.py — the pure color-math / formatting helpers from
+"""tuxthrottle_gui_widgets.py - the pure color-math / formatting helpers from
 the second module-extraction slice. Skipped if ttkbootstrap isn't importable
-(same soft-dependency pattern as test_tui.py/textual) — this sandbox's own
+(same soft-dependency pattern as test_tui.py/textual) - this sandbox's own
 ttkbootstrap install is broken (PIL/ImageTk), and CI's main "checks" job
 doesn't install it either (only the separate gui-smoke job does), so this
 suite only actually runs where ttkbootstrap really works (e.g. on g15).
 
 The widget *classes* (RingGauge, HistoryChart, SidebarNav, _Tooltip) need a
 real Tk root and are already exercised end-to-end by the gui-smoke CI job
-and this session's live g15 verification — not duplicated here.
+and this session's live g15 verification - not duplicated here.
 """
 import pytest
 

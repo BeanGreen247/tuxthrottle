@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Steam "low-resource mode" — run the Steam *client* (not games) as light as
+"""Steam "low-resource mode" - run the Steam *client* (not games) as light as
 it goes on a low-end / hybrid laptop.
 
 Steam's heaviness on Linux is almost entirely its embedded Chromium UI
 (`steamwebhelper`): the store / library / friends views are web pages, GPU-
 composited. On a machine like the G15 (iGPU-composited desktop, tight VRAM)
 that GPU path also fights the compositor. This mode applies only the *safe*
-levers — nothing that has been seen to break the client or get it OOM-killed:
+levers - nothing that has been seen to break the client or get it OOM-killed:
 
     -silent                       start to the tray, don't paint a window until opened
     -cef-disable-gpu              no GPU acceleration in the web UI  (the big one)
@@ -20,11 +20,11 @@ Never used: a hard MemoryMax (that OOM-kills Steam), and the CEF process
 flags -cef-single-process / -no-cef-sandbox / -no-browser. Those three were
 an opt-in "--aggressive" tier until 2026-09-03, when they were confirmed to
 crash-loop steamwebhelper (SIGTRAP in libcef roughly every 10 s, no usable
-UI) on a current Steam build — the tier was removed.
+UI) on a current Steam build - the tier was removed.
 
 Also dropped 2026-09-06: -noverifyfiles / -nobootstrapupdate / -norepairfiles.
 They only shaved a small startup CPU/I-O spike, but they suppress Steam's own
-client self-repair — so when a Steam client update lands (Steam updates its
+client self-repair - so when a Steam client update lands (Steam updates its
 client constantly) the bootstrap is skipped, steamclient.so ends up out of
 sync with the rest of the client, and the ubuntu12_32/steam bootstrap
 SIGSEGVs on launch (`segfault … in steamclient.so`). Letting Steam verify /
@@ -36,21 +36,21 @@ actually mounted; an unmounted library looks identical (no games).
 …the patched launcher also wraps Steam in a systemd scope with a **soft**
 memory limit only (`systemd-run --user --scope -p MemoryHigh=1200M`):
 MemoryHigh just makes the kernel reclaim page cache harder once Steam passes
-~1.2 GB — it throttles, it never kills. No MemoryMax, no swap cap.
+~1.2 GB - it throttles, it never kills. No MemoryMax, no swap cap.
 
 …plus every file-settable low-resource setting Steam has (needs Steam closed):
     localconfig.vdf  friends → SignIntoFriends = 0   (no auto chat → no friends
                                                       web-view renderer)
     localconfig.vdf  friends → AnimatedAvatars / AnimatedGameArt = 0
     config.vdf  ShaderCacheManager → EnableShaderBackgroundProcessing = 0
-                                     (on ON only; OFF leaves it — it has its own
+                                     (on ON only; OFF leaves it - it has its own
                                       toggle in the shader-cache box)
 
-The Steam Overlay (system → EnableGameOverlay) is LEFT ON on purpose — Shift+Tab
+The Steam Overlay (system → EnableGameOverlay) is LEFT ON on purpose - Shift+Tab
 and Steam screenshots stay working.
 
 A few low-resource toggles live in Steam's internal store and can't be scripted
-on the current UI — `on` prints them for you to tick by hand (see MANUAL_HINTS:
+on the current UI - `on` prints them for you to tick by hand (see MANUAL_HINTS:
 Library → Low Bandwidth Mode + Low Performance Mode, Interface → smooth
 scrolling off, Downloads → Shader Pre-Caching off).
 
@@ -58,23 +58,24 @@ This installs the flags by writing a user-level `~/.local/share/applications/
 steam.desktop` (which shadows the system launcher for the menu / tray) and
 patching `~/.config/autostart/steam.desktop` if present. `off` removes the
 override, restores autostart, and flips the localconfig keys back on. **Only
-affects Steam started from the app menu / autostart — a running Steam or a
+affects Steam started from the app menu / autostart - a running Steam or a
 pinned-taskbar launcher keeps the old settings; fully quit and relaunch.**
 Trade-off: you sign into chat manually. (The Steam Overlay stays on.)
 
 Autostart: if there's no `~/.config/autostart/steam.desktop`, `on` creates one
 (carrying the same flags) so Steam comes up on login straight to the tray,
-never painting a window — `off` deletes the one it made. `--no-autostart`
+never painting a window - `off` deletes the one it made. `--no-autostart`
 skips that.
 
 Separately, `igpu-on` / `igpu-off` write a user-level steam.desktop shadow that
 forces the Steam *client* onto the iGPU (`PrefersNonDefaultGPU=false`,
-`X-KDE-RunOnDiscreteGpu=false`) — the fix for the Nobara steam.desktop shipping
+`X-KDE-RunOnDiscreteGpu=false`) - the fix for the Nobara steam.desktop shipping
 those keys `true`, which on a muxless Optimus laptop makes `steamwebhelper`'s
 CEF GPU process crash-loop on the dGPU. Composes with low-resource mode (shared
 shadow file). Games still PRIME-offload via their own launch options.
 
-CLI:  tuxthrottle_steamperf.py on [--no-autostart]
+CLI:  tuxthrottle_steamperf.py sweep-autostart   (move stray backups out of autostart)
+      tuxthrottle_steamperf.py on [--no-autostart]
       tuxthrottle_steamperf.py {off|status}
       tuxthrottle_steamperf.py {igpu-on|igpu-off|igpu-status}
   (run as the real user; `status` → off / on [+autostart])
@@ -94,7 +95,7 @@ MARKER = "X-TuxThrottle-LowResource"
 IGPU_MARKER = "X-TuxThrottle-SteamIgpu"
 FLAGS = ("-silent -cef-disable-gpu -cef-disable-gpu-compositing "
          "-cef-disable-breakpad -cef-disable-extra-info-spew")
-# removed 2026-09-06 — suppressing client self-repair made steamclient.so
+# removed 2026-09-06 - suppressing client self-repair made steamclient.so
 # SIGSEGV on launch after a Steam client update. `link-check` flags a shadow
 # .desktop that still carries them so `on` gets re-run.
 _UNSAFE_FLAGS = ("-noverifyfiles", "-nobootstrapupdate", "-norepairfiles")
@@ -108,7 +109,7 @@ _UNSAFE_FLAGS = ("-noverifyfiles", "-nobootstrapupdate", "-norepairfiles")
 # __VK_LAYER_NV_optimus=NVIDIA_only / VK_LOADER_DRIVERS_SELECT=*nvidia*). The
 # CEF `steamwebhelper` GPU subprocess then fails to init GL on the dGPU and
 # aborts in a loop ("GPU process launch failed: error_code=1002 … GPU process
-# isn't usable. Goodbye.", SIGTRAP) — no usable Steam UI. The client only ever
+# isn't usable. Goodbye.", SIGTRAP) - no usable Steam UI. The client only ever
 # needs the iGPU; individual games still PRIME-offload via their own launch
 # options. `igpu-on` writes a user-level shadow desktop entry forcing both keys
 # false; `igpu-off` removes it.
@@ -123,7 +124,7 @@ _GPU_KEYS = ("PrefersNonDefaultGPU", "X-KDE-RunOnDiscreteGpu")
 # no-op on the CLI. Do not re-add these flags without per-build testing.
 
 # Soft memory pressure only. MemoryHigh throttles + makes the kernel reclaim
-# page cache above the threshold (Chromium sheds its caches) — it NEVER kills a
+# page cache above the threshold (Chromium sheds its caches) - it NEVER kills a
 # process. No MemoryMax (a hard cap is what OOM-kills Steam), no swap cap.
 MEM_HIGH_MB = 1200
 
@@ -138,17 +139,17 @@ _PATCHED_MARK = ("-cef-disable-gpu", "MemoryHigh=")
 
 # localconfig.vdf keys we flip to "0" (low-resource) / "1" (restore). Grouped
 # by the block they live in; a key that's absent is inserted right after that
-# block's opening brace. All are Steam's own supported low-resource levers —
+# block's opening brace. All are Steam's own supported low-resource levers -
 # none break the client, none can OOM it.
 _VDF_KEYS: dict[str, tuple[str, ...]] = {
     "friends": ("SignIntoFriends",      # don't auto-connect chat → no friends renderer
                 "AnimatedAvatars",       # static avatars in the friends list
                 "AnimatedGameArt"),      # static game art in chat
     # NOTE: the Steam Overlay (system → EnableGameOverlay) is deliberately left
-    # ON — the user wants Shift+Tab and Steam screenshots. Disabling it would
+    # ON - the user wants Shift+Tab and Steam screenshots. Disabling it would
     # save a bit of in-game RAM but that trade isn't wanted.
 }
-# Keys we no longer manage but may have set "0" in an earlier version — reset to
+# Keys we no longer manage but may have set "0" in an earlier version - reset to
 # "1" on every run so an upgrade un-does them.
 _LEGACY_RESET: dict[str, tuple[str, ...]] = {"system": ("EnableGameOverlay",)}
 # config.vdf: InstallConfigStore/Software/Valve/Steam/ShaderCacheManager/<key>.
@@ -157,7 +158,7 @@ _LEGACY_RESET: dict[str, tuple[str, ...]] = {"system": ("EnableGameOverlay",)}
 _SHADER_BG_KEY = "EnableShaderBackgroundProcessing"
 
 # Settings that this tool CANNOT flip from a file on current Steam (the new UI
-# keeps them in an internal store) — surfaced to the user to tick by hand.
+# keeps them in an internal store) - surfaced to the user to tick by hand.
 MANUAL_HINTS = (
     "Steam → Settings → Library → enable “Low Bandwidth Mode” (no animated "
     "capsule / hero artwork downloads)",
@@ -231,7 +232,7 @@ def _apply_client_settings(low: bool) -> list[str]:
     background-shader key. value '0' = lean, '1' = restore. Skipped entirely
     while Steam runs (it rewrites these on exit)."""
     if _steam_running():
-        return ["(Steam is running — client settings left unchanged; "
+        return ["(Steam is running - client settings left unchanged; "
                 "close Steam and press Enable again)"]
     value = "0" if low else "1"
     done = []
@@ -276,28 +277,40 @@ def _autostart_bak(suffix: str) -> Path:
     """Backup of the user's real autostart steam.desktop, kept OUTSIDE the
     autostart dir. A `*.desktop.*`-named file left in ~/.config/autostart is
     picked up by Plasma's autostart scanner and launched as a second Steam
-    instance — the two race the singleton lock and one client's steamwebhelper
+    instance - the two race the singleton lock and one client's steamwebhelper
     then respawns forever ("Steam Web Helper is not responding")."""
     base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
     return Path(base) / "tuxthrottle" / f"steam.desktop.{suffix}"
 
 
-def _migrate_stray_bak() -> None:
-    """Move any pre-existing in-autostart-dir backup to the safe location and
-    delete the stray so it stops autostarting a duplicate Steam."""
+def stray_autostart_files() -> list[Path]:
+    """Files in the autostart dir that would start a SECOND Steam at login:
+    anything named `steam.desktop.<something>` (a backup). The desktop's
+    autostart generator runs every file in that folder, whatever its suffix."""
     au = _autostart()
-    for suffix in ("tuxthrottle-bak", "tuxthrottle-igpu-bak"):
-        stray = au.with_name(au.name + "." + suffix)
-        if not stray.is_file():
-            continue
-        dst = _autostart_bak(suffix)
+    try:
+        return sorted(p for p in au.parent.iterdir()
+                      if p.is_file() and p.name.startswith(au.name + "."))
+    except OSError:
+        return []
+
+
+def _migrate_stray_bak() -> list[Path]:
+    """Move every in-autostart-dir backup to the safe location so it stops
+    autostarting a duplicate Steam. Returns the files it moved."""
+    moved = []
+    au = _autostart()
+    for stray in stray_autostart_files():
+        dst = _autostart_bak(stray.name[len(au.name) + 1:])
         try:
             if not dst.exists():
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 dst.write_text(stray.read_text())
             stray.unlink()
+            moved.append(stray)
         except OSError:
             pass
+    return moved
 
 
 def _steam_bin() -> str:
@@ -314,7 +327,7 @@ def _stamp(text: str, val: str = "true") -> str:
 def _patch_exec_lines(text: str, flags: str = FLAGS,
                       mem_high_mb: int = MEM_HIGH_MB,
                       scope_props: tuple = ()) -> str:
-    """Rewrite the primary `Exec=… steam %U` line (only that one — the steam://
+    """Rewrite the primary `Exec=… steam %U` line (only that one - the steam://
     action Execs are left alone) to add `flags` and, if `systemd-run` is
     present, wrap it in the memory-scope prefix. Idempotent (a line already
     carrying our markers is first reset, then re-patched)."""
@@ -324,7 +337,7 @@ def _patch_exec_lines(text: str, flags: str = FLAGS,
     for ln in text.splitlines():
         raw = ln.strip()
         if raw.startswith("Exec=") and "steam" in raw and any(t in raw for t in _PATCHED_MARK):
-            # already patched (maybe with a different flag set) — normalise first
+            # already patched (maybe with a different flag set) - normalise first
             m = re.search(r"(\S*/)?steam\b", raw)
             pre = (m.group(1) or "") if m else ""
             raw = f"Exec={pre}steam %U"
@@ -364,7 +377,7 @@ def _base_desktop_body() -> str:
 
 def _force_igpu_keys(text: str) -> str:
     """Ensure `PrefersNonDefaultGPU=false` and `X-KDE-RunOnDiscreteGpu=false`
-    under [Desktop Entry] — rewrite an existing line, else insert one. Leaves
+    under [Desktop Entry] - rewrite an existing line, else insert one. Leaves
     the steam:// action groups untouched (they carry no GPU keys)."""
     lines = text.splitlines()
     out: list[str] = []
@@ -425,10 +438,10 @@ def enable_igpu() -> tuple[bool, str]:
             bak.write_text(au.read_text())
         au.write_text(_stamp_key(_force_igpu_keys(au.read_text()), IGPU_MARKER, "true"))
         did.append(f"{au} (patched)")
-    return True, ("Steam client pinned to the iGPU — " + ", ".join(did)
+    return True, ("Steam client pinned to the iGPU - " + ", ".join(did)
                   + "\n(games still PRIME-offload to the dGPU via their own launch "
                   "options).\n\nFully QUIT Steam (tray → Quit) and relaunch it from "
-                  "the application menu — a running Steam, or one started from a "
+                  "the application menu - a running Steam, or one started from a "
                   "pinned taskbar entry, keeps the old GPU assignment.")
 
 
@@ -437,7 +450,7 @@ def disable_igpu() -> tuple[bool, str]:
     dst = _user_desktop()
     if dst.is_file() and IGPU_MARKER in dst.read_text():
         if MARKER in dst.read_text():
-            # shared with low-resource mode — just drop our marker + restore the
+            # shared with low-resource mode - just drop our marker + restore the
             # GPU keys to whatever the system file has (default: remove our lines)
             txt = "\n".join(ln for ln in dst.read_text().splitlines()
                             if not ln.startswith(IGPU_MARKER + "=")
@@ -460,8 +473,8 @@ def disable_igpu() -> tuple[bool, str]:
         au.write_text(txt + ("\n" if not txt.endswith("\n") else ""))
         done.append(f"cleaned {au}")
     if not done:
-        return True, "Steam client iGPU pin was not set — nothing to do"
-    return True, ("Steam client iGPU pin removed — " + "; ".join(done)
+        return True, "Steam client iGPU pin was not set - nothing to do"
+    return True, ("Steam client iGPU pin removed - " + "; ".join(done)
                   + "\nRestart Steam for it to take effect.")
 
 
@@ -481,13 +494,13 @@ _MOUNTWAIT_BIN = "/usr/local/bin/tuxthrottle-wait-mounts"
 def _reapply_mountwait(text: str) -> str:
     """Re-prefix the Exec= line with the mount-wait wrapper (see
     SteamAutostartMountWait in config/tweaks.json) if it isn't there already.
-    No-op if the wrapper binary was never installed — callers only invoke
+    No-op if the wrapper binary was never installed - callers only invoke
     this to preserve a wrapper that was already present before a rewrite."""
     if _MOUNTWAIT_BIN in text:
         return text
     result = []
     for ln in text.splitlines():
-        # only the primary launcher Exec line ends in a %U/%u placeholder —
+        # only the primary launcher Exec line ends in a %U/%u placeholder -
         # the steam:// action groups' Exec lines never take one
         if ln.startswith("Exec=") and re.search(r"%[uU]['\"]?$", ln.rstrip()):
             result.append(f"Exec={_MOUNTWAIT_BIN} " + ln[len('Exec='):])
@@ -519,7 +532,7 @@ def enable(autostart: bool = True) -> tuple[bool, str]:
     au = _autostart()
     bak = _autostart_bak("tuxthrottle-bak")
     if au.is_file() and MARKER not in au.read_text():
-        # a real pre-existing Steam autostart entry — back it up, patch in place
+        # a real pre-existing Steam autostart entry - back it up, patch in place
         had_mountwait = _MOUNTWAIT_BIN in au.read_text()
         if not bak.exists():
             bak.parent.mkdir(parents=True, exist_ok=True)
@@ -527,7 +540,7 @@ def enable(autostart: bool = True) -> tuple[bool, str]:
         au.write_text(_patch(au.read_text(), had_mountwait))
         did.append(f"{au} (patched)")
     elif au.is_file() and MARKER in au.read_text():
-        # ours from a previous run — regenerate so a flag/level change lands
+        # ours from a previous run - regenerate so a flag/level change lands
         had_mountwait = _MOUNTWAIT_BIN in au.read_text()
         created = "X-TuxThrottle-Created=true" in au.read_text()
         base = bak.read_text() if bak.is_file() else _base_desktop_body()
@@ -543,18 +556,18 @@ def enable(autostart: bool = True) -> tuple[bool, str]:
         new = _patch(_base_desktop_body()).replace(
             "[Desktop Entry]\n", "[Desktop Entry]\nX-TuxThrottle-Created=true\n", 1)
         au.write_text(new)
-        did.append(f"{au} (created — Steam autostarts to the tray, -silent)")
+        did.append(f"{au} (created - Steam autostarts to the tray, -silent)")
 
     settings = _apply_client_settings(True)
-    cap = (f"memory scope: MemoryHigh={mem}M (soft — reclaims, never kills)"
-           if shutil.which("systemd-run") else "memory scope: (systemd-run absent — skipped)")
+    cap = (f"memory scope: MemoryHigh={mem}M (soft - reclaims, never kills)"
+           if shutil.which("systemd-run") else "memory scope: (systemd-run absent - skipped)")
     hints = "\n".join(f"    • {h}" for h in MANUAL_HINTS)
-    return True, ("Steam low-resource mode ON — " + ", ".join(did)
+    return True, ("Steam low-resource mode ON - " + ", ".join(did)
                   + "\n  " + cap
                   + "\n  client settings (no auto chat / no friends animations / "
                   "no bg shaders; overlay kept): " + "; ".join(settings)
                   + "\n\nFully QUIT Steam (tray → Quit) and relaunch it from the "
-                  "application menu — a Steam that's still running, or one "
+                  "application menu - a Steam that's still running, or one "
                   "started from a pinned taskbar entry, keeps the old settings."
                   + "\n\nAlso tick these by hand (Steam keeps them in its own "
                   "store, can't be scripted):\n" + hints)
@@ -565,7 +578,7 @@ def disable() -> tuple[bool, str]:
     dst = _user_desktop()
     if dst.is_file() and MARKER in dst.read_text():
         if IGPU_MARKER in dst.read_text():
-            # keep the shadow alive for the iGPU pin — just strip low-resource
+            # keep the shadow alive for the iGPU pin - just strip low-resource
             body = _stamp_key(_force_igpu_keys(_base_desktop_body()),
                               IGPU_MARKER, "true")
             dst.write_text(body)
@@ -577,7 +590,7 @@ def disable() -> tuple[bool, str]:
     au = _autostart()
     bak = _autostart_bak("tuxthrottle-bak")
     if au.is_file() and "X-TuxThrottle-Created=true" in au.read_text():
-        au.unlink()                                   # we made it — remove it
+        au.unlink()                                   # we made it - remove it
         if bak.is_file():
             bak.unlink()
         done.append(f"removed {au} (we created it)")
@@ -586,7 +599,7 @@ def disable() -> tuple[bool, str]:
         bak.unlink()
         done.append(f"restored {au}")
     elif au.is_file() and MARKER in au.read_text():
-        # patched with no backup — drop the marker line + un-patch the Exec
+        # patched with no backup - drop the marker line + un-patch the Exec
         txt = "\n".join(ln for ln in au.read_text().splitlines()
                         if not ln.startswith(MARKER + "="))
         au.write_text(_unpatch_exec_lines(txt))
@@ -596,16 +609,16 @@ def disable() -> tuple[bool, str]:
     settings_changed = not (settings[0].startswith("(no ")
                             or settings[0].startswith("(Steam is running"))
     if not desktop_changed and not settings_changed:
-        return True, "Steam low-resource mode was not enabled — nothing to do"
+        return True, "Steam low-resource mode was not enabled - nothing to do"
     done.append("client settings restored: " + "; ".join(settings))
-    return True, ("Steam low-resource mode OFF — " + "; ".join(done)
-                  + "\n(the background-shader setting is left as-is — use its own "
+    return True, ("Steam low-resource mode OFF - " + "; ".join(done)
+                  + "\n(the background-shader setting is left as-is - use its own "
                   "toggle in the shader-cache box)"
                   + "\nRestart Steam for it to take effect.")
 
 
 def status() -> str:
-    """'off' / 'on' — plus '+autostart' when we created the login entry.
+    """'off' / 'on' - plus '+autostart' when we created the login entry.
     A legacy 'X-TuxThrottle-LowResource=aggressive' marker also reads as 'on'."""
     dst = _user_desktop()
     try:
@@ -629,7 +642,7 @@ _REMOVED_AGGRESSIVE_FLAGS = ("-cef-single-process", "-no-cef-sandbox", "-no-brow
 def diagnose(user: str | None = None) -> list[tuple[str, str]]:
     """Read-only checks for the most common 'Steam won't start / a library's
     games are missing' causes seen on this laptop so far. Returns a list of
-    (status, message) with status 'ok' or 'bad' — never modifies anything,
+    (status, message) with status 'ok' or 'bad' - never modifies anything,
     this only reports; the Diagnostics/Fixes page decides what to offer."""
     results: list[tuple[str, str]] = []
 
@@ -645,7 +658,7 @@ def diagnose(user: str | None = None) -> list[tuple[str, str]]:
     if forced:
         results.append(("bad",
             "Steam's launcher forces the client onto the discrete GPU "
-            "(PrefersNonDefaultGPU=true) — on a muxless laptop this crash-loops "
+            "(PrefersNonDefaultGPU=true) - on a muxless laptop this crash-loops "
             "steamwebhelper. Fix: Game Tools -> Steam client low-resource mode -> "
             "pin Steam client to the iGPU."))
     else:
@@ -661,7 +674,7 @@ def diagnose(user: str | None = None) -> list[tuple[str, str]]:
     if stale:
         results.append(("bad",
             f"Steam launcher still has removed/unsafe flags set: {', '.join(stale)} "
-            "— these have been seen to crash-loop steamwebhelper or SIGSEGV "
+            "- these have been seen to crash-loop steamwebhelper or SIGSEGV "
             "steamclient.so on launch. Fix: turn Steam low-resource mode off then "
             "back on to regenerate the launcher without them."))
     else:
@@ -686,11 +699,11 @@ def diagnose(user: str | None = None) -> list[tuple[str, str]]:
     if strays:
         results.append(("bad",
             f"Extra Steam autostart file(s) in ~/.config/autostart: "
-            f"{', '.join(sorted(strays))} — these launch a second Steam at login "
-            "that fights the first for the single-instance lock, leaving one "
-            "client's steamwebhelper stuck respawning ('not responding'). Fix: "
-            "turn Steam low-resource mode off then on (it now keeps its backup "
-            "outside the autostart dir), or delete the stray file."))
+            f"{', '.join(sorted(strays))} - these launch a second Steam at login "
+            "that fights the first for the single-instance lock: one client "
+            "crashes a few seconds after login, or its steamwebhelper is left "
+            "respawning ('not responding'). Fix: Game Tools -> Fix Steam starting "
+            "twice at login."))
     else:
         results.append(("ok", "No duplicate Steam autostart entry."))
 
@@ -712,20 +725,20 @@ def diagnose(user: str | None = None) -> list[tuple[str, str]]:
     if missing:
         results.append(("bad",
             "Steam library folder(s) look unmounted or missing: " + ", ".join(missing) +
-            " — its games will show as 'missing' until the drive is mounted. Check "
+            " - its games will show as 'missing' until the drive is mounted. Check "
             "Diagnostics/Fixes -> unmounted drives, or fstab for that mount."))
     elif text:
         results.append(("ok", "All declared Steam library folders are present."))
 
     # 4) an NTFS volume Windows left 'dirty' (won't mount without NtfsForceMount)
     try:
-        j = subprocess.run(  # noqa: S603 — fixed argv, read-only
+        j = subprocess.run(  # noqa: S603 - fixed argv, read-only
             ["journalctl", "--since", "-1d", "--no-pager", "-o", "cat"],
             capture_output=True, text=True, timeout=15)
         if re.search(r"ntfs3.*volume is dirty", j.stdout, re.I):
             results.append(("bad",
                 "An NTFS drive was refused as 'dirty' by the kernel in the last day "
-                "— any Steam library on it silently vanishes. Fix: enable the "
+                "- any Steam library on it silently vanishes. Fix: enable the "
                 "NtfsForceMount tweak (Stability tab)."))
     except (OSError, subprocess.SubprocessError):
         pass
@@ -738,7 +751,7 @@ def main(argv=None) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("state", choices=["on", "off", "status",
                                       "igpu-on", "igpu-off", "igpu-status",
-                                      "diagnose"])
+                                      "diagnose", "sweep-autostart"])
     ap.add_argument("--aggressive", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--no-autostart", action="store_true",
                     help="don't create a hidden-Steam login entry if none exists")
@@ -756,6 +769,14 @@ def main(argv=None) -> int:
             for status_word, msg in results:
                 print(f"[{status_word}] {msg}")
         return 0 if all(s == "ok" for s, _ in results) else 1
+    if a.state == "sweep-autostart":
+        moved = _migrate_stray_bak()
+        for m in moved:
+            print(f"moved {m} out of the autostart folder")
+        left = stray_autostart_files()
+        print("no stray Steam autostart backups" if not moved and not left else
+              f"{len(moved)} moved, {len(left)} could not be moved")
+        return 1 if left else 0
     if a.state == "status":
         print(status())
         return 0

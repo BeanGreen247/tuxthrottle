@@ -11,7 +11,7 @@ symlinks and the prefix build dies with:
 …and the game never starts. Steam has no "prefix elsewhere" option, so the
 fix is to keep the game where it is, move just its `compatdata/<appid>`
 directory onto a Linux-native drive, and drop a symlink back in its place
-(the symlink name is the numeric appid — no ':' — so NTFS accepts it).
+(the symlink name is the numeric appid - no ':' - so NTFS accepts it).
 
 Usage:
     python3 tuxthrottle_prefix_relocate.py <appid>            # do the move
@@ -85,7 +85,7 @@ def library_for_appid(root: Path, appid: str) -> Path | None:
         return Path(best)
     # libraryfolders.vdf's "apps" block can be stale/empty (Steam hasn't
     # rewritten it, or a leftover appmanifest sits in a library the game was
-    # never fully installed to) — fall back to picking whichever candidate
+    # never fully installed to) - fall back to picking whichever candidate
     # library actually holds the game, biggest reported SizeOnDisk first,
     # so a stale zero-byte appmanifest in the default library doesn't win
     # over the real install on another drive.
@@ -182,7 +182,7 @@ def do_scan(root: Path) -> int:
         print(f"  {appid:<{w}}  {flag:<10}  {name[:44]:<44}  {lib}")
     print()
     if need:
-        print(f"{need} prefix(es) NEED FIX — run:  "
+        print(f"{need} prefix(es) NEED FIX - run:  "
               f"python3 tuxthrottle_prefix_relocate.py <appid>   (or --all)   "
               f"(Steam closed)")
     else:
@@ -208,23 +208,23 @@ def relocate_one(root: Path, appid: str, lib: Path | None = None) -> None:
     if src.resolve() == dst.resolve():
         raise RelocateError(
             f"{appid}: its library ({lib}) is the bad filesystem AND the main "
-            f"Steam library — move the game to a Linux drive instead")
+            f"Steam library - move the game to a Linux drive instead")
     if not src.exists():
         raise RelocateError(f"{appid}: {src} vanished")
     if dst.exists() or dst.is_symlink():
-        raise RelocateError(f"{appid}: {dst} already exists — clear it first")
+        raise RelocateError(f"{appid}: {dst} already exists - clear it first")
     name = appid_name(root, appid) or appid
     print(f"moving prefix for {name}:\n  {src}\n    ->  {dst}")
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(src), str(dst))
     os.symlink(str(dst), str(src))
-    print(f"  done — {src} is now a symlink to {dst}")
+    print(f"  done - {src} is now a symlink to {dst}")
 
 
 def do_relevant(root: Path, appid: str) -> int:
     """exit 0 if the "move the Proton prefix" step is worth showing for this
-    game — its Steam library is a colon-hostile FS (NTFS/exFAT), i.e. a drive
-    that is not the native Steam/OS drive — so it either needs the move or has
+    game - its Steam library is a colon-hostile FS (NTFS/exFAT), i.e. a drive
+    that is not the native Steam/OS drive - so it either needs the move or has
     already had it. exit 1 when the game sits on a colon-friendly drive (same
     filesystem as Steam, or another Linux disk) and the step is pointless."""
     lib = library_for_appid(root, appid)
@@ -234,7 +234,7 @@ def do_relevant(root: Path, appid: str) -> int:
     if status in ("symlink", "needs-fix"):
         return 0
     if status == "absent":
-        # prefix not built yet — show only if the library drive rejects ':'
+        # prefix not built yet - show only if the library drive rejects ':'
         return 0 if not colon_ok(lib) else 1
     return 1  # "ok"
 
@@ -242,29 +242,29 @@ def do_relevant(root: Path, appid: str) -> int:
 def do_one(root: Path, appid: str, check: bool) -> int:
     lib = library_for_appid(root, appid)
     if lib is None:
-        print(f"appid {appid} not found in any Steam library — nothing to do "
+        print(f"appid {appid} not found in any Steam library - nothing to do "
               f"(is it installed? launched once?)")
         return 0
 
     status, src = classify(lib, appid)
     if status == "symlink":
-        print(f"OK — prefix already relocated: {src} -> {os.readlink(src)}")
+        print(f"OK - prefix already relocated: {src} -> {os.readlink(src)}")
         return 0
     if status == "absent":
-        print(f"OK — no prefix on disk yet ({src} absent); it'll build in place.")
+        print(f"OK - no prefix on disk yet ({src} absent); it'll build in place.")
         return 0
     if status == "ok":
-        print(f"OK — {src} is on a filesystem that allows ':' in names; "
+        print(f"OK - {src} is on a filesystem that allows ':' in names; "
               f"no relocation needed.")
         return 0
 
     if check:
-        print(f"NEEDS FIX — {src} is on a filesystem that rejects ':' in "
+        print(f"NEEDS FIX - {src} is on a filesystem that rejects ':' in "
               f"filenames; Proton can't build drive-letter links there.")
         return 1
 
     if steam_running():
-        sys.exit("Steam is running — close Steam (and the game) first, then retry.")
+        sys.exit("Steam is running - close Steam (and the game) first, then retry.")
     try:
         relocate_one(root, appid, lib)
     except RelocateError as exc:
@@ -278,14 +278,14 @@ def do_all(root: Path) -> int:
     targets = [(a, n, lib) for a, n, st, lib in all_prefixes(root)
                if st == "needs-fix"]
     if not targets:
-        print("no prefixes need relocating — nothing to do.")
+        print("no prefixes need relocating - nothing to do.")
         return 0
     print(f"{len(targets)} prefix(es) to relocate:")
     for a, n, _ in targets:
         print(f"  {a}  {n}")
     print()
     if steam_running():
-        sys.exit("Steam is running — close Steam (and every game) first, then retry.")
+        sys.exit("Steam is running - close Steam (and every game) first, then retry.")
     ok = 0
     fails: list[str] = []
     for appid, _name, lib in targets:
@@ -349,14 +349,14 @@ def pull_saves_one(root: Path, appid: str) -> int:
     strays = stray_saves(root, appid)
     name = appid_name(root, appid) or appid
     if not strays:
-        print(f"{name} ({appid}): no stray save folders — nothing to do.")
+        print(f"{name} ({appid}): no stray save folders - nothing to do.")
         return 0
     moved = 0
     for kf, link, target in strays:
         staging = link.with_name(link.name + ".tuxthrottle-pull")
         print(f"{name}: {kf}  <-  {target}")
         if staging.exists():
-            print(f"  SKIP — {staging} already exists"); continue
+            print(f"  SKIP - {staging} already exists"); continue
         try:
             shutil.copytree(target, staging, symlinks=True,
                             ignore_dangling_symlinks=True)
@@ -401,7 +401,7 @@ def _has_files(d: Path) -> bool:
 
 def loose_save_dirs(root: Path) -> list[Path]:
     """Drive-root Documents/My Games/… folders (outside any steamapps tree and
-    outside home) — left behind when a prefix used to redirect its Documents
+    outside home) - left behind when a prefix used to redirect its Documents
     onto another drive. e.g. /mnt/Data/Documents ."""
     home = Path.home().resolve()
     seen: set[Path] = set()
@@ -432,7 +432,7 @@ def do_saves_scan(root: Path) -> int:
             print(f"      {kf:<18} -> {target}")
     if hits:
         print(f"\n{hits} game(s) have a save folder symlinked onto another drive"
-              f" — run:  tuxthrottle_prefix_relocate.py --saves <appid>  (or --saves-all)")
+              f" - run:  tuxthrottle_prefix_relocate.py --saves <appid>  (or --saves-all)")
 
     loose = loose_save_dirs(root)
     if loose:
@@ -462,13 +462,13 @@ def import_loose_one(root: Path, appid: str) -> int:
     pfx = (lib / "steamapps" / "compatdata" / appid / "pfx")
     docs = pfx / "drive_c" / "users" / "steamuser" / "Documents"
     if not docs.is_dir():
-        sys.exit(f"{name}: no prefix Documents folder at {docs} — launch the "
+        sys.exit(f"{name}: no prefix Documents folder at {docs} - launch the "
                  f"game once first")
     mp = mount_point(lib)
     srcs = [mp / nm for nm in LOOSE_DIR_NAMES
             if (mp / nm).is_dir() and not (mp / nm).is_symlink() and _has_files(mp / nm)]
     if not srcs:
-        print(f"{name}: no loose save folders on {mp} — nothing to import.")
+        print(f"{name}: no loose save folders on {mp} - nothing to import.")
         return 0
     total = 0
     for src in srcs:
@@ -493,13 +493,13 @@ def import_loose_one(root: Path, appid: str) -> int:
 def do_saves_all(root: Path) -> int:
     targets = [a for a, _n, _s, _l in all_prefixes(root) if stray_saves(root, a)]
     if not targets:
-        print("no save folders on another drive — nothing to do.")
+        print("no save folders on another drive - nothing to do.")
         return 0
     if steam_running():
-        sys.exit("Steam is running — close Steam (and every game) first, then retry.")
+        sys.exit("Steam is running - close Steam (and every game) first, then retry.")
     for appid in targets:
         pull_saves_one(root, appid)
-    print(f"\ndone — {len(targets)} game(s) processed.")
+    print(f"\ndone - {len(targets)} game(s) processed.")
     return 0
 
 
@@ -522,13 +522,13 @@ def main() -> int:
         if not args or not args[0].isdigit():
             sys.exit("usage: tuxthrottle_prefix_relocate.py --saves-import <appid>")
         if steam_running():
-            sys.exit("Steam is running — close Steam and the game first, then retry.")
+            sys.exit("Steam is running - close Steam and the game first, then retry.")
         return import_loose_one(root, args[0])
     if "--saves" in sys.argv:
         if not args or not args[0].isdigit():
             sys.exit("usage: tuxthrottle_prefix_relocate.py --saves <appid>")
         if steam_running():
-            sys.exit("Steam is running — close Steam and the game first, then retry.")
+            sys.exit("Steam is running - close Steam and the game first, then retry.")
         return pull_saves_one(root, args[0])
     if not args or not args[0].isdigit():
         sys.exit("usage: tuxthrottle_prefix_relocate.py <appid> [--check|--relevant] "

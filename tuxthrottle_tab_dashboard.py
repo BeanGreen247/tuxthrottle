@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Dashboard tab (RingGauge/HistoryChart wiring, the reveal animation, and the
-background polling loop + queue drain) — extracted from tuxthrottle.py
+background polling loop + queue drain) - extracted from tuxthrottle.py
 (module-split pass, seventh slice)."""
 import queue
 import threading
@@ -100,7 +100,7 @@ class DashboardTabMixin:
         self._dash_first_data = False
 
     def _dash_reveal(self):
-        """First real sample arrived — swap the spinner for the live body."""
+        """First real sample arrived - swap the spinner for the live body."""
         if self._dash_first_data or not self._dash_built:
             return
         self._dash_first_data = True
@@ -205,7 +205,7 @@ class DashboardTabMixin:
 
     def _dashboard_loop(self):
         loop_n = 0
-        stapm_limit = None       # refreshed every ~10 ticks — ryzenadj -i isn't free,
+        stapm_limit = None       # refreshed every ~10 ticks - ryzenadj -i isn't free,
                                  # and the configured limit only changes when the user
                                  # touches Power & Limits, not every 2s
         while self.dash_running:
@@ -236,7 +236,7 @@ class DashboardTabMixin:
 
     def _poll_dash_queue(self):
         if not getattr(self, "_dash_built", False):
-            try:                                    # tab not built — just drain
+            try:                                    # tab not built - just drain
                 while True:
                     self.dash_queue.get_nowait()
             except queue.Empty:
@@ -276,7 +276,7 @@ class DashboardTabMixin:
                     self.dash_dgpu_label.configure(text="dGPU: n/a (asleep or no nvidia-smi)")
                 if not rapl_ok:
                     self.rapl_warning.configure(
-                        text="⚠ CPU power reads 0/blank — Linux locks RAPL power counters to root by default. "
+                        text="⚠ CPU power reads 0/blank - Linux locks RAPL power counters to root by default. "
                              "Install the 'RaplPowerPermissions' tweak (Power tab) to fix this."
                     )
                 else:

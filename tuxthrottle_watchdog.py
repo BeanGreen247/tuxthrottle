@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Confirm-or-auto-revert safety watchdog — stdlib only, no GUI deps.
+"""Confirm-or-auto-revert safety watchdog - stdlib only, no GUI deps.
 
 The pattern Windows/NVIDIA display-settings dialogs use for anything that
 can make the machine unusable: apply the change, arm an independent timer,
 and auto-revert unless the user confirms within N seconds. TuxThrottle's own
 scx_lavd hard-freeze (sched_ext stalling on kernel 7.x, see project memory)
-is exactly the failure class this exists for — a change that can freeze the
+is exactly the failure class this exists for - a change that can freeze the
 *GUI process itself*, so the revert cannot depend on that process still
 being alive to run it.
 
 The timer therefore runs as an independent transient systemd unit
-(`systemd-run --on-active=<seconds>`), not a Python thread inside the GUI —
+(`systemd-run --on-active=<seconds>`), not a Python thread inside the GUI -
 if the GUI (or the whole desktop session) locks up, the unit still fires on
 schedule and runs the rollback command outside the frozen process.
 
 Callers are responsible for taking a rollback point *before* applying the
-risky change (`tuxthrottle_profiles.snapshot(...)`) — this module only arms
+risky change (`tuxthrottle_profiles.snapshot(...)`) - this module only arms
 the timer that will run `tuxthrottle_profiles.py rollback last` against it.
 
 CLI:
@@ -41,7 +41,7 @@ def arm(seconds: int, user: str, toolkit_dir: str | None = None) -> str:
     """Schedule a rollback-to-last-snapshot unless disarmed within `seconds`.
 
     Returns the transient unit's name (pass it to `disarm`/`status`). Raises
-    RuntimeError if systemd-run itself can't be invoked — callers should
+    RuntimeError if systemd-run itself can't be invoked - callers should
     treat that as "no safety net available" and decide whether to proceed
     anyway (never silently pretend a watchdog is armed when it isn't)."""
     if seconds < 1:
@@ -66,7 +66,7 @@ def arm(seconds: int, user: str, toolkit_dir: str | None = None) -> str:
 
 def disarm(unit: str) -> bool:
     """Cancel a still-pending watchdog (the user confirmed the change was
-    good). Best-effort and idempotent — safe to call even if it already
+    good). Best-effort and idempotent - safe to call even if it already
     fired or never existed."""
     if not unit.startswith(UNIT_PREFIX):
         return False

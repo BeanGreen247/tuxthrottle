@@ -1,4 +1,4 @@
-"""tuxthrottle_diag.py — the debug-report / hardware-bundle / onboarding
+"""tuxthrottle_diag.py - the debug-report / hardware-bundle / onboarding
 helpers, pulled out of tuxthrottle.py's monolith in the modular-refactor pass
 so the Diagnostics tab mixin can import them without a circular dependency.
 Pure read-only logic; every shell command is stubbed here.
@@ -19,7 +19,7 @@ def test_collect_debug_report_assembles_sections(monkeypatch):
     monkeypatch.setattr(td, "format_status_report", lambda items: "STATUS-TABLE")
 
     rep = td.collect_debug_report()
-    assert "TuxThrottle — debug report" in rep
+    assert "TuxThrottle - debug report" in rep
     assert "toolkit 99.9.9" in rep
     assert "STATUS-TABLE" in rep
     assert "APPLY LEDGER" in rep

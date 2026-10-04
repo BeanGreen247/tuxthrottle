@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Dell G15 5515 (Ryzen Edition) Toolkit — Nobara Linux.
+"""TuxThrottle - gaming tweaks and tools for Nobara Linux (hardware tabs
+written for the Dell G15 5515 Ryzen Edition).
 
 Checkbox-driven GUI for hardware-specific tweaks, drivers, and gaming
 software, built the same way as the Windows UltimateToolkit this mirrors:
 data-driven JSON config, live status detection, apply/undo, presets.
 Inspired by Div-Acer-Manager-Max (DAMX): https://github.com/PXDiv/Div-Acer-Manager-Max
 
-Not a general-purpose distro tool — targets this one laptop's hardware only.
+Not a general-purpose distro tool - targets this one laptop's hardware only.
 
-Requires: ttkbootstrap (pip install --user ttkbootstrap — confirmed NOT
+Requires: ttkbootstrap (pip install --user ttkbootstrap - confirmed NOT
 packaged in Fedora/Nobara's repos, pip is the only install path) for the
 themed dark UI + round-toggle switches + gauge widgets on the Dashboard tab.
 """
@@ -32,7 +33,7 @@ CONFIG_DIR = BASE_DIR / "config"
 ASSETS_DIR = BASE_DIR / "assets"
 
 # Editable points in the custom fan-curve editor. powerd's interp() is generic
-# over any N, and old (5-point) powerd.json configs still load — the editor
+# over any N, and old (5-point) powerd.json configs still load - the editor
 # resamples them up to this count on open.
 FAN_CURVE_POINTS = 10
 sys.path.insert(0, str(BASE_DIR))
@@ -42,7 +43,7 @@ try:
     from ttkbootstrap.constants import DANGER, INFO, SECONDARY, SUCCESS, WARNING
 except ImportError:
     print("ttkbootstrap not found. Install with: pip install --user ttkbootstrap")
-    print("(not packaged in Fedora/Nobara's repos — pip is the only path)")
+    print("(not packaged in Fedora/Nobara's repos - pip is the only path)")
     sys.exit(1)
 
 import sensors  # noqa: E402  (local module, no GUI deps)
@@ -56,18 +57,18 @@ import tuxthrottle_btrfs  # noqa: E402  (stdlib, filesystem snapshot-before-appl
 import tuxthrottle_gui_widgets as gw  # noqa: E402  (live palette lookups after set_palette)
 import tuxthrottle_profiles  # noqa: E402  (stdlib, imports sensors)
 import tuxthrottle_watchdog  # noqa: E402  (stdlib, confirm-or-auto-revert timer)
-from tuxthrottle_diag import (  # noqa: E402  (report builders — extracted)
+from tuxthrottle_diag import (  # noqa: E402  (report builders - extracted)
     collect_debug_report,
     collect_hw_bundle,
 )
-from tuxthrottle_gui_widgets import (  # noqa: E402  (standalone widgets/theme — extracted)
+from tuxthrottle_gui_widgets import (  # noqa: E402  (standalone widgets/theme - extracted)
     ACCENT_FALLBACK,
     SidebarNav,
     _Tooltip,
     apply_bios_style,
     read_desktop_accent,
 )
-from tuxthrottle_items import (  # noqa: E402  (tweaks/apps data layer — extracted, no Tk deps)
+from tuxthrottle_items import (  # noqa: E402  (tweaks/apps data layer - extracted, no Tk deps)
     _STATE_UI,
     Item,
     evaluate_item,
@@ -82,12 +83,16 @@ from tuxthrottle_items import load_all_items as _load_all_items  # noqa: E402
 from tuxthrottle_tab_about import AboutTabMixin  # noqa: E402
 from tuxthrottle_tab_category import CategoryTabMixin  # noqa: E402
 from tuxthrottle_tab_dashboard import DashboardTabMixin  # noqa: E402
+from tuxthrottle_tab_dgpu import DgpuBoxMixin  # noqa: E402
 from tuxthrottle_tab_diagnostics import DiagnosticsTabMixin  # noqa: E402
+from tuxthrottle_tab_drives import DrivesTabMixin  # noqa: E402
 from tuxthrottle_tab_fans import FanTabMixin  # noqa: E402
 from tuxthrottle_tab_games import GamesTabMixin  # noqa: E402
 from tuxthrottle_tab_keyboard import KeyboardTabMixin  # noqa: E402
+from tuxthrottle_tab_mangohud import MangoHudTabMixin  # noqa: E402
 from tuxthrottle_tab_power_display import PowerDisplayTabMixin  # noqa: E402
 from tuxthrottle_tab_profiles import ProfilesTabMixin  # noqa: E402
+from tuxthrottle_tab_proton import ProtonTabMixin  # noqa: E402
 from tuxthrottle_tab_updates import UpdatesTabMixin  # noqa: E402
 from tuxthrottle_tab_vram import VramTabMixin  # noqa: E402
 
@@ -124,12 +129,12 @@ def self_elevate():
         return
     script = str(Path(__file__).resolve())
     # pkexec/sudo scrub the environment on re-exec, dropping DISPLAY/XAUTHORITY
-    # (or their Wayland equivalents) — without these the elevated process
+    # (or their Wayland equivalents) - without these the elevated process
     # can't reach the X/Wayland session at all ("no display name" crash).
     present = {v: os.environ[v] for v in DISPLAY_VARS if v in os.environ}
 
     # pkexec/sudo re-exec as root, which no longer sees the invoking user's
-    # ~/.local/lib/pythonX.Y/site-packages — where `pip install --user
+    # ~/.local/lib/pythonX.Y/site-packages - where `pip install --user
     # ttkbootstrap` (the documented install path, since it isn't packaged for
     # Fedora/Nobara) lands. Carry that dir forward on PYTHONPATH so the import
     # at the top of this file still resolves after elevation.
@@ -171,17 +176,19 @@ def _maximize(root: "tb.Window") -> None:
 
 class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                  UpdatesTabMixin, AboutTabMixin, DashboardTabMixin, PowerDisplayTabMixin,
-                 CategoryTabMixin, GamesTabMixin, DiagnosticsTabMixin):
+                 CategoryTabMixin, GamesTabMixin, MangoHudTabMixin, ProtonTabMixin, DrivesTabMixin,
+                 DgpuBoxMixin,
+                 DiagnosticsTabMixin):
     def __init__(self, root: "tb.Window"):
         self.root = root
         # Size + maximise the window before any widgets exist so the WM has the
         # final geometry from the first map. (An earlier version withdrew the
-        # window until _build_ui finished — but if a startup probe stalls, that
+        # window until _build_ui finished - but if a startup probe stalls, that
         # leaves a blank invisible window and looks like a hang, so it's gone.)
         self.user = resolve_real_user()
         sensors.set_session_user(self.user)  # for kscreen-doctor when elevated
         self._tooltips: list = []            # keep refs so bindings stay alive
-        root.title("TuxThrottle — Nobara Linux")
+        root.title("TuxThrottle - Nobara Linux")
         root.geometry("1080x760")  # fallback size if the WM ignores maximise
         _maximize(root)
         self._set_window_icon(root)
@@ -251,7 +258,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         self.root.after(130, self._poll_games_queue)
         # The 95 status checks each fork a privileged helper (sudo/kreadconfig/
         # flatpak/rpm). Firing them all at launch starved power-profiles-daemon
-        # hard enough to trip scx_lavd's stall watchdog once — so hold them
+        # hard enough to trip scx_lavd's stall watchdog once - so hold them
         # until the window is up and interactive, then run them narrow.
         self.root.after(1200, lambda: threading.Thread(
             target=self._refresh_all_status, daemon=True).start())
@@ -343,7 +350,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                 pass
             return
 
-    # slow-ish, side-effect-free probes each used once at build time — value is
+    # slow-ish, side-effect-free probes each used once at build time - value is
     # stable for the life of the window, so warm them up front. The ones that
     # shell out to nvidia-smi share ONE worker and run one-at-a-time: a burst of
     # concurrent nvidia-smi can wake and wedge a runtime-suspended dGPU.
@@ -418,12 +425,12 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
     def _apply_vendor_gate(self, item: Item):
         if item.requires_vendor == "nvidia" and not self.has_nvidia:
             item.hw_supported = False
-            item.description += "  (no NVIDIA GPU detected on this system — disabled)"
+            item.description += "  (no NVIDIA GPU detected on this system - disabled)"
         elif item.requires_vendor == "amd" and not self.has_amd:
             item.hw_supported = False
-            item.description += "  (no AMD GPU detected on this system — disabled)"
+            item.description += "  (no AMD GPU detected on this system - disabled)"
         # Nobara 43 already ships /sys/class/powercap world-readable, so the
-        # RAPL-permissions tweak is a no-op there — hide it unless it's needed
+        # RAPL-permissions tweak is a no-op there - hide it unless it's needed
         # or the user has already applied it (so they can still undo).
         # per-board gate: hide an entry that names a `models` list this
         # machine isn't in, or that the model profile's `tweaks_skip` names.
@@ -462,19 +469,21 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                  bootstyle=(SECONDARY, "inverse"), font=("Sans", 8, "bold"),
                  padding=(8, 3)).pack(side="right")
 
-        # DMI identity — only surface it when the board is NOT the one the
+        # DMI identity - only surface it when the board is NOT the one the
         # tweaks target (a wrong-hardware warning); the happy-path "✓ matches"
         # bar was just noise restating the CPU/GPU.
         m = sensors.detect_model()
         if not m["is_target"]:
             if m["is_close"]:
-                txt = (f"⚠  Detected {m['vendor']} {m['product']} — a G15 5515 variant, "
+                txt = (f"⚠  Detected {m['vendor']} {m['product']} - a G15 5515 variant, "
                        f"not the exact unit this was built against; some sysfs paths may differ.")
                 style = WARNING
             else:
-                txt = (f"⚠  Detected {m['vendor']} {m['product']} — this is NOT a Dell G15 5515. "
-                       f"The checks and tweaks are written for that board; expect breakage.")
-                style = DANGER
+                txt = (f"Detected {m['vendor']} {m['product']}. The hardware tabs (keyboard, "
+                       f"fans, power limits, the G-key) were written for the Dell G15 5515 "
+                       f"and may not work here; the game, Steam, Proton, MangoHud, drives, "
+                       f"apps and updates tabs do not depend on the hardware.")
+                style = WARNING
             tb.Label(self.root, text=txt, bootstyle=style, padding=(16, 2, 16, 8),
                      wraplength=1600, justify="left").pack(fill="x")
 
@@ -486,7 +495,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         # let the global mouse-wheel handler drive the scrollable nav rail too
         self._scroll_canvases.append(self.notebook._nav_canvas)  # noqa: SLF001
 
-        # Dashboard is the landing page — build it eagerly. Every other tab is
+        # Dashboard is the landing page - build it eagerly. Every other tab is
         # registered as a lazy page: its widgets are constructed the first time
         # its nav entry is clicked (SidebarNav.add_lazy), which is what keeps
         # cold start off the ~2 s all-22-tabs build.
@@ -500,10 +509,13 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         self.notebook.add_lazy("VRAM", self._build_vram_tab)
         self.notebook.add_lazy("Profiles", self._build_profiles_tab)
         self.notebook.add_lazy("Presets", self._build_presets_tab)
+        self.notebook.add_lazy("Drives", self._build_drives_tab)
         self.notebook.add_lazy("Updates", self._build_updates_tab)
         if self.games:
             self.notebook.add_lazy("Setup Games", self._build_games_tab)
         self.notebook.add_lazy("Game Tools", self._build_gametools_tab)
+        self.notebook.add_lazy("MangoHud", self._build_mangohud_tab)
+        self.notebook.add_lazy("Proton & Runtimes", self._build_proton_tab)
 
         categories = sorted(
             {item.category for item in self.items.values() if not item.hidden},
@@ -519,7 +531,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                                kind="support", spacer=True)
 
         # per-section "apply the developer's picks" button, right side of the
-        # page title — only shows on a tweak/app category page that still has
+        # page title - only shows on a tweak/app category page that still has
         # unapplied recommendations
         self._rec_btn = tb.Button(
             self.notebook._header_actions,  # noqa: SLF001
@@ -598,7 +610,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
     def _toggle_log_popout(self):
         if self._pop_win is None:
             self._pop_win = tk.Toplevel(self.root)
-            self._pop_win.title("TuxThrottle — Log")
+            self._pop_win.title("TuxThrottle - Log")
             self._pop_win.geometry("900x480")
             if getattr(self, "_icon_img", None) is not None:
                 try:
@@ -633,8 +645,8 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
     def _begin_busy(self, text: str = "Working…", steps: int = 0) -> None:
         """Lock the UI for a long task. MAIN THREAD ONLY (call from the button
         handler, not the worker). Covers the notebook with a click-eating
-        overlay showing two progress bars — overall (determinate when `steps`
-        is known) and current task (indeterminate) — plus a step/phase line
+        overlay showing two progress bars - overall (determinate when `steps`
+        is known) and current task (indeterminate) - plus a step/phase line
         and an elapsed timer. Reversed by _poll_busy_queue on _busy_queue."""
         self._busy = True
         self.worker_running = True
@@ -764,7 +776,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                     if step is not None or phase is not None:
                         base = self._cur_step or "Working…"
                         self._busy_step.configure(
-                            text=f"{base}   —   {phase}" if phase else base)
+                            text=f"{base}   -   {phase}" if phase else base)
                 except tk.TclError:
                     pass
         except queue.Empty:
@@ -793,7 +805,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
             if info:
                 if not info["ok"]:
                     self._show_output_dialog(
-                        f"{info['desc']} — failed (exit {info['rc']})", info["tail"])
+                        f"{info['desc']} - failed (exit {info['rc']})", info["tail"])
                 elif info["reboot"] and messagebox.askyesno(
                     "Reboot recommended",
                     f"{info['desc']} finished.\n\nNobara recommends a reboot after a "
@@ -935,7 +947,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                 else:
                     self._set_diag(rep)
                     self._diag_btn.configure(state="normal", text="Regenerate report")
-                    self.status_var.set("Debug report ready — Copy for GitHub issue.")
+                    self.status_var.set("Debug report ready - Copy for GitHub issue.")
             except queue.Empty:
                 pass
         self.root.after(120, self._poll_log_queue)
@@ -954,7 +966,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                 futs = {ex.submit(evaluate_item, it, ledger): it for it in items}
                 for fut in as_completed(futs):
                     self.status_queue.put(futs[fut])
-        # Tk is not thread-safe — hand back via the queue, never root.after()
+        # Tk is not thread-safe - hand back via the queue, never root.after()
         # from here (races the interpreter). `True` = the batch is done.
         self.status_queue.put(True)
 
@@ -992,7 +1004,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
             item.var.set(item.done)
 
     def _pending_ids(self) -> list[str]:
-        """Item ids whose tick disagrees with their applied state — the count
+        """Item ids whose tick disagrees with their applied state - the count
         the footer's Apply button shows. Only built category tabs have an
         `item.var`, which is exactly the set the user could have toggled."""
         out = []
@@ -1020,7 +1032,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
     def _recompute_status_summary(self):
         n_done = n_total = n_attention = 0
         for item in self.items.values():
-            # count by item substance, not widget presence — category tabs are
+            # count by item substance, not widget presence - category tabs are
             # built lazily now, so status_label is often still None here. A
             # check that silently errored keeps state "unknown"; it must still
             # count (it shows as 'available' + feeds n_attention if 'error').
@@ -1031,7 +1043,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                 n_done += 1
             if item.state in ("error", "drifted", "failed"):
                 n_attention += 1
-        msg = (f"{n_done} of {n_total} applied/installed — "
+        msg = (f"{n_done} of {n_total} applied/installed - "
                f"{n_total - n_done} available.")
         if n_attention:
             msg += f"  ⚠ {n_attention} need attention (see Status report)."
@@ -1051,7 +1063,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         """Scrollable, copyable table of every item: state, the check that
         decided it (+ exit code), and the last thing the toolkit did to it."""
         win = tk.Toplevel(self.root)
-        win.title("TuxThrottle — status report")
+        win.title("TuxThrottle - status report")
         win.geometry("1040x640")
         win.transient(self.root)
         tb.Label(win, text="Status report", font=("Sans", 11, "bold"),
@@ -1097,7 +1109,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
             return proc.wait(timeout=3600) == 0
         except subprocess.TimeoutExpired:
             proc.kill()
-            self._log("[TIMEOUT] command ran over 60 min — killed")
+            self._log("[TIMEOUT] command ran over 60 min - killed")
             return False
 
     def _run_item_apply(self, item: Item):
@@ -1107,7 +1119,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         if item.kind == "app" and item.check_cmd:
             ok, _rc, _out = run_cmd3(item.check_cmd, timeout=30)
             if ok:
-                self._log(f"[skip, already present] {item.content} — nothing to install")
+                self._log(f"[skip, already present] {item.content} - nothing to install")
                 ledger_record(item.id, "apply", True, "already present (another source); skipped")
                 return True
         self._log(f"--- Applying: {item.content} ---")
@@ -1135,7 +1147,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
 
     def _on_apply_click(self):
         if self._busy:
-            messagebox.showinfo("Busy", "An operation is already running — check the log.")
+            messagebox.showinfo("Busy", "An operation is already running - check the log.")
             return
         selected_ids = [i.id for i in self.items.values() if i.var is not None and i.hw_supported]
 
@@ -1153,7 +1165,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
 
     def _pre_risky_snapshot(self, label: str) -> None:
         """Config snapshot (always) + best-effort Btrfs filesystem snapshot
-        (only where the root is Btrfs with snapper configured — a no-op
+        (only where the root is Btrfs with snapper configured - a no-op
         elsewhere, never fatal). Call this at the start of every worker that
         applies a batch of tweaks."""
         try:
@@ -1167,14 +1179,14 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
             self._log(f"[btrfs] snapshot attempt failed: {exc}")
             return
         if res["ok"]:
-            self._log(f"[btrfs] {res['msg']} — {tuxthrottle_btrfs.rollback_hint(res['id'])}")
+            self._log(f"[btrfs] {res['msg']} - {tuxthrottle_btrfs.rollback_hint(res['id'])}")
         else:
             self._log(f"[btrfs] {res['msg']}")
 
     def _arm_watchdog_if_risky(self, item_ids: list[str], seconds: int = 20) -> None:
         """If any item in this batch is risk == 'advanced', arm the
         confirm-or-auto-revert watchdog and pop a countdown dialog on the
-        main thread. The watchdog itself is an independent systemd timer —
+        main thread. The watchdog itself is an independent systemd timer -
         it fires the rollback even if this GUI process locks up, which is
         the whole point (see tuxthrottle_watchdog.py docstring)."""
         risky = any(getattr(self.items.get(iid), "risk", "safe") == "advanced"
@@ -1186,7 +1198,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         except RuntimeError as exc:
             self._log(f"[watchdog] couldn't arm auto-revert timer: {exc}")
             return
-        self._log(f"[watchdog] armed — auto-revert in {seconds}s unless confirmed")
+        self._log(f"[watchdog] armed - auto-revert in {seconds}s unless confirmed")
         self.root.after(0, self._show_revert_confirm, unit, seconds)
 
     def _show_revert_confirm(self, unit: str, seconds: int) -> None:
@@ -1199,7 +1211,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
 
         tb.Label(dlg, padding=16, wraplength=360, justify="left", text=(
             "A risky (ADVANCED) tweak was just applied. If the system looks "
-            "fine, click Keep. If anything is wrong, click Revert Now — "
+            "fine, click Keep. If anything is wrong, click Revert Now - "
             "otherwise it reverts automatically when the countdown ends.")
                  ).pack()
         count_lbl = tb.Label(dlg, font=("Sans", 14, "bold"), bootstyle=WARNING,
@@ -1220,13 +1232,13 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         def _revert_now():
             try:
                 tuxthrottle_profiles.rollback("last", user=self.user)
-                self._log("[watchdog] user chose Revert Now — rolled back")
+                self._log("[watchdog] user chose Revert Now - rolled back")
             except Exception as exc:  # noqa: BLE001
                 self._log(f"[watchdog] revert-now failed: {exc}")
             _finish(disarm=True)
 
         def _keep():
-            self._log("[watchdog] user confirmed — keeping the change")
+            self._log("[watchdog] user confirmed - keeping the change")
             _finish(disarm=True)
 
         btn_row = tb.Frame(dlg, padding=(0, 0, 0, 12))
@@ -1279,7 +1291,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         if n_skipped:
             self._log(f"[skipped {n_skipped} already-applied/installed item(s)]")
         self._log("=== Done. Click Refresh Status to confirm. ===")
-        self._busy_queue.put("Done — refresh to confirm.")
+        self._busy_queue.put("Done - refresh to confirm.")
         self._arm_watchdog_if_risky(item_ids)
         threading.Thread(target=self._refresh_all_status, daemon=True).start()
 
@@ -1306,7 +1318,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
 
     def _on_apply_all_recommended(self):
         if self._busy:
-            messagebox.showinfo("Busy", "An operation is already running — check the log.")
+            messagebox.showinfo("Busy", "An operation is already running - check the log.")
             return
         pending = self._recommended_all()
         daemon = self.items.get("FanCurveDaemon")
@@ -1322,11 +1334,11 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         reboot = any("cmdline" in i.id.lower()
                      or "grubby" in " ".join(i.apply_cmds).lower() for i in pending)
         total = len(pending) + (1 if want_daemon else 0)
-        msg = (f"Apply the developer's recommended set — {total} item(s) across "
+        msg = (f"Apply the developer's recommended set - {total} item(s) across "
                f"every category?\n\n{lines}\n\nA snapshot is taken first so you "
                f"can roll back from the Profiles tab.")
         if reboot:
-            msg += "\n\n⚠ Some of these change kernel boot params — reboot to finish."
+            msg += "\n\n⚠ Some of these change kernel boot params - reboot to finish."
         if not messagebox.askyesno("Apply all recommendations", msg):
             return
         ids = [i.id for i in pending] + (["FanCurveDaemon"] if want_daemon else [])
@@ -1379,7 +1391,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
 
     def _on_apply_recommended(self):
         if self._busy:
-            messagebox.showinfo("Busy", "An operation is already running — check the log.")
+            messagebox.showinfo("Busy", "An operation is already running - check the log.")
             return
         cat = getattr(self, "_rec_target", None)
         pending = self._recommended_for(cat or "", pending_only=True)
@@ -1394,11 +1406,11 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                f"“{cat}”?\n\n{lines}\n\nA snapshot is taken first so you can roll "
                f"back from the Profiles tab.")
         if reboot:
-            msg += "\n\n⚠ Some of these change kernel boot params — reboot to finish."
+            msg += "\n\n⚠ Some of these change kernel boot params - reboot to finish."
         if not messagebox.askyesno("Apply section recommendations", msg):
             return
         ids = [i.id for i in pending]
-        self._begin_busy(f"Applying recommended — {cat}", steps=max(1, len(ids)))
+        self._begin_busy(f"Applying recommended - {cat}", steps=max(1, len(ids)))
         threading.Thread(target=self._apply_ids_worker,
                          args=(ids, f"recommended-{cat}"), daemon=True).start()
 
@@ -1415,13 +1427,13 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
             done += 1
         self._progress(overall=done)
         self._log(f"=== Applied {done} recommended item(s). Refresh Status to confirm. ===")
-        self._busy_queue.put(f"{label}: {done} applied — refresh to confirm.")
+        self._busy_queue.put(f"{label}: {done} applied - refresh to confirm.")
         self._arm_watchdog_if_risky(item_ids)
         threading.Thread(target=self._refresh_all_status, daemon=True).start()
 
     def _on_apply_preset(self, preset_id: str):
         if self._busy:
-            messagebox.showinfo("Busy", "An operation is already running — check the log.")
+            messagebox.showinfo("Busy", "An operation is already running - check the log.")
             return
         preset = self.presets[preset_id]
         if not messagebox.askyesno(
@@ -1433,14 +1445,14 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         ids = list(preset.get("tweaks", [])) + list(preset.get("apps", []))
         n = sum(1 for i in ids
                 if (it := self.items.get(i)) and it.hw_supported and not it.done)
-        self._begin_busy(f"Applying preset — {preset['Content']}", steps=max(1, n))
+        self._begin_busy(f"Applying preset - {preset['Content']}", steps=max(1, n))
         threading.Thread(target=self._preset_worker, args=(ids, preset_id), daemon=True).start()
 
     @staticmethod
     def _fmt_snapshot_delta(before: dict, after: dict) -> list[str]:
         """Human 'X → Y (Δ)' lines for the fields that moved between two
         sensors.snapshot_light() readings."""
-        # (label, key, unit, decimals, deadband) — deadband swallows ordinary
+        # (label, key, unit, decimals, deadband) - deadband swallows ordinary
         # idle jitter so only a preset-caused shift is reported. dGPU *clock*
         # is deliberately omitted: it swings hundreds of MHz between any two
         # reads on boost alone and no preset here touches it.
@@ -1480,7 +1492,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         lines = self._fmt_snapshot_delta(before, after)
         self._last_preset_delta = (preset_id or "preset", lines, time.time())
         self._log("[Preset delta, 30 s after apply] " + "  ·  ".join(lines))
-        # Tk is not thread-safe — hand the widget write back to the main loop
+        # Tk is not thread-safe - hand the widget write back to the main loop
         try:
             self.root.after(0, lambda: self._preset_delta_apply(preset_id, lines))
         except (RuntimeError, tk.TclError):
@@ -1490,7 +1502,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
         if getattr(self, "_preset_delta_lbl", None) is not None:
             try:
                 self._preset_delta_lbl.configure(
-                    text=f"{preset_id or 'preset'} — " + "   ·   ".join(lines))
+                    text=f"{preset_id or 'preset'} - " + "   ·   ".join(lines))
             except tk.TclError:
                 pass
 
@@ -1512,7 +1524,7 @@ class ToolkitApp(KeyboardTabMixin, FanTabMixin, VramTabMixin, ProfilesTabMixin,
                 self._log(f"[skip, already {state}] {item.content}")
         self._progress(overall=done)
         self._log("=== Preset done. Click Refresh Status to confirm. ===")
-        self._busy_queue.put("Preset done — refresh to confirm.")
+        self._busy_queue.put("Preset done - refresh to confirm.")
         self._arm_watchdog_if_risky(item_ids)
         threading.Thread(target=self._refresh_all_status, daemon=True).start()
         threading.Thread(target=self._preset_delta_watch,
@@ -1544,7 +1556,7 @@ def cli_report() -> int:
         list(ex.map(lambda it: evaluate_item(it, ledger), items))
     print(format_status_report(items))
     if os.geteuid() != 0:
-        print("note: not running as root — privileged checks may read as "
+        print("note: not running as root - privileged checks may read as "
               "'Not applied'/'Check error'. Re-run with sudo for accuracy.")
     return 0
 

@@ -74,7 +74,7 @@ else
     ok "polkit action not installed (PolkitTuxthrottlectl tweak is opt-in)"
 fi
 
-hdr "GUI — Report a Bug page"
+hdr "GUI - Report a Bug page"
 XAUTHORITY=$(ls -t /run/user/1000/xauth* 2>/dev/null | head -1) DISPLAY=:0 python3 - <<'PY' 2>&1 | sed 's/^/  /'
 import sys, time
 sys.path.insert(0, "/opt/tuxthrottle")

@@ -1,6 +1,6 @@
 """Preset before/after sensor deltas (Phase 3a).
 
-`_fmt_snapshot_delta` is a pure staticmethod on ToolkitApp — pulled out here
+`_fmt_snapshot_delta` is a pure staticmethod on ToolkitApp - pulled out here
 without a Tk root by grabbing it off the class via the mixin chain would still
 import ttkbootstrap, so this reimports the function's logic path guarded.
 """

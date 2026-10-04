@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Dell G15 dedicated G-key listener — toggles Game Mode.
+"""Dell G15 dedicated G-key listener - toggles Game Mode.
 
 On the G15 5515 the dedicated key emits evdev keycode KEY_PERFORMANCE (701)
-on the "AT Translated Set 2 keyboard" device — a distinct, purpose-built
+on the "AT Translated Set 2 keyboard" device - a distinct, purpose-built
 Linux keycode, not aliased to anything else. Which physical action produces
 it depends on Fn Lock:
 
@@ -12,11 +12,11 @@ it depends on Fn Lock:
 
 This listener only ever acts on KEY_PERFORMANCE, so it can never hijack a
 real F9 press. Default behaviour mirrors Windows: **one press toggles
-G-Mode** (the "performance" platform_profile — on the G15 the firmware ramps
+G-Mode** (the "performance" platform_profile - on the G15 the firmware ramps
 the fan curve and raises the CPU/GPU power limits; balanced turns it back
 off). If you find a bare tap too easy to hit by accident, set
 TUXTHROTTLE_HOTKEY_MODE=double for a double-tap trigger (two KEY_PERFORMANCE
-within TUXTHROTTLE_HOTKEY_DOUBLE_MS — a long-press can't be used because
+within TUXTHROTTLE_HOTKEY_DOUBLE_MS - a long-press can't be used because
 KEY_PERFORMANCE fires as an instantaneous down+up).
 
 Runs as a systemd --user service (installed by the HotkeyListener tweak).
@@ -72,7 +72,7 @@ def find_device():
     hidden = [p for p in glob.glob("/dev/input/event*") if p not in readable
               and not os.access(p, os.R_OK)]
     if hidden:
-        print(f"Can't read {len(hidden)} input device(s) incl. the keyboard — "
+        print(f"Can't read {len(hidden)} input device(s) incl. the keyboard - "
               "your user is not in the 'input' group. Apply the HotkeyListener "
               "tweak (it runs 'usermod -aG input'), then log out and back in.")
     return None
@@ -92,7 +92,7 @@ def _run_toggle():
 
 def _fire_toggle():
     if _toggle_busy.is_set():
-        print("Toggle already in progress — ignoring", flush=True)
+        print("Toggle already in progress - ignoring", flush=True)
         return
     _toggle_busy.set()
     threading.Thread(target=_run_toggle, daemon=True).start()
@@ -109,7 +109,7 @@ def main():
             continue
 
         trigger = "single press" if single else f"double-tap (<{DOUBLE_MS}ms)"
-        print(f"Listening on {dev.path} ({dev.name}) for KEY_PERFORMANCE — trigger: {trigger}",
+        print(f"Listening on {dev.path} ({dev.name}) for KEY_PERFORMANCE - trigger: {trigger}",
               flush=True)
         last_press = 0.0
         try:
@@ -122,7 +122,7 @@ def main():
                     continue
 
                 # Use the event's own hardware timestamp, NOT wall-clock at
-                # processing time — the toggle runs in a thread now, but even
+                # processing time - the toggle runs in a thread now, but even
                 # so this keeps the double-tap gap accurate under any latency.
                 ts = event.timestamp()
                 if single:
@@ -134,7 +134,7 @@ def main():
                     last_press = 0.0        # consume the pair
                     _fire_toggle()
                 else:
-                    last_press = ts         # first tap — wait for the second
+                    last_press = ts         # first tap - wait for the second
         except OSError:
             print("Device disconnected, retrying...", flush=True)
             time.sleep(2)

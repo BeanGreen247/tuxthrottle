@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TuxThrottle profiles + snapshots — stdlib only, no GUI deps.
+"""TuxThrottle profiles + snapshots - stdlib only, no GUI deps.
 
 A **profile** is a named full-state bundle: platform_profile + CPU TDP
 (ryzenadj) + battery charge limit + NVIDIA power limit + NVIDIA GPU
@@ -25,7 +25,7 @@ CLI:
 
 `apply` / `rollback` / `reassert` need root for the hardware writes.
 `--user NAME` / $SUDO_USER locates the config dir in that user's home.
-`--with-gpu-mode` also switches hybrid graphics (off by default — it needs
+`--with-gpu-mode` also switches hybrid graphics (off by default - it needs
 a logout and most callers don't want a profile switch to force one).
 """
 import argparse
@@ -149,7 +149,7 @@ def capture_state(user=None) -> dict:
         st["refresh_hz"] = int(round(pm["current_hz"]))
 
     # the GPU clock lock can't be queried back (like the Curve Optimizer), so
-    # nvclk.json is the record of truth — absent when no lock is set.
+    # nvclk.json is the record of truth - absent when no lock is set.
     nvclk = _read_json(_config_dir(user) / "nvclk.json")
     if nvclk.get("gr_max"):
         st["nvclk"] = {"gr_min": int(nvclk.get("gr_min") or nvclk["gr_max"]),
@@ -196,7 +196,7 @@ def apply_state(state: dict, user=None, with_gpu_mode: bool = False) -> list[dic
     if "nvpl" in state:
         info = sensors.nvidia_power_limit_info()
         if info and not info.get("supported"):
-            rec("nvpl", True, "skipped — firmware-locked on this GPU")
+            rec("nvpl", True, "skipped - firmware-locked on this GPU")
         else:
             ok, err = sensors.set_nvidia_power_limit(state["nvpl"]["watts"])
             rec("nvpl", ok, err)
@@ -211,7 +211,7 @@ def apply_state(state: dict, user=None, with_gpu_mode: bool = False) -> list[dic
         hi = int(n["gr_max"])
         info = sensors.nvidia_clock_info()
         if info is None:
-            rec("nvclk", True, "dGPU asleep — saved for the boot service")
+            rec("nvclk", True, "dGPU asleep - saved for the boot service")
         else:
             ok, err = sensors.set_nvidia_clock_lock(lo, hi)
             rec("nvclk", ok, err)
@@ -223,7 +223,7 @@ def apply_state(state: dict, user=None, with_gpu_mode: bool = False) -> list[dic
         ok, err = sensors.gpu_mode_set(state["gpu_mode"])
         rec("gpu_mode", ok, err + " (log out to apply)" if ok else err)
 
-    # fan curve / auto-switch / game-profile map are owned by the daemon —
+    # fan curve / auto-switch / game-profile map are owned by the daemon -
     # merge them into powerd.json and let it re-read on mtime change.
     powerd_keys = {k: state[k] for k in ("fan_curve", "autoswitch", "game_profiles")
                    if k in state}
@@ -248,7 +248,7 @@ def apply_state(state: dict, user=None, with_gpu_mode: bool = False) -> list[dic
 # --------------------------------------------------------------------------- #
 
 def _safe_name(name: str) -> str:
-    # no '.', '/' or '\' — the result is interpolated straight into a file path,
+    # no '.', '/' or '\' - the result is interpolated straight into a file path,
     # so this also blocks '..' traversal from a crafted profile name.
     cleaned = "".join(c for c in name if c.isalnum() or c in "-_ ").strip()
     return cleaned or "unnamed"
@@ -279,11 +279,11 @@ def delete_profile(name: str, user=None) -> bool:
 
 
 # --------------------------------------------------------------------------- #
-#  export / import — shareable profile files
+#  export / import - shareable profile files
 # --------------------------------------------------------------------------- #
 #
 # A saved profile is already a plain, hardware-agnostic JSON (semantic units
-# like "stapm watts" and "refresh_hz", never raw hwmon paths) — export/import
+# like "stapm watts" and "refresh_hz", never raw hwmon paths) - export/import
 # is just a thin, validated wrapper for moving that file in and out of
 # ~/.config/tuxthrottle/profiles/ so people can actually trade known-good
 # curves the way the CachyOS community trades configs, without hand-editing
@@ -375,7 +375,7 @@ def rollback(target: str, user=None, with_gpu_mode: bool = False) -> list[dict]:
 
 
 def reassert(user=None) -> list[dict]:
-    """Re-apply the last state we applied — for the systemd-sleep resume hook.
+    """Re-apply the last state we applied - for the systemd-sleep resume hook.
     No-op (not an error) if nothing has been applied yet."""
     st = _read_json(_config_dir(user) / "active_state.json")
     if not st:
@@ -393,14 +393,14 @@ def _print_results(rows: list[dict]) -> int:
         mark = "ok " if r["ok"] else "ERR"
         if not r["ok"]:
             bad += 1
-        print(f"  [{mark}] {r['key']}" + (f" — {r['msg']}" if r["msg"] else ""))
+        print(f"  [{mark}] {r['key']}" + (f" - {r['msg']}" if r["msg"] else ""))
     return 1 if bad else 0
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(prog="tuxthrottle_profiles", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    # These flags are accepted BOTH before and after the subcommand — the boot
+    # These flags are accepted BOTH before and after the subcommand - the boot
     # service / sleep hook pass `--user NAME` and arg order there has bitten us.
     # The top-level parser supplies the default; the parent (SUPPRESS) only
     # overrides when the flag actually appears after the subcommand.

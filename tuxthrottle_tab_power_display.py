@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Power / Display / Touchpad / Battery-health tabs and all their helper
 sections (TDP, Curve Optimizer, NVPL, GPU clock/mode, refresh-rate, VRR,
-auto-switch, battery charge limits) — their build helpers are physically
+auto-switch, battery charge limits) - their build helpers are physically
 interleaved in the original, so they share one mixin. Extracted from
 tuxthrottle.py (module-split pass, eighth slice)."""
 import shlex
@@ -26,7 +26,7 @@ class PowerDisplayTabMixin:
         if not info:
             tb.Label(frame, bootstyle=SECONDARY, wraplength=1000, justify="left",
                      text="No battery detected (/sys/class/power_supply/BAT* is "
-                          "empty) — this page is for laptops.").pack(anchor="w")
+                          "empty) - this page is for laptops.").pack(anchor="w")
             return
 
         tb.Label(frame, wraplength=1100, justify="left", bootstyle=SECONDARY,
@@ -76,7 +76,7 @@ class PowerDisplayTabMixin:
                          ("voltage", "Voltage")):
             r = tb.Frame(lf); r.pack(fill="x", pady=2)
             tb.Label(r, text=cap, width=18, anchor="w").pack(side="left")
-            v = tb.Label(r, text="—", bootstyle=SECONDARY)
+            v = tb.Label(r, text="-", bootstyle=SECONDARY)
             v.pack(side="left")
             self._bath_live[key] = v
 
@@ -90,10 +90,10 @@ class PowerDisplayTabMixin:
             cf = Card(frame, "Charging speed")
             cf.pack(fill="x", pady=6)
             note = ("Express charges the pack faster (more heat, a little more "
-                    "wear); Standard is the gentler default. Firmware setting — "
+                    "wear); Standard is the gentler default. Firmware setting - "
                     "persists with no service.")
             if mode is None:
-                note += "  (current mode unreadable on this firmware — setting still works)"
+                note += "  (current mode unreadable on this firmware - setting still works)"
             tb.Label(cf, bootstyle=SECONDARY, wraplength=1000, justify="left",
                      text=note).pack(anchor="w", pady=(0, 6))
             self._chg_mode = tk.StringVar(value=mode or "standard")
@@ -120,13 +120,13 @@ class PowerDisplayTabMixin:
             i = sensors.battery_health_info()
             cap = i.get("capacity_pct")
             self._bath_live["charge"].config(
-                text=f"{cap}%" if cap is not None else "—")
-            self._bath_live["state"].config(text=i.get("status") or "—")
+                text=f"{cap}%" if cap is not None else "-")
+            self._bath_live["state"].config(text=i.get("status") or "-")
             pw = i.get("power_w")
             st = (i.get("status") or "").lower()
             arrow = "→ in" if st == "charging" else "← out" if st == "discharging" else ""
             self._bath_live["rate"].config(
-                text=f"{pw:.1f} W {arrow}".strip() if pw is not None else "—")
+                text=f"{pw:.1f} W {arrow}".strip() if pw is not None else "-")
             em, ek = i.get("eta_min"), i.get("eta_kind")
             if em and ek:
                 h, m = divmod(int(em), 60)
@@ -134,28 +134,28 @@ class PowerDisplayTabMixin:
                 self._bath_live["eta"].config(text=f"~{pretty} {ek} at this rate")
             else:
                 self._bath_live["eta"].config(
-                    text="—" if (i.get("status") or "").lower() in ("charging", "discharging")
+                    text="-" if (i.get("status") or "").lower() in ("charging", "discharging")
                     else "full / plugged in")
             vv = i.get("voltage_v")
             self._bath_live["voltage"].config(
-                text=f"{vv:.2f} V" if vv is not None else "—")
+                text=f"{vv:.2f} V" if vv is not None else "-")
             live = getattr(self, "_bath_bat_live", None)
             if live is not None:
                 cl = sensors.battery_charge_limit_info().get("current")
-                live.configure(text=f"now: {cl} %" if cl is not None else "now: — %")
+                live.configure(text=f"now: {cl} %" if cl is not None else "now: - %")
         except Exception:  # noqa: BLE001
             pass
         self.root.after(4000, lambda: self._bath_poll(token))
 
     # ------------------------------------------------------------------ #
-    #  VRAM budget — a laptop iGPU shares a small slice of system RAM as
+    #  VRAM budget - a laptop iGPU shares a small slice of system RAM as
     #  VRAM and the KDE desktop fills it; keep the dGPU free for editing /
     #  games / 3D. Tiers are pure KWin/Plasma config (vendor-agnostic);
     #  the live panel + GPU names are all read from real hardware.
     # ------------------------------------------------------------------ #
     _VRAM_TIERS = (
         ("regular", "Regular",
-         "Full desktop — every effect, image wallpaper, all window "
+         "Full desktop - every effect, image wallpaper, all window "
          "previews kept in VRAM. The baseline your settings started at."),
         ("medium", "Medium",
          "Blur & background-contrast off, quicker animations, cheaper "
@@ -188,16 +188,16 @@ class PowerDisplayTabMixin:
         dg_name = (self._vram_gpu_name(dg["pci"]) if dg else "") or "discrete GPU"
         rows = [
             ("auto", "Automatic",
-             f"Let KWin choose — normally the {ig_name}."),
-            ("igpu", f"Integrated — {ig_name} (pin)",
+             f"Let KWin choose - normally the {ig_name}."),
+            ("igpu", f"Integrated - {ig_name} (pin)",
              "Pin the compositor to the integrated GPU so a driver / device "
              "re-enumeration can't move it. Usually the same render path as "
              "Automatic, just nailed down."),
         ]
         rows.append((
-            "dgpu", f"Discrete — {dg_name}",
+            "dgpu", f"Discrete - {dg_name}",
             "Pin the whole desktop to the discrete GPU. Not possible when the "
-            "panel is wired to the integrated GPU (muxless) — most hybrid "
+            "panel is wired to the integrated GPU (muxless) - most hybrid "
             "laptops; offered only where a hardware MUX exists."))
         return rows
 
@@ -205,7 +205,7 @@ class PowerDisplayTabMixin:
         frame = self._scroll_body(outer, pad=16)
 
         tb.Label(frame, wraplength=1100, justify="left", bootstyle=SECONDARY,
-                 text="Live power/thermal envelope controls — the Linux equivalent "
+                 text="Live power/thermal envelope controls - the Linux equivalent "
                       "of ThrottleStop / the ASUS Armoury tuning sliders. Changes "
                       "apply immediately; installing the matching tweak on the Power "
                       "tab makes them stick across a reboot.").pack(anchor="w", pady=(0, 14))
@@ -222,7 +222,7 @@ class PowerDisplayTabMixin:
     # --- CPU TDP (ryzenadj) ---
 
     def _build_tdp_section(self, parent):
-        lf = Card(parent, "CPU power limits — Ryzen 7 5800H (ryzenadj)")
+        lf = Card(parent, "CPU power limits - Ryzen 7 5800H (ryzenadj)")
         lf.pack(fill="x", pady=6)
         if not self._probe("ryzenadj_avail"):
             tb.Label(lf, bootstyle=WARNING, wraplength=1000, justify="left",
@@ -246,7 +246,7 @@ class PowerDisplayTabMixin:
             sc.bind("<ButtonRelease-1>", lambda _e: self._tdp_apply())
             tb.Label(r, textvariable=v, width=3).pack(side="left")
             tb.Label(r, text="W").pack(side="left", padx=(0, 8))
-            live = tb.Label(r, text="now: — W", width=12, bootstyle=SECONDARY)
+            live = tb.Label(r, text="now: - W", width=12, bootstyle=SECONDARY)
             live.pack(side="left")
             self._tdp_val_labels[key] = live
 
@@ -291,7 +291,7 @@ class PowerDisplayTabMixin:
     def _build_co_section(self, parent):
         if not self._probe("ryzenadj_co"):
             return
-        lf = Card(parent, "Curve Optimizer — all-core undervolt  (advanced)")
+        lf = Card(parent, "Curve Optimizer - all-core undervolt  (advanced)")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=DANGER, wraplength=1000, justify="left",
                  text="⚠  An undervolt that's too aggressive causes silent errors, a "
@@ -368,13 +368,13 @@ class PowerDisplayTabMixin:
     def _build_nvpl_section(self, parent):
         if not self.has_nvidia:
             return
-        lf = Card(parent, "NVIDIA board power limit — RTX 3050 Ti")
+        lf = Card(parent, "NVIDIA board power limit - RTX 3050 Ti")
         lf.pack(fill="x", pady=6)
         info = self._probe("nvpl")
         if info is not None and not info.get("supported", True):
             tb.Label(lf, bootstyle=WARNING, wraplength=1000, justify="left",
                      text="This laptop's GPU firmware locks the board power limit "
-                          "(NVIDIA Dynamic Boost manages it) — nvidia-smi -pl is "
+                          "(NVIDIA Dynamic Boost manages it) - nvidia-smi -pl is "
                           "rejected on the G15 5515. Nothing to set here. Use the "
                           "'nvidia-max-perf' GPU tweak + the CPU TDP slider above "
                           "to influence the shared power/thermal budget instead.").pack(anchor="w")
@@ -391,7 +391,7 @@ class PowerDisplayTabMixin:
         self._nvpl_scale.bind("<ButtonRelease-1>", lambda _e: self._nvpl_apply())
         tb.Label(r, textvariable=self._nvpl_var, width=3).pack(side="left")
         tb.Label(r, text="W").pack(side="left", padx=(0, 8))
-        self._nvpl_live = tb.Label(r, text="now: — W", width=12, bootstyle=SECONDARY)
+        self._nvpl_live = tb.Label(r, text="now: - W", width=12, bootstyle=SECONDARY)
         self._nvpl_live.pack(side="left")
         br = tb.Frame(lf); br.pack(anchor="w", pady=(8, 0))
         if info and info.get("default"):
@@ -399,7 +399,7 @@ class PowerDisplayTabMixin:
                       command=lambda: (self._nvpl_var.set(info["default"]), self._nvpl_apply())
                       ).pack(side="left")
         self._nvpl_note = tb.Label(lf, bootstyle=SECONDARY, wraplength=1000,
-                                   text="" if info else "dGPU is asleep — wake it (run something on it) "
+                                   text="" if info else "dGPU is asleep - wake it (run something on it) "
                                         "to read/set the limit.")
         self._nvpl_note.pack(anchor="w", pady=(6, 0))
 
@@ -420,18 +420,18 @@ class PowerDisplayTabMixin:
         if not self.has_nvidia:
             return
         info = self._probe("nvclk")
-        lf = Card(parent, "NVIDIA GPU clock lock — RTX 3050 Ti")
+        lf = Card(parent, "NVIDIA GPU clock lock - RTX 3050 Ti")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "Clamps the dGPU graphics clock. Lowering the ceiling is the one GPU "
             "lever that works on this chassis (the board power limit is "
-            "firmware-locked) — good for heat and battery; raising it back to the "
+            "firmware-locked) - good for heat and battery; raising it back to the "
             "max is the default. Applies immediately; the “GPU clock lock at "
             "boot” tweak re-applies it after a reboot / resume.")
             ).pack(anchor="w", pady=(0, 8))
         if not info:
             self._gpuclk_note = tb.Label(lf, bootstyle=SECONDARY, text=(
-                "dGPU is asleep — run something on it to read the clock range."))
+                "dGPU is asleep - run something on it to read the clock range."))
             self._gpuclk_note.pack(anchor="w")
             return
 
@@ -448,7 +448,7 @@ class PowerDisplayTabMixin:
         sc.bind("<ButtonRelease-1>", lambda _e: self._gpuclk_apply())
         tb.Label(r, textvariable=self._gpuclk_var, width=5).pack(side="left")
         tb.Label(r, text="MHz").pack(side="left", padx=(0, 8))
-        self._gpuclk_live = tb.Label(r, text="now: — MHz", width=14, bootstyle=SECONDARY)
+        self._gpuclk_live = tb.Label(r, text="now: - MHz", width=14, bootstyle=SECONDARY)
         self._gpuclk_live.pack(side="left")
 
         br = tb.Frame(lf); br.pack(anchor="w", pady=(8, 0))
@@ -468,10 +468,10 @@ class PowerDisplayTabMixin:
         self._build_gpuoffset_section(lf)
 
     def _build_gpuoffset_section(self, lf):
-        """Core/mem clock OFFSET (overclock) — RISKY, session-only, needs
+        """Core/mem clock OFFSET (overclock) - RISKY, session-only, needs
         Coolbits + an X session (usually absent on Wayland). The capability
         probe shells out to nvidia-settings (timeout 8 s), so it runs on a
-        worker on demand — never inline on this now-lazy tab build."""
+        worker on demand - never inline on this now-lazy tab build."""
         tb.Separator(lf).pack(fill="x", pady=(10, 8))
         head = tb.Frame(lf); head.pack(anchor="w")
         tb.Label(head, text="Clock offset (overclock)", font=("Sans", 10, "bold")
@@ -483,7 +483,7 @@ class PowerDisplayTabMixin:
         self._gpuoff_note = tb.Label(
             self._gpuoff_body, bootstyle=SECONDARY, wraplength=1000, justify="left",
             text="A GPU clock offset needs the NVIDIA 'Coolbits' option and a "
-                 "reachable X display — a muxless laptop dGPU on Wayland normally "
+                 "reachable X display - a muxless laptop dGPU on Wayland normally "
                  "can't. Check whether this box can:")
         self._gpuoff_note.pack(anchor="w", pady=(0, 4))
         self._gpuoff_check_btn = tb.Button(
@@ -612,7 +612,7 @@ class PowerDisplayTabMixin:
     # ---------- Display tab ----------
     # Consolidates the panel-tuning controls that used to be scattered across
     # Power & Limits (refresh rate) and Battery (VRR, as a buried info line)
-    # into one place — same idea as Legion-Linux-Toolkit's Display tab.
+    # into one place - same idea as Legion-Linux-Toolkit's Display tab.
 
     def _build_display_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
@@ -624,7 +624,7 @@ class PowerDisplayTabMixin:
         lf = Card(parent, "Adaptive Sync (VRR)")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1000, justify="left",
-                 text=(f"{', '.join(vrr['capable'])} report VRR-capable — enable it "
+                 text=(f"{', '.join(vrr['capable'])} report VRR-capable - enable it "
                        f"per-display in System Settings → Display, and apply the "
                        f"KDE “allow tearing” tweak (Gaming category) for lowest latency."
                        if vrr["capable"]
@@ -632,10 +632,10 @@ class PowerDisplayTabMixin:
                  ).pack(anchor="w")
 
     # ---------- Touchpad tab ----------
-    # Live KWin D-Bus property writes (org.kde.KWin.InputDevice) — the
+    # Live KWin D-Bus property writes (org.kde.KWin.InputDevice) - the
     # Wayland-native mechanism, not xinput (X11-only, doesn't exist here).
     # Session-only by design: nothing here is boot-persisted, so a disabled
-    # touchpad can never survive past the next logout/reboot on its own —
+    # touchpad can never survive past the next logout/reboot on its own -
     # see sensors.py's touchpad section docstring for why that's deliberate.
 
     def _build_touchpad_tab(self, outer):
@@ -644,7 +644,7 @@ class PowerDisplayTabMixin:
 
         if not info or not info.get("available"):
             tb.Label(frame, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
-                "No touchpad reachable via KWin's D-Bus interface — needs KDE "
+                "No touchpad reachable via KWin's D-Bus interface - needs KDE "
                 "Plasma on Wayland with a touchpad (xinput-based X11 toggles "
                 "don't apply here).")).pack(anchor="w")
             return
@@ -656,7 +656,7 @@ class PowerDisplayTabMixin:
         ef.pack(fill="x", pady=6)
         tb.Label(ef, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "Takes effect immediately. This is a live session setting, not a "
-            "boot-persisted tweak — a reboot or logout always brings the "
+            "boot-persisted tweak - a reboot or logout always brings the "
             "touchpad back, so turning it off can't lock you out permanently.")
                  ).pack(anchor="w", pady=(0, 8))
         self._tp_enabled_var = tk.BooleanVar(value=bool(info.get("enabled", True)))
@@ -730,7 +730,7 @@ class PowerDisplayTabMixin:
         self._refresh_now.pack(anchor="w", pady=(6, 0))
         tb.Label(lf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
             "Tip: the AC/battery auto-switch on the Power & Limits tab can flip "
-            "this with the charger — “AC → 120 Hz, battery → 60 Hz”.")
+            "this with the charger - “AC → 120 Hz, battery → 60 Hz”.")
                  ).pack(anchor="w", pady=(6, 0))
 
     def _refresh_apply(self, hz: int):
@@ -758,7 +758,7 @@ class PowerDisplayTabMixin:
                    "(no charge_control_end_threshold in sysfs).")
             if info.get("dell_libsmbios_possible"):
                 msg += ("  On this Dell you can still get a firmware-level charge "
-                        "limit — install the “Dell battery threshold (libsmbios)” "
+                        "limit - install the “Dell battery threshold (libsmbios)” "
                         "tweak on the Power tab, then reopen this tab.")
             tb.Label(lf, bootstyle=SECONDARY, wraplength=1000, justify="left",
                      text=msg).pack(anchor="w")
@@ -779,7 +779,7 @@ class PowerDisplayTabMixin:
         sc.bind("<ButtonRelease-1>", lambda _e: self._bat_apply(prefix))
         tb.Label(r, textvariable=var, width=3).pack(side="left")
         tb.Label(r, text="%").pack(side="left", padx=(0, 8))
-        live = tb.Label(r, text="now: — %", width=12, bootstyle=SECONDARY)
+        live = tb.Label(r, text="now: - %", width=12, bootstyle=SECONDARY)
         live.pack(side="left")
         setattr(self, f"{prefix}_live", live)
         br = tb.Frame(lf); br.pack(anchor="w", pady=(8, 0))
@@ -843,7 +843,7 @@ class PowerDisplayTabMixin:
                       + ("  (log out / reboot to apply)" if ok else f"  FAILED: {err}"))
             if ok:
                 self.root.after(0, lambda: self._gpumode_now.configure(
-                    text=f"current: {mode}  — log out or reboot to apply"))
+                    text=f"current: {mode}  - log out or reboot to apply"))
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -947,7 +947,7 @@ class PowerDisplayTabMixin:
             for key, lab in self._tdp_val_labels.items():
                 v = tdp.get(f"{key}_limit")
                 try:
-                    lab.configure(text=f"now: {v:.0f} W" if v is not None else "now: — W")
+                    lab.configure(text=f"now: {v:.0f} W" if v is not None else "now: - W")
                 except tk.TclError:
                     pass
         if getattr(self, "_nvpl_live", None) is not None:
@@ -959,7 +959,7 @@ class PowerDisplayTabMixin:
         if getattr(self, "_bat_live", None) is not None and bat is not None:
             try:
                 self._bat_live.configure(
-                    text=f"now: {bat['current']} %" if bat["current"] is not None else "now: — %")
+                    text=f"now: {bat['current']} %" if bat["current"] is not None else "now: - %")
             except tk.TclError:
                 pass
         if getattr(self, "_gpuclk_live", None) is not None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TuxThrottle control plane — a tiny newline-delimited-JSON RPC over a Unix
+"""TuxThrottle control plane - a tiny newline-delimited-JSON RPC over a Unix
 domain socket. **stdlib only, no GUI deps.**
 
 `tuxthrottle_powerd.py` runs the server (`ControlServer`) so there is one
@@ -14,7 +14,7 @@ Wire protocol (one JSON object per line, both directions):
     <- {"ok": false, "error": "message"}
 
 Methods are registered by the server owner (see `tuxthrottle_powerd.run`).
-The socket is created 0660 root:root — only root (the GUI runs elevated, the
+The socket is created 0660 root:root - only root (the GUI runs elevated, the
 CLI via sudo) may write; an unprivileged reader just can't connect and the
 caller falls back to a direct read.
 """
@@ -43,7 +43,7 @@ Handler = Callable[[dict], object]
 def available(path: Path = SOCKET_PATH) -> bool:
     """True if the control socket exists and accepts a connection from this
     process. A 0660 root:root socket that exists but refuses us (EACCES) means
-    the daemon IS up but we're not root — see `presence()`."""
+    the daemon IS up but we're not root - see `presence()`."""
     return presence(path) == "up"
 
 
@@ -120,7 +120,7 @@ class _RPCHandler(socketserver.StreamRequestHandler):
         try:
             result = fn(params)
             self._reply({"ok": True, "result": result})
-        except Exception as exc:  # noqa: BLE001 — report, don't crash the daemon
+        except Exception as exc:  # noqa: BLE001 - report, don't crash the daemon
             self._reply({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
 
     def _reply(self, obj: dict) -> None:

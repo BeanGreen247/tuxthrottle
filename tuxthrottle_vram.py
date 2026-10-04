@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Video-memory budget for a KDE Plasma 6 / Wayland laptop.
 
-Model-agnostic: every tier is plain KWin/Plasma KConfig — no vendor calls —
+Model-agnostic: every tier is plain KWin/Plasma KConfig - no vendor calls -
 so it degrades gracefully on AMD, NVIDIA or Intel graphics. The typical
 target is a laptop whose integrated GPU shares a small slice of system RAM
 as VRAM and whose KDE desktop fills it (spilling to slower GTT), while a
@@ -10,7 +10,7 @@ discrete GPU is kept free for video editing / games / 3D.
 Three jobs:
   * report which GPU the desktop renders on, how full each GPU's video
     memory is, and which processes are holding it;
-  * apply a KWin/Plasma "VRAM budget" tier — regular / medium / extreme —
+  * apply a KWin/Plasma "VRAM budget" tier - regular / medium / extreme -
     that trades desktop eye-candy for a smaller compositor VRAM footprint;
   * a "free VRAM now" action (driver-level buffer eviction where the GPU
     supports it + an optional compositor restart) and a desktop-GPU
@@ -18,7 +18,7 @@ Three jobs:
     integrated GPU.
 
 Config:   <user>/.config/tuxthrottle/vram.json   {"tier":…, "compositor_gpu":…}
-Baseline: <user>/.config/tuxthrottle/vram-baseline.json — KConfig values
+Baseline: <user>/.config/tuxthrottle/vram-baseline.json - KConfig values
           captured before the first non-regular apply, so `regular` restores
           exactly what was there.
 
@@ -51,7 +51,7 @@ ENV_FILE_NAME = "09-tuxthrottle-gpu.sh"
 TIERS = ("regular", "medium", "extreme")
 
 # (file, [group chain], key, value) applied for each tier. `regular` is the
-# absence of all of these — it restores the captured baseline instead.
+# absence of all of these - it restores the captured baseline instead.
 _TIER_KEYS: dict[str, list[tuple[str, list[str], str, str]]] = {
     "medium": [
         ("kwinrc", ["Compositing"], "HiddenPreviews", "5"),
@@ -74,7 +74,7 @@ _TIER_KEYS: dict[str, list[tuple[str, list[str], str, str]]] = {
         ("kwinrc", ["Plugins"], "kwin4_effect_translucencyEnabled", "false"),
         ("kdeglobals", ["KDE"], "AnimationDurationFactor", "0"),
         # the Maliit on-screen keyboard (plasma-keyboard) keeps a live QML
-        # scene in VRAM even unused — tens of MiB. Empty string = "None" in
+        # scene in VRAM even unused - tens of MiB. Empty string = "None" in
         # System Settings → Virtual Keyboard. Fully applies next login.
         ("kwinrc", ["Wayland"], "InputMethod", ""),
     ],
@@ -92,7 +92,7 @@ _DESKTOP_PLUGINS = ("org.kde.desktopcontainment", "org.kde.plasma.folder")
 
 
 # --------------------------------------------------------------------------- #
-#  config / baseline — always under the REAL user's home, never /root when
+#  config / baseline - always under the REAL user's home, never /root when
 #  we were launched via pkexec/sudo (the "state landed in /root" bug).
 # --------------------------------------------------------------------------- #
 def _real_pw() -> pwd.struct_passwd:
@@ -163,11 +163,11 @@ def current_compositor_gpu() -> str:
 
 
 # --------------------------------------------------------------------------- #
-#  session helpers — run the KDE tools in the real user's session. Everything
+#  session helpers - run the KDE tools in the real user's session. Everything
 #  a tier does goes through ONE batched `bash -lc` per operation: a whole tier
 #  is ~40 kreadconfig6/kwriteconfig6/qdbus calls and doing each as its own
 #  `sudo -u <user>` fork is both slow and (on a box with slow sudo/NSS
-#  lookups) enough to blow a per-call timeout — which is exactly how "profile
+#  lookups) enough to blow a per-call timeout - which is exactly how "profile
 #  extreme" was failing with subprocess.TimeoutExpired.
 # --------------------------------------------------------------------------- #
 def _shq(s: str) -> str:
@@ -239,7 +239,7 @@ def _reload_kwin_cmd() -> str:
 
 def _restart_plasmashell() -> None:
     # --no-block: `systemctl restart` otherwise blocks until plasmashell has
-    # fully re-initialised every applet, which is 20-40 s — far too long to
+    # fully re-initialised every applet, which is 20-40 s - far too long to
     # sit inside a tier apply. The wallpaper change is already on disk; the
     # panel picks it up when it comes back.
     _run_session_script(
@@ -277,7 +277,7 @@ def _desktop_containments() -> list[str]:
 
 
 # --------------------------------------------------------------------------- #
-#  tier apply — one batched session script for the whole tier
+#  tier apply - one batched session script for the whole tier
 # --------------------------------------------------------------------------- #
 def _all_tier_keys() -> list[tuple[str, list[str], str]]:
     seen, out = set(), []
@@ -355,7 +355,7 @@ def apply_tier(tier: str) -> tuple[bool, str]:
     cfg = _load(_cfg_path())
     cfg["tier"] = tier
     _save(_cfg_path(), cfg)
-    extra = (" — the panel restarts in the background for the wallpaper change"
+    extra = (" - the panel restarts in the background for the wallpaper change"
              if wallpaper_changed else "")
     return True, f"VRAM budget -> {tier}{extra}"
 
@@ -366,7 +366,7 @@ def apply_tier(tier: str) -> tuple[bool, str]:
 def _debugfs_dirs(driver: str) -> list[str]:
     """One /sys/kernel/debug/dri dir per device with this driver. The kernel
     exposes several minors for the same card (0000:BB:DD.F, a small int, a
-    128+ render minor) — dedupe by the device each points at."""
+    128+ render minor) - dedupe by the device each points at."""
     seen, out = set(), []
     for name in sorted(glob.glob("/sys/kernel/debug/dri/*/name")):
         d = os.path.dirname(name)
@@ -389,7 +389,7 @@ def free_vram(restart_compositor: bool = False) -> dict:
     before = sensors.vram_info()
     evicted, errors = [], []
     # AMD: on current kernels (6.x+) amdgpu_evict_{vram,gtt} are read-only
-    # trigger files — *reading* one evicts that pool to system RAM (buffers
+    # trigger files - *reading* one evicts that pool to system RAM (buffers
     # page back in on next use). Older kernels took a write of "1".
     for d in _debugfs_dirs("amdgpu"):
         for node in ("amdgpu_evict_vram", "amdgpu_evict_gtt"):
@@ -426,7 +426,7 @@ def free_vram(restart_compositor: bool = False) -> dict:
             except OSError as exc:
                 errors.append(f"{node}: {exc}")
     if not evicted and not restart_compositor:
-        errors.append("no driver-level eviction available on this GPU — try "
+        errors.append("no driver-level eviction available on this GPU - try "
                       "Restart compositor to release KWin's own allocations")
     if restart_compositor:
         rc, _out = _run_session_script(
@@ -454,7 +454,7 @@ def _card_node(pci: str) -> str:
 
 
 def _is_muxless() -> bool:
-    """True when the panel is wired to the integrated GPU (no hardware MUX) —
+    """True when the panel is wired to the integrated GPU (no hardware MUX) -
     then KWin *must* use the iGPU for scanout and cannot put the whole
     desktop on the dGPU. True for most Optimus / hybrid gaming laptops."""
     return any(g["kind"] == "integrated" and g["boot_vga"]
@@ -502,14 +502,14 @@ def set_compositor_gpu(mode: str) -> tuple[bool, str]:
     gpus = sensors.drm_gpus()
     if mode == "dgpu" and _is_muxless():
         return False, ("this laptop's panel is wired to the integrated GPU "
-                       "(muxless) — KWin cannot render the whole desktop on "
+                       "(muxless) - KWin cannot render the whole desktop on "
                        "the dGPU. Use per-app PRIME offload for games / "
                        "DaVinci Resolve instead.")
 
     if mode == "igpu":
         # ONLY the integrated node. Listing the NVIDIA DRM node here makes KWin
         # try to init it as a usable GPU and the proprietary driver's GBM/EGL
-        # aborts the session (login loop) — learned the hard way on the g15.
+        # aborts the session (login loop) - learned the hard way on the g15.
         cards = [_card_node(g["pci"]) for g in gpus if g["kind"] == "integrated"]
     else:  # dgpu, non-muxless: discrete first, integrated kept for scanout
         cards = ([_card_node(g["pci"]) for g in gpus if g["kind"] == "discrete"]
@@ -519,11 +519,11 @@ def set_compositor_gpu(mode: str) -> tuple[bool, str]:
         return False, "no matching /dev/dri/card node found"
 
     # A shell guard so a node that vanishes (driver reload, reorder) is simply
-    # not exported — KWin then auto-picks, instead of failing to start.
+    # not exported - KWin then auto-picks, instead of failing to start.
     lines = "\n".join(f'[ -e {c} ] && _d="${{_d:+$_d:}}{c}"' for c in cards)
     env_dir.mkdir(parents=True, exist_ok=True)
     env_file.write_text(
-        "# written by tuxthrottle_vram — pin the KDE compositor's GPU.\n"
+        "# written by tuxthrottle_vram - pin the KDE compositor's GPU.\n"
         "# If the desktop fails to start: switch to a TTY (Ctrl+Alt+F3),\n"
         f"# log in, and run:  rm {env_file}\n"
         "_d=\"\"\n"

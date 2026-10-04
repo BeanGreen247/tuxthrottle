@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The data-driven category tab renderer (Performance/GPU/Power/Stability/
-Gaming/KDE/Software nav pages) and the Presets tab — extracted from
+Gaming/KDE/Software nav pages) and the Presets tab - extracted from
 tuxthrottle.py (module-split pass, ninth slice)."""
 import tkinter as tk
 
@@ -46,7 +46,7 @@ class CategoryTabMixin:
                      bootstyle="inverse-dark", justify="left").pack(anchor="w", pady=(4, 0))
 
         # This tab may be built lazily, after the first status sweep already
-        # ran — paint the rows with whatever state we already know so they
+        # ran - paint the rows with whatever state we already know so they
         # don't sit on "checking…" until the next refresh.
         for item in self.items.values():
             if item.category == category and not item.hidden and item.state != "unknown":
@@ -60,12 +60,12 @@ class CategoryTabMixin:
 
         # before/after sensor deltas from the last preset apply (filled ~30 s
         # after an apply by _preset_delta_watch)
-        dl = Card(frame, "Last preset — sensor change (30 s after apply)")
+        dl = Card(frame, "Last preset - sensor change (30 s after apply)")
         dl.pack(fill="x", pady=(0, 10))
         prev = getattr(self, "_last_preset_delta", None)
         self._preset_delta_lbl = tb.Label(
             dl, bootstyle=SECONDARY, wraplength=1000, justify="left",
-            text=(f"{prev[0]} — " + "   ·   ".join(prev[1])) if prev
+            text=(f"{prev[0]} - " + "   ·   ".join(prev[1])) if prev
             else "Apply a preset and this shows how temps / clocks / TDP moved.")
         self._preset_delta_lbl.pack(anchor="w")
 
@@ -73,8 +73,8 @@ class CategoryTabMixin:
         rb = Card(frame, "Developer recommendations")
         rb.pack(fill="x", pady=(0, 10))
         tb.Label(rb, wraplength=900, bootstyle=SECONDARY, text=(
-            "Applies every item the developer marked ★ recommended — across all "
-            "categories — in one pass, and offers to turn on the background "
+            "Applies every item the developer marked ★ recommended - across all "
+            "categories - in one pass, and offers to turn on the background "
             "daemon that powers the fan curve, AC/battery auto-switch and the "
             "time schedule. A snapshot is taken first so you can roll back from "
             "the Profiles tab.")).pack(anchor="w", pady=(0, 8))

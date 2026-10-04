@@ -1,6 +1,6 @@
 # Packaging TuxThrottle (RPM / COPR)
 
-`tuxthrottle.spec` is a **noarch** spec — the project is pure Python + JSON +
+`tuxthrottle.spec` is a **noarch** spec - the project is pure Python + JSON +
 shell, so there is no compile step. It installs the runnable tree to
 `/opt/tuxthrottle` (matching `install.sh`, `verify-install.sh` and the
 `{TOOLKIT_DIR}` substitution in `config/tweaks.json`), a launcher at
@@ -8,7 +8,7 @@ shell, so there is no compile step. It installs the runnable tree to
 `.desktop` entry and the hicolor icons.
 
 The in-app **tweaks** (systemd units, sudoers drop-ins, `kwriteconfig6` edits,
-GRUB/fstab changes) are deliberately **not** touched by `%post` — they stay
+GRUB/fstab changes) are deliberately **not** touched by `%post` - they stay
 opt-in and are applied from the GUI or `apply_tweak.py` exactly as with the
 git-clone install.
 

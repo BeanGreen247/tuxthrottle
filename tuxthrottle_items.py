@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """The tweaks/apps data layer: `Item`, config-file loading, the apply ledger,
-and status evaluation — everything tuxthrottle.py's tweak checkboxes are
+and status evaluation - everything tuxthrottle.py's tweak checkboxes are
 built from, with zero Tkinter/ttkbootstrap dependency. Extracted from
 tuxthrottle.py (first slice of the modular-refactor pass) because this was
 the one section confirmed to have no widget/GUI-state coupling at all: it's
 pure data (config/*.json) in, `Item` objects with a `state` out.
 
-Kept independent of ttkbootstrap on purpose — `_STATE_UI`'s bootstyle names
+Kept independent of ttkbootstrap on purpose - `_STATE_UI`'s bootstyle names
 are plain lowercase strings (confirmed against ttkbootstrap.constants:
 SUCCESS="success" etc.), so this module can be imported, tested, and used
 by the CLI --report/--debug paths without pulling in the GUI toolkit.
@@ -28,12 +28,12 @@ PROJECT_ISSUES_URL = PROJECT_URL + "/issues"
 
 
 def toolkit_version() -> str:
-    """Human version string — date-based `YY.MM.DD` (Xylonic-style), keyed to
+    """Human version string - date-based `YY.MM.DD` (Xylonic-style), keyed to
     the day of the last commit. Priority: the deploy stamp install.sh writes
     (`.version`, since /opt has no .git) -> the last git commit date when
     running from a checkout -> the committed `VERSION` file (source tarball,
     no git) -> "unknown"."""
-    # the deploy stamp wins, but only when this is NOT a git checkout — a stray
+    # the deploy stamp wins, but only when this is NOT a git checkout - a stray
     # .version left in a source tree must never shadow the live commit date.
     if not (BASE_DIR / ".git").exists():
         try:
@@ -44,14 +44,15 @@ def toolkit_version() -> str:
             pass
     dv = run_cmd3(f"git -C {BASE_DIR} log -1 --format=%cd --date=format:%y.%m.%d "
                   f"2>/dev/null")[2].strip()
-    if dv:
-        return dv
     try:
         v = (BASE_DIR / "VERSION").read_text().strip()
-        if v:
-            return v
     except OSError:
-        pass
+        v = ""
+    # a VERSION bump that isn't committed yet is newer than the last commit day
+    if dv and v:
+        return max(dv, v)
+    if dv or v:
+        return dv or v
     return "unknown"
 
 
@@ -87,7 +88,7 @@ def _dnf_metadata_age() -> str:
 
 
 def _dnf_metadata_stale(threshold_secs: float = 21600.0) -> bool:
-    """True when the dnf metadata is older than threshold (default 6 h) — the
+    """True when the dnf metadata is older than threshold (default 6 h) - the
     pending-update count is then only a rough snapshot and should read as such.
     Missing metadata counts as stale."""
     secs = _dnf_metadata_secs()
@@ -139,7 +140,7 @@ class Item:
 
         self.check_cmd = sub(data.get("check", ""))
         # Optional: a tweak whose real effect only lands after a reboot (kernel
-        # cmdline) can declare `check_pending` — true once the change is staged
+        # cmdline) can declare `check_pending` - true once the change is staged
         # in the bootloader but not yet live. The UI shows "Pending reboot" and
         # Apply/Presets skip it, so the user doesn't re-select and re-run it.
         self.check_pending_cmd = sub(data.get("check_pending", ""))
@@ -149,7 +150,7 @@ class Item:
         else:
             manager = data.get("manager", "dnf")
             # An app counts as "already here" if ANY reasonable install of it is
-            # present — not just the one this entry would use. Otherwise the row
+            # present - not just the one this entry would use. Otherwise the row
             # shows "not installed" and Apply happily adds a second, colliding
             # copy (classic: dnf `steam` on top of the Flatpak). `provides` is a
             # list of extra shell probes OR-ed into the check; for a Flatpak
@@ -179,7 +180,7 @@ class Item:
             else:
                 self.apply_cmds = []
             self.undo_cmds = []
-        # live status — set by _refresh_all_status. `state` is the single
+        # live status - set by _refresh_all_status. `state` is the single
         # source of truth; `applied`/`pending` are kept as derived bools so the
         # rest of the code doesn't change.
         #   applied      check exited 0
@@ -206,7 +207,7 @@ class Item:
 
     @property
     def done(self) -> bool:
-        """Already in the desired state — nothing to (re-)apply."""
+        """Already in the desired state - nothing to (re-)apply."""
         return self.state in ("applied", "pending")
 
 
@@ -227,7 +228,7 @@ def run_cmd3(cmd: str, timeout: int = 1800) -> tuple[bool, int, str]:
 
 
 # --------------------------------------------------------------------------- #
-#  Apply ledger — what the toolkit itself has applied/undone, and how it went.
+#  Apply ledger - what the toolkit itself has applied/undone, and how it went.
 #  The per-tweak `check` command is still the source of truth for the *current*
 #  state; the ledger adds "...and we're the ones who set it" / "...and our last
 #  attempt failed", which is how "Reverted" and "Apply failed" are told apart
@@ -266,7 +267,7 @@ def ledger_record(item_id: str, action: str, ok: bool, note: str = "") -> None:
         pass
 
 
-# state key -> (short label, ttkbootstrap bootstyle name — a plain lowercase
+# state key -> (short label, ttkbootstrap bootstyle name - a plain lowercase
 # string, e.g. "success"; see module docstring for why this isn't imported
 # from ttkbootstrap.constants). App items relabel applied/not_applied to
 # installed/not installed at render time (that relabeling stays in the GUI).
@@ -286,7 +287,7 @@ def format_status_report(items) -> str:
     """Plain-text table of every item's state + the check that decided it +
     the toolkit's last action. Used by the GUI dialog and `--report`."""
     rows = sorted(items, key=lambda i: (i.category, i.kind, i.content.lower()))
-    out = [f"TuxThrottle — status report   {time.strftime('%Y-%m-%d %H:%M:%S')}",
+    out = [f"TuxThrottle - status report   {time.strftime('%Y-%m-%d %H:%M:%S')}",
            "=" * 100]
     cur = None
     counts: dict[str, int] = {}
@@ -297,7 +298,7 @@ def format_status_report(items) -> str:
             out.append(f"\n[{cur}]")
         led = it.ledger
         led_s = (f"{led['action']} {'ok' if led['ok'] else 'FAILED'} {led['ts']}"
-                 + (f" — {led['note']}" if led.get("note") else "")) if led else "—"
+                 + (f" - {led['note']}" if led.get("note") else "")) if led else "-"
         rc = "" if it.check_rc in (None, 0) else f" (rc {it.check_rc})"
         out.append(f"  {it.state.upper():<12} {it.content[:44]:<44} "
                    f"check{rc}: {it.check_cmd[:60] or '(none)'}")
@@ -340,7 +341,7 @@ def evaluate_item(item: Item, ledger: dict) -> None:
 
 
 def load_all_items() -> list:
-    """Build the Item list (with vendor gating) without a ToolkitApp — shared
+    """Build the Item list (with vendor gating) without a ToolkitApp - shared
     by the --report / --debug CLI paths."""
     import sensors  # local import: keeps this module importable even in a
                     # context where sensors.py's DMI probing isn't wanted

@@ -1,6 +1,6 @@
 """New Fixes-tab backend pieces: fixlog, crashwatch signature matching,
 launchopts remove-token, and steamperf's mount-wait wrapper preservation.
-No Steam / systemd / network needed — pure logic + tmp_path isolation.
+No Steam / systemd / network needed - pure logic + tmp_path isolation.
 """
 import json
 
@@ -201,7 +201,7 @@ def test_diagnose_flags_a_shadow_still_carrying_the_repair_suppression(monkeypat
 
 
 # --------------------------------------------------------------------------- #
-#  steamperf: the autostart backup must not sit in ~/.config/autostart —
+#  steamperf: the autostart backup must not sit in ~/.config/autostart -
 #  Plasma's autostart scanner launches it as a 2nd Steam that fights the
 #  singleton lock, leaving one steamwebhelper stuck respawning.
 # --------------------------------------------------------------------------- #
@@ -243,3 +243,124 @@ def test_diagnose_flags_a_stray_steam_autostart_file(monkeypatch, tmp_path):
     sp._autostart().with_name("steam.desktop.tuxthrottle-bak").write_text("x")
     bad = [m for s, m in sp.diagnose(user=None) if s == "bad"]
     assert any("autostart" in m.lower() for m in bad)
+
+
+# --------------------------------------------------------------------------- #
+#  launchopts: default string vs per-game custom options
+# --------------------------------------------------------------------------- #
+def _lo_cfg():
+    return {"UserLocalConfigStore": {"Software": {"Valve": {"Steam": {"apps": {
+        "10": {"LaunchOptions": "gamemoderun mangohud %command%"},
+        "20": {"LaunchOptions": "gamemoderun mangohud %command%"},
+        "30": {"LaunchOptions": "gamescope -f -- gamemoderun %command%"},
+        "40": {},
+    }}}}}}
+
+
+def test_baseline_is_the_most_common_string():
+    assert lo.baseline(lo._apps_dict(_lo_cfg())) == "gamemoderun mangohud %command%"
+    assert lo.baseline({"10": {}}) == ""
+
+
+def test_set_all_keep_custom_leaves_hand_tuned_games(monkeypatch, tmp_path):
+    lc = tmp_path / "localconfig.vdf"
+    lc.write_text("x")
+    cfg = _lo_cfg()
+    written = {}
+    monkeypatch.setattr(lo, "steam_running", lambda: False)
+    monkeypatch.setattr(lo, "find_localconfigs", lambda: [lc])
+    monkeypatch.setattr(lo, "_load", lambda p: cfg)
+    monkeypatch.setattr(lo, "_dump", lambda obj, p: written.update(obj))
+    assert lo._write_all("gamemoderun %command%", False, False, keep_custom=True) == 0
+    apps = lo._apps_dict(written)
+    assert apps["10"]["LaunchOptions"] == "gamemoderun %command%"
+    assert apps["20"]["LaunchOptions"] == "gamemoderun %command%"
+    assert apps["30"]["LaunchOptions"] == "gamescope -f -- gamemoderun %command%"
+    assert apps["40"]["LaunchOptions"] == "gamemoderun %command%"
+
+
+def test_sweep_moves_any_steam_desktop_backup_not_only_known_suffixes(monkeypatch, tmp_path):
+    _wire_autostart(monkeypatch, tmp_path)
+    au = sp._autostart()
+    au.write_text("[Desktop Entry]\nExec=/usr/local/bin/tuxthrottle-wait-mounts steam\n")
+    stray = au.with_name(au.name + ".tuxthrottle-mountwait-bak")
+    stray.write_text("[Desktop Entry]\nExec=/usr/bin/steam %U\n")
+    other = au.parent / "discord.desktop"
+    other.write_text("[Desktop Entry]\n")
+    assert sp.stray_autostart_files() == [stray]
+    assert sp._migrate_stray_bak() == [stray]
+    assert sorted(f.name for f in au.parent.iterdir()) == ["discord.desktop", "steam.desktop"]
+    assert sp._autostart_bak("tuxthrottle-mountwait-bak").is_file()
+    assert sp._migrate_stray_bak() == []
+
+
+def test_no_tweak_writes_a_backup_into_the_autostart_dir():
+    import json
+    from pathlib import Path
+    tweaks = json.loads((Path(cw.__file__).parent / "config" / "tweaks.json").read_text())
+    for name, tw in tweaks.items():
+        for cmd in tw.get("apply", []):
+            # a copy whose target is a steam.desktop.<suffix> path in the autostart dir
+            assert 'cp -a "$AS" "$AS.' not in cmd, f"{name} backs up into autostart"
+
+
+def test_steam_client_crash_is_recognised_and_repairs_the_double_start(monkeypatch, tmp_path):
+    _wire_autostart(monkeypatch, tmp_path)
+    sig = cw._classify("/home/u/.local/share/Steam/ubuntu12_32/steam", "steam -silent")
+    assert sig["id"] == "steam-client-crash"
+    assert cw._steam_double_start(sig) is sig                   # nothing stray: generic hint
+    au = sp._autostart()
+    stray = au.with_name(au.name + ".tuxthrottle-mountwait-bak")
+    stray.write_text("[Desktop Entry]\n")
+    fixed = cw._steam_double_start(sig)
+    assert "started twice" in fixed["label"] and stray.name in fixed["hint"]
+    assert not stray.exists()
+    # the web helper and a game still classify as before
+    assert cw._classify("/x/ubuntu12_64/steamwebhelper", "")["id"] == "steamwebhelper-crash"
+
+
+def test_every_sidebar_entry_has_an_icon_defined():
+    """A tab or tweak/app category with no entry in _NAV_TILES shows up bare
+    in the nav rail (Monitoring, Streaming and RGB once did)."""
+    import ast
+    import json
+    import re
+    from pathlib import Path
+    base = Path(cw.__file__).parent
+    # read the icon table from the source: importing the widgets module needs
+    # ttkbootstrap, which the plain test job does not install
+    tree = ast.parse((base / "tuxthrottle_gui_widgets.py").read_text())
+    tiles = next(n.value for n in ast.walk(tree) if isinstance(n, ast.Assign)
+                 and getattr(n.targets[0], "id", "") == "_NAV_TILES")
+    icons = {k.value for k in tiles.keys}
+    labels = set(re.findall(r'add_lazy\("([^"]+)"', (base / "tuxthrottle.py").read_text()))
+    for f in ("tweaks.json", "apps.json"):
+        data = json.loads((base / "config" / f).read_text())
+        labels |= {v["category"] for v in data.values() if v.get("category")}
+    missing = sorted(lbl for lbl in labels if lbl not in icons)
+    assert missing == [], f"no sidebar icon for: {missing}"
+
+
+def test_power_profile_is_read_over_dbus_not_via_the_python_cli(monkeypatch):
+    """`powerprofilesctl get` (a PyGObject script) segfaulted on exit when
+    polled; the profile now comes from the daemon's D-Bus property."""
+    import sensors
+    calls = []
+
+    class _R:
+        def __init__(self, rc, out):
+            self.returncode, self.stdout = rc, out
+
+    def fake_run(cmd, **_k):
+        calls.append(cmd[0])
+        return _R(0, 's "performance"\n') if cmd[0] == "busctl" else _R(0, "balanced\n")
+    monkeypatch.setattr(sensors, "which", lambda n: "/usr/bin/" + n)
+    monkeypatch.setattr(sensors.subprocess, "run", fake_run)
+    assert sensors.active_power_profile() == "performance"
+    assert calls == ["busctl"]
+    # no busctl / no daemon on the bus: fall back to the CLI
+    monkeypatch.setattr(sensors.subprocess, "run",
+                        lambda cmd, **_k: _R(1, "") if cmd[0] == "busctl" else _R(0, "balanced\n"))
+    assert sensors.active_power_profile() == "balanced"
+    monkeypatch.setattr(sensors, "which", lambda n: None)
+    assert sensors.active_power_profile() == ""

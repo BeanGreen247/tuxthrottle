@@ -1,4 +1,4 @@
-# TuxThrottle — todo
+# TuxThrottle - todo
 
 ## Done (2026-08-30)
 - Backlog phases 1-8: CPU TDP (ryzenadj), battery limit (sysfs + libsmbios),
@@ -11,7 +11,7 @@
   StateResume tweak, Dashboard history sparklines + session CSV.
 - Tier 2: per-game auto-profiles (GameProfileController in the daemon + editor),
   unified resume re-assert (StateResume).
-- KDE (Desktop GUI Tweaks) category — 7 Plasma-6 toggles.
+- KDE (Desktop GUI Tweaks) category - 7 Plasma-6 toggles.
 - tests/ (31 pytest) + .github/workflows/ci.yml.
 - install.sh dependency hardening.
 - KDE (Desktop GUI Tweaks): 9 toggles, all verified LIVE on g15 (2026-08-30).
@@ -21,7 +21,7 @@
   doesn't exist on Nobara -> qdbus-qt6/dbus-send. See memory tuxthrottle-kde-tweaks.
 - README + CLAUDE.md updated (Profiles tab, KDE section, new helper files, KDE gotchas).
 
-## Tier 3 — deferred (full plan: ~/tuxthrottle-tier3-followups-2026-08-31.md)
+## Tier 3 - deferred (full plan: ~/tuxthrottle-tier3-followups-2026-08-31.md)
 - [ ] COPR / RPM packaging
 - [ ] thermal-event notifications (in the daemon)
 - [ ] Ryzen Curve Optimizer undervolt + stress-test/auto-revert harness

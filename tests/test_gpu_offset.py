@@ -1,4 +1,4 @@
-"""GPU clock-offset capability probe (Phase 3c) — parse + unavailable paths."""
+"""GPU clock-offset capability probe (Phase 3c) - parse + unavailable paths."""
 import subprocess
 
 import sensors

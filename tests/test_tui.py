@@ -1,10 +1,10 @@
-"""tuxthrottle_tui.py — the Textual dashboard. Skipped entirely if textual
+"""tuxthrottle_tui.py - the Textual dashboard. Skipped entirely if textual
 isn't installed (it's a soft dependency, same as ttkbootstrap for the GUI).
 
 This caught a real bug once already: Static's internal renderable storage
 differs between the "textual" package on PyPI and the one Fedora/Nobara
 packages, so StatBox/ValueStatic track their own `.value` instead of relying
-on Textual internals — these tests assert on `.value` for exactly that
+on Textual internals - these tests assert on `.value` for exactly that
 reason, and would have failed loudly if that tracking broke.
 """
 import pytest
@@ -15,7 +15,7 @@ import tuxthrottle_tui as tt  # noqa: E402
 
 
 def test_ctl_returns_false_with_message_when_command_fails(monkeypatch):
-    # _ctl()'s last fallback is `[]` (no launcher prefix — runs the bare
+    # _ctl()'s last fallback is `[]` (no launcher prefix - runs the bare
     # command, for when the caller is already privileged), so mocking only
     # shutil.which() still lets that branch exec a REAL command. An earlier
     # version of this test did exactly that and flipped Game Mode for real
@@ -52,7 +52,7 @@ def test_statbox_set_value_includes_label_and_value():
 @pytest.mark.asyncio
 async def test_app_builds_and_populates_stat_boxes(monkeypatch):
     # stub out real sensor/privileged calls so this runs identically on any
-    # machine (CI included) — the point is exercising the App/widget wiring,
+    # machine (CI included) - the point is exercising the App/widget wiring,
     # not real hardware (that's covered live on g15 separately).
     monkeypatch.setattr(tt.sensors, "read_cpu_power_watts", lambda: 12.3)
     monkeypatch.setattr(tt.sensors, "read_cpu_temp_c", lambda: "60 C")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Standalone GUI widgets and the BIOS dark theme — extracted from
+"""Standalone GUI widgets and the BIOS dark theme - extracted from
 tuxthrottle.py (second slice of the modular-refactor pass). Everything
 here is genuinely self-contained: no ToolkitApp/self-instance coupling,
 just tkinter/ttkbootstrap widget classes and pure color-math helpers.
@@ -110,7 +110,7 @@ class _Tooltip:
 
 
 # --------------------------------------------------------------------------- #
-#  Look & feel — a "gaming BIOS" dark shell with the KDE accent colour.
+#  Look & feel - a "gaming BIOS" dark shell with the KDE accent colour.
 # --------------------------------------------------------------------------- #
 
 ACCENT_FALLBACK = "#3daee9"   # Breeze blue, if the desktop accent can't be read
@@ -281,7 +281,7 @@ def readable_on(fg: str, bg: str, target: float = 4.5) -> str:
 
 def apply_bios_style(style: tb.Style, accent: str, theme_name: str = "BIOS Dark") -> str:
     """Re-skin the ttkbootstrap 'darkly' base into the chosen palette. All
-    wrapped defensively — a theming quirk must never take the app down.
+    wrapped defensively - a theming quirk must never take the app down.
     Returns the theme name actually applied. A palette that pins its own
     `accent` overrides the passed-in (desktop) accent."""
     theme_name = set_palette(theme_name)
@@ -333,13 +333,13 @@ def apply_bios_style(style: tb.Style, accent: str, theme_name: str = "BIOS Dark"
                                "relief": "solid", "borderwidth": 1,
                                "padding": (12, 9)},
         # Card = the page surface + a hairline border + a glyphed header. Same
-        # background as everything else (BIOS_PANEL) so raw children — RingGauge
-        # canvases, plain tb.Labels, Scales — sit on it seamlessly instead of
+        # background as everything else (BIOS_PANEL) so raw children - RingGauge
+        # canvases, plain tb.Labels, Scales - sit on it seamlessly instead of
         # showing as darker rectangles (the "wrong gauge background" bug).
         "Card.TFrame": {"background": BIOS_PANEL, "bordercolor": BIOS_BORDER,
                         "darkcolor": BIOS_BORDER, "lightcolor": BIOS_BORDER,
                         "relief": "solid", "borderwidth": 1},
-        # coloured-border variants — for a section that needs a semantic edge
+        # coloured-border variants - for a section that needs a semantic edge
         # (risky = danger, firmware = warning, …). Card(parent, t, border="danger")
         "CardDanger.TFrame": {"background": BIOS_PANEL, "bordercolor": SEM_DANGER,
                               "darkcolor": SEM_DANGER, "lightcolor": SEM_DANGER,
@@ -354,7 +354,7 @@ def apply_bios_style(style: tb.Style, accent: str, theme_name: str = "BIOS Dark"
         "Card.TLabel": {"background": BIOS_PANEL, "foreground": BIOS_FG},
         "CardKey.TLabel": {"background": BIOS_PANEL, "foreground": accent_txt_hi,
                            "font": ("Sans", 10, "bold")},
-        # section header inside a Card — neutral bright text, NOT the accent:
+        # section header inside a Card - neutral bright text, NOT the accent:
         # accent-coloured titles everywhere read as errors (esp. when the KDE
         # accent BIOS Dark follows is a saturated red). Accent stays on the
         # card's left edge / active controls only.
@@ -379,7 +379,7 @@ def apply_bios_style(style: tb.Style, accent: str, theme_name: str = "BIOS Dark"
                               "bordercolor": accent, "focuscolor": "",
                               "font": ("Sans", 10, "bold"), "anchor": "w",
                               "padding": (16, 11), "relief": "flat"},
-        # the odd one out: the Bug Report / Logs page — warm amber, not the
+        # the odd one out: the Bug Report / Logs page - warm amber, not the
         # KDE accent, so it reads as "support / external", not a hardware tab
         "NavSupport.TButton": {"background": BIOS_PANEL,
                                "foreground": readable_on(HELP_AMBER, BIOS_PANEL, 6.0),
@@ -440,7 +440,7 @@ def apply_bios_style(style: tb.Style, accent: str, theme_name: str = "BIOS Dark"
 
 
 class RingGauge(tk.Canvas):
-    """A self-drawn 270° ring gauge — replaces ttkbootstrap's Meter, which
+    """A self-drawn 270° ring gauge - replaces ttkbootstrap's Meter, which
     doesn't re-colour cleanly under the custom theme and rendered thin/odd.
     `set(value)` redraws; `size` scales the whole thing."""
 
@@ -464,7 +464,7 @@ class RingGauge(tk.Canvas):
         pad = w // 2 + 3
         box = (pad, pad, s - pad, s - pad)
         frac = max(0.0, min(1.0, self._value / self._max))
-        # track + value arc — 270° sweep with a symmetric gap at the bottom
+        # track + value arc - 270° sweep with a symmetric gap at the bottom
         self.create_arc(*box, start=225, extent=-270, style="arc",
                         outline=BIOS_SUNKEN, width=w)
         if frac > 0.001:
@@ -487,7 +487,7 @@ class RingGauge(tk.Canvas):
 
 
 class HistoryChart(tk.Canvas):
-    """A rolling sparkline — `push(value)` appends and redraws. Keeps the last
+    """A rolling sparkline - `push(value)` appends and redraws. Keeps the last
     `samples` points; auto-scales Y with a small headroom. Used for the
     Dashboard history strip."""
 
@@ -499,7 +499,7 @@ class HistoryChart(tk.Canvas):
         self._color = color or ACCENT_FALLBACK
         self._caption = caption
         self._unit = unit
-        # [(value, color, label)] — horizontal reference lines (throttle temp,
+        # [(value, color, label)] - horizontal reference lines (throttle temp,
         # TDP cap, …). Mapped through the same base/span as the trace so they
         # only render once the value is inside the visible range.
         self._thresholds = list(thresholds or [])
@@ -530,7 +530,7 @@ class HistoryChart(tk.Canvas):
         dlo, dhi = min(vals), max(vals)
         dspan = max(1e-6, dhi - dlo)
         # A threshold only widens the y-range (and only then renders) once the
-        # trace gets within ~one span of it — otherwise a far-off 90°C throttle
+        # trace gets within ~one span of it - otherwise a far-off 90°C throttle
         # line would flatten an idle 45-55°C trace against the floor.
         near = [(tv, tc, tl) for (tv, tc, tl) in self._thresholds
                 if _is_num(tv) and dlo - dspan <= float(tv) <= dhi + dspan]
@@ -571,19 +571,19 @@ class HistoryChart(tk.Canvas):
 
 # ---- shared layout primitives (the DAMX/LACT restyle) --------------------- #
 
-# spacing scale — use instead of ad-hoc pixel pads so every tab lines up
+# spacing scale - use instead of ad-hoc pixel pads so every tab lines up
 PAD_XS, PAD_S, PAD_M, PAD_L = 4, 8, 14, 22
 FONT_TITLE = ("Sans", 11, "bold")     # card / section heading
 FONT_BODY = ("Sans", 10)              # normal copy
 FONT_CAPTION = ("Sans", 9)            # secondary / hint text
 
-# monochrome glyph per card title — same visual language as SidebarNav._NAV_ICONS
+# monochrome glyph per card title - same visual language as SidebarNav._NAV_ICONS
 _CARD_ICONS = {"CPU": "▤", "GPU": "◈", "Details": "≣", "History": "∿",
                "Game Mode": "♞"}
 
 
 class Card(tb.Frame):
-    """A titled, hair-lined section — the DAMX/LACT card, and a drop-in for
+    """A titled, hair-lined section - the DAMX/LACT card, and a drop-in for
     `tb.Labelframe(parent, text=…, padding=…)`. A glyphed header is packed at
     the top. **pack** your content straight into the Card; use `.body` (a
     zero-height-when-empty sub-frame) only when you need to `.grid()` children,
@@ -607,14 +607,14 @@ class Card(tb.Frame):
                      font=FONT_TITLE, wraplength=1100, justify="left",
                      anchor="w").pack(side="left")
             self._head = head
-        # for callers that .grid() their content (Dashboard gauge grid) — a
+        # for callers that .grid() their content (Dashboard gauge grid) - a
         # container can't mix pack and grid, so give them their own frame.
         self.body = tb.Frame(self, style="CardRow.TFrame")
         self.body.pack(fill="x")
 
 
 class Segmented(tb.Frame):
-    """A row of linked toggle buttons bound to one StringVar — replaces a
+    """A row of linked toggle buttons bound to one StringVar - replaces a
     cluster of Radiobuttons / an OptionMenu for picking one of a few modes.
     `options` is [(label, value), ...] or a plain list (label == value)."""
 
@@ -647,6 +647,144 @@ class Segmented(tb.Frame):
             b.configure(bootstyle="info" if value == cur else "secondary-outline")
 
 
+# Nav-rail icons: label → (pictograph, colour, font). Bare solid pictographs
+# with no tile behind them (the Xylonic sidebar look), filled with a soft
+# top-to-bottom gradient of the entry's colour. Rendered with Pillow because Tk
+# can't draw colour-emoji fonts; "s2" = Noto Sans Symbols 2, "dv" = DejaVu Sans
+# Bold. Any failure (no Pillow / no font) falls back to SidebarNav._NAV_ICONS.
+_NAV_TILES = {
+    "Dashboard": ("\U0001F4CA", "#3b82f6", "s2"), "Keyboard": ("\u2328", "#8b5cf6", "s2"),
+    "Touchpad": ("\U0001F5B1", "#94a3b8", "s2"), "Fans": ("\u2744", "#06b6d4", "s2"),
+    "Battery": ("\u23FB", "#22c55e", "s2"), "VRAM": ("\u25A5", "#a855f7", "s2"),
+    "Power & Limits": ("\u26A1", "#f59e0b", "s2"), "Display": ("\U0001F5A5", "#0ea5e9", "s2"),
+    "Profiles": ("\U0001F5C4", "#14b8a6", "s2"), "Presets": ("\u2605", "#eab308", "s2"),
+    "Setup Games": ("\U0001F3AE", "#ef4444", "s2"),
+    "Game Tools": ("\U0001F6E0", "#f97316", "s2"),
+    "MangoHud": ("\U0001F4C8", "#ff8a1f", "s2"), "Proton & Runtimes": ("\u269B", "#38bdf8", "dv"),
+    "Drives": ("\U0001F5B4", "#a3e635", "s2"),
+    "Monitoring": ("\U0001F441", "#22d3ee", "s2"),
+    "Streaming": ("\U0001F4F9", "#c084fc", "s2"),
+    "RGB": ("", "#ffffff", "s2"),          # drawn: three overlapping light discs
+    "Updates": ("\u2B07", "#10b981", "s2"),
+    "About": ("i", "#9ca3af", "dv"), "Report a Bug": ("\u26A0", "#dc2626", "s2"),
+    "Performance": ("\u25B2", "#e11d48", "s2"), "GPU": ("\u25C8", "#76b900", "s2"),
+    "Power": ("\u2609", "#facc15", "s2"), "Stability": ("\U0001F6E1", "#3b82f6", "s2"),
+    "Gaming": ("\U0001F579", "#db2777", "s2"),
+    "KDE (Desktop GUI Tweaks)": ("\U0001F5D7", "#1d99f3", "s2"),
+    "Software": ("\U0001F4E6", "#f59e0b", "s2"), "Emulation": ("\u25C9", "#a78bfa", "s2"),
+    "Input & Controllers": ("\U0001F39B", "#2dd4bf", "s2"),
+    "Repos": ("\u26C1", "#94a3b8", "s2"),
+}
+_NAV_FONT_FILES = {
+    "s2": ("/usr/share/fonts/google-noto/NotoSansSymbols2-Regular.ttf",
+           "/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf",
+           "/usr/share/fonts/noto/NotoSansSymbols2-Regular.ttf"),
+    "dv": ("/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf",
+           "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+           "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"),
+}
+
+
+def _hex(c: str) -> tuple:
+    c = c.lstrip("#")
+    return tuple(int(c[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _gradient_fill(mask, colour: str):
+    """RGBA image the size of `mask` (an L image): a vertical gradient from a
+    light tint of `colour` at the top to `colour` at the bottom, cut to mask."""
+    from PIL import Image
+    w, h = mask.size
+    base = _hex(colour)
+    top = tuple(int(v + (255 - v) * 0.55) for v in base)
+    col = Image.new("RGB", (1, h))
+    for y in range(h):
+        t = y / max(1, h - 1)
+        col.putpixel((0, y), tuple(int(top[i] + (base[i] - top[i]) * t) for i in range(3)))
+    img = col.resize((w, h)).convert("RGBA")
+    img.putalpha(mask)
+    return img
+
+
+def _mango_icon(size: int):
+    """MangoHud's icon: an actual mango (tilted orange-to-red fruit, green
+    leaf) - no font has one, so it's drawn. No tile behind it."""
+    from PIL import Image, ImageDraw, ImageFilter
+    big = size * 4
+    fruit = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    fd = ImageDraw.Draw(fruit)
+    body = (big * 0.10, big * 0.22, big * 0.90, big * 0.92)
+    fd.ellipse(body, fill="#ffb020")
+    blush = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    ImageDraw.Draw(blush).ellipse((big * 0.42, big * 0.16, big * 1.05, big * 0.74),
+                                  fill="#f4511e")
+    blush = blush.filter(ImageFilter.GaussianBlur(big * 0.08))
+    mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(mask).ellipse(body, fill=255)
+    from PIL import ImageChops
+    fruit.paste(blush, (0, 0), ImageChops.multiply(blush.getchannel("A"), mask))
+    fd.ellipse((big * 0.24, big * 0.36, big * 0.40, big * 0.50), fill="#ffe08a")
+    fruit = fruit.rotate(28, resample=Image.BICUBIC, center=(big / 2, big * 0.57))
+    im = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    im.alpha_composite(fruit)
+    d = ImageDraw.Draw(im)
+    d.line((big * 0.60, big * 0.22, big * 0.66, big * 0.07), fill="#a8703a",
+           width=max(2, big // 18))
+    d.polygon([(big * 0.66, big * 0.09), (big * 0.96, big * 0.02), (big * 0.86, big * 0.26)],
+              fill="#4ade80")
+    return im.resize((size, size), Image.LANCZOS)
+
+
+def _rgb_icon(size: int):
+    """RGB's icon: red, green and blue light discs overlapping, mixed
+    additively where they cross (yellow / cyan / magenta, white centre)."""
+    from PIL import Image, ImageChops, ImageDraw
+    big = size * 4
+    r = big * 0.30
+    acc = Image.new("RGB", (big, big), (0, 0, 0))
+    cover = Image.new("L", (big, big), 0)
+    for (cx, cy), colour in (((0.50, 0.34), (255, 70, 70)), ((0.33, 0.64), (60, 220, 90)),
+                             ((0.67, 0.64), (70, 130, 255))):
+        box = (big * cx - r, big * cy - r, big * cx + r, big * cy + r)
+        disc = Image.new("RGB", (big, big), (0, 0, 0))
+        ImageDraw.Draw(disc).ellipse(box, fill=colour)
+        acc = ImageChops.add(acc, disc)
+        ImageDraw.Draw(cover).ellipse(box, fill=255)
+    im = acc.convert("RGBA")
+    im.putalpha(cover)
+    return im.resize((size, size), Image.LANCZOS)
+
+
+def nav_tile_image(label: str, size: int = 26):
+    """A PIL image of the nav icon for a label, or None when the label has no
+    icon / Pillow or the font isn't available. The pictograph is drawn at 4×,
+    centred on its real ink box (font metrics sit it too high), gradient-filled
+    and downsampled for antialiasing."""
+    spec = _NAV_TILES.get(label)
+    if spec is None:
+        return None
+    glyph, colour, fkey = spec
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        if label == "MangoHud":
+            return _mango_icon(size)
+        if label == "RGB":
+            return _rgb_icon(size)
+        path = next(p for p in _NAV_FONT_FILES[fkey] if os.path.isfile(p))
+        big = size * 4
+        font = ImageFont.truetype(path, big)
+        l, t, r, b = font.getbbox(glyph)
+        scale = min((big * 0.94) / max(1, r - l), (big * 0.94) / max(1, b - t))
+        font = ImageFont.truetype(path, max(8, int(big * scale)))
+        l, t, r, b = font.getbbox(glyph)
+        mask = Image.new("L", (big, big), 0)
+        ImageDraw.Draw(mask).text(((big - (r - l)) / 2 - l, (big - (b - t)) / 2 - t),
+                                  glyph, font=font, fill=255)
+        return _gradient_fill(mask, colour).resize((size, size), Image.LANCZOS)
+    except Exception:  # noqa: BLE001 - icons are decoration, never fatal
+        return None
+
+
 class SidebarNav(tb.Frame):
     """Minimal drop-in for tb.Notebook that renders a left nav rail + a single
     swapped content pane and a big page header (gaming-BIOS layout).
@@ -664,7 +802,7 @@ class SidebarNav(tb.Frame):
         self.rail.pack_propagate(False)
         tb.Separator(self, orient="vertical").pack(side="left", fill="y")
 
-        # Pinned area at the foot of the rail — packed first (side=bottom) so it
+        # Pinned area at the foot of the rail - packed first (side=bottom) so it
         # always reserves its height; About + Report a Bug live here and stay
         # visible no matter how far the scrollable list above is scrolled.
         self._rail_bottom = tb.Frame(self.rail, style="Nav.TFrame")
@@ -694,7 +832,7 @@ class SidebarNav(tb.Frame):
                                 anchor="w", padding=(24, 18, 12, 14))
         self._header.pack(side="left")
         # right-hand slot for a per-page action (ToolkitApp drops the
-        # "Apply section recommendations" button here) — kept well clear of the
+        # "Apply section recommendations" button here) - kept well clear of the
         # title so it can't be fat-fingered instead of a nav click
         self._header_actions = tb.Frame(header_row)
         self._header_actions.pack(side="right", padx=(0, 20))
@@ -718,7 +856,7 @@ class SidebarNav(tb.Frame):
         elif not need and self._nav_vsb.winfo_ismapped():
             self._nav_vsb.pack_forget()
 
-    # A small monochrome-glyph icon per nav label — the one visual habit every
+    # A small monochrome-glyph icon per nav label - the one visual habit every
     # peer tool researched (TuxedoControlCenter, asusctl/rog-control-center,
     # LenovoLegionLinux/Legion-Linux-Toolkit, LACT) shares that this sidebar
     # didn't: icon + label, not label alone. Plain Unicode symbols, not color
@@ -727,7 +865,8 @@ class SidebarNav(tb.Frame):
         "Dashboard": "▦", "Keyboard": "⌨", "Touchpad": "▢", "Fans": "❄",
         "Battery": "⏻", "VRAM": "▥", "Power & Limits": "⚡", "Display": "▭",
         "Profiles": "❖", "Presets": "★", "Setup Games": "♦", "Game Tools": "⚙",
-        "Updates": "⬇", "About": "ℹ", "Report a Bug": "⚠",
+        "Updates": "⬇", "About": "ℹ", "Report a Bug": "⚠", "MangoHud": "◔", "Proton & Runtimes": "⚛", "Drives": "⛃",
+        "Monitoring": "◉", "Streaming": "▶", "RGB": "✺",
         # data-driven tweak categories (config/tweaks.json "category" values)
         "Performance": "▲", "GPU": "◈", "Power": "☉", "Stability": "▣",
         "Gaming": "♞", "KDE (Desktop GUI Tweaks)": "◧", "Software": "⬢",
@@ -759,10 +898,24 @@ class SidebarNav(tb.Frame):
             self._rail_bottom_sep = tb.Separator(self._rail_bottom, orient="horizontal")
             self._rail_bottom_sep.pack(side="top", fill="x", padx=12, pady=(4, 2))
         base = "NavSupport.TButton" if kind == "support" else "Nav.TButton"
-        icon = self._NAV_ICONS.get(text, "")
-        label = f"{icon}  {text}" if icon else text
-        btn = tb.Button(parent, text=label, style=base,
-                        takefocus=False, command=lambda f=frame: self.select(f))
+        img = None
+        tile = nav_tile_image(text)
+        if tile is not None:
+            try:
+                from PIL import ImageTk
+                img = ImageTk.PhotoImage(tile, master=self)
+            except Exception:  # noqa: BLE001
+                img = None
+        if img is not None:
+            btn = tb.Button(parent, text=f"  {text}", image=img, compound="left",
+                            style=base, takefocus=False,
+                            command=lambda f=frame: self.select(f))
+            btn._nav_img = img  # noqa: SLF001 - keep a ref or Tk drops the image
+        else:
+            icon = self._NAV_ICONS.get(text, "")
+            label = f"{icon}  {text}" if icon else text
+            btn = tb.Button(parent, text=label, style=base,
+                            takefocus=False, command=lambda f=frame: self.select(f))
         btn.pack(side="top", fill="x", padx=0, pady=1)
         btn._nav_kind = kind  # noqa: SLF001
         self._pages.append((text, frame, btn))

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Diagnostics tab — the hardware-bundle collector UI and the "copy a full
+"""Diagnostics tab - the hardware-bundle collector UI and the "copy a full
 GitHub issue" flow. The heavy report-building functions live in
 tuxthrottle_diag. Extracted from tuxthrottle.py (module-split pass, 11th
 slice)."""
@@ -24,20 +24,20 @@ from tuxthrottle_gui_widgets import Card
 
 class DiagnosticsTabMixin:
     def _build_diagnostics_tab(self, outer):
-        # amber banner — this page is about GitHub issues / sending logs, not
+        # amber banner - this page is about GitHub issues / sending logs, not
         # changing the machine
         banner = tb.Frame(outer, style="SupportBanner.TFrame", padding=(16, 10))
         banner.pack(fill="x")
         tb.Label(
             banner, style="SupportBanner.TLabel", wraplength=1200, justify="left",
-            text="⚑  Bug reports & logs.  This page only READS your system — it gathers "
+            text="⚑  Bug reports & logs.  This page only READS your system - it gathers "
                  "hardware + OS + toolkit state so you can attach it to a GitHub issue. "
                  "Nothing is uploaded automatically: you Copy or Save the report and paste "
                  "it into the issue yourself. Review it for username / hostname first.",
         ).pack(anchor="w")
         tb.Separator(outer).pack(fill="x")
 
-        frame = tb.Frame(outer, padding=16)      # NOT _scroll_body — the report
+        frame = tb.Frame(outer, padding=16)      # NOT _scroll_body - the report
         frame.pack(fill="both", expand=True)     # box scrolls itself and must be tall
         self._diag_q: queue.Queue = queue.Queue()
         self._diag_running = False
@@ -73,7 +73,7 @@ class DiagnosticsTabMixin:
             command=self._collect_bundle)
         self._bundle_btn.pack(side="left")
         tb.Label(row2, bootstyle=SECONDARY,
-                 text="  — raw sysfs / DMI / evdev-keycaps / hwmon / PCI / OpenRGB dumps; "
+                 text="  - raw sysfs / DMI / evdev-keycaps / hwmon / PCI / OpenRGB dumps; "
                       "attach the file to a “new hardware support” issue").pack(side="left", padx=6)
 
         box = Card(
@@ -127,14 +127,14 @@ class DiagnosticsTabMixin:
         self._to_clipboard(GITHUB_ISSUE_TEMPLATE.replace(
             "PASTE THE DEBUG REPORT HERE",
             self._diag_raw.replace("```", "``​`").strip()))
-        self.status_var.set("Full issue (template + report) copied — paste it on GitHub.")
+        self.status_var.set("Full issue (template + report) copied - paste it on GitHub.")
 
     def _gen_diag(self):
         if self._diag_running:
             return
         self._diag_running = True
         self._diag_btn.configure(state="disabled", text="Collecting…")
-        self._set_diag("Collecting hardware / OS / toolkit info — ~15–30 s…\n")
+        self._set_diag("Collecting hardware / OS / toolkit info - ~15-30 s…\n")
         items = list(self.items.values())
 
         def work():

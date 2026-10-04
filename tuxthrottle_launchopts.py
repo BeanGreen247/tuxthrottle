@@ -1,30 +1,34 @@
 #!/usr/bin/env python3
 """Bulk-set Steam per-game **Launch Options** from one string.
 
-Steam has no global launch-options field — every game keeps its own in
+Steam has no global launch-options field - every game keeps its own in
 `userdata/<id>/config/localconfig.vdf` under
 `Software / Valve / Steam / apps / <appid> / LaunchOptions`. This writes the
 same string into every installed game at once (the TuxThrottle launch-options
 builder's "Apply to every game" button, or standalone).
 
 Usage:
-    python3 tuxthrottle_launchopts.py list
-    python3 tuxthrottle_launchopts.py set-all  '<string>'  [--only-empty] [--dry-run]
-    python3 tuxthrottle_launchopts.py set-all  --b64 <base64-of-string> [--only-empty] [--dry-run]
+    python3 tuxthrottle_launchopts.py list [--custom]
+    python3 tuxthrottle_launchopts.py set-all  '<string>'  [--only-empty] [--keep-custom] [--dry-run]
+    python3 tuxthrottle_launchopts.py set-all  --b64 <base64-of-string> [--only-empty] [--keep-custom] [--dry-run]
     python3 tuxthrottle_launchopts.py clear-all [--dry-run]
     python3 tuxthrottle_launchopts.py remove-token '<token>' [--dry-run]
     python3 tuxthrottle_launchopts.py remove-token --b64 <base64-of-token> [--dry-run]
 
 `remove-token` strips one token (e.g. a flag you bulk-applied earlier and
 have since decided against) out of *whichever* game's LaunchOptions contains
-it, leaving the rest of that game's string intact — unlike `set-all`, which
+it, leaving the rest of that game's string intact - unlike `set-all`, which
 replaces the whole string everywhere.
 
 Rules:
-  * Steam must be **closed** — it rewrites localconfig.vdf on exit and would
+  * Steam must be **closed** - it rewrites localconfig.vdf on exit and would
     clobber the change (the script refuses while `steam` is running).
   * every localconfig.vdf is copied to `*.tuxthrottle-bak-<epoch>` first.
   * `--only-empty` skips games that already have a non-empty LaunchOptions.
+  * `--keep-custom` rewrites only the games that are empty or still carry the
+    *default* string (the one most games share - i.e. the last bulk apply) and
+    leaves every game with its own hand-tuned options alone. `list --custom`
+    prints that default and the games that deviate from it.
   * run as your normal user, not root.
 """
 from __future__ import annotations
@@ -41,7 +45,7 @@ APPS_PATH = ("Software", "Valve", "Steam", "apps")  # under the file's root key
 
 
 # --------------------------------------------------------------------------- #
-#  VDF load/dump — use the `vdf` module when present, else a small parser
+#  VDF load/dump - use the `vdf` module when present, else a small parser
 # --------------------------------------------------------------------------- #
 def _load(path: Path) -> dict:
     try:
@@ -234,10 +238,51 @@ def _iter_games(apps: dict):
 # --------------------------------------------------------------------------- #
 #  commands
 # --------------------------------------------------------------------------- #
+def baseline(apps: dict) -> str:
+    """The 'default' launch-options string: the non-empty value most games
+    share (what the last bulk apply wrote). '' when no game has options."""
+    counts: dict[str, int] = {}
+    for _aid, e in _iter_games(apps):
+        cur = _ci_get(e, "LaunchOptions") or ""
+        if cur:
+            counts[cur] = counts.get(cur, 0) + 1
+    return max(counts, key=lambda k: counts[k]) if counts else ""
+
+
+def do_list_custom() -> int:
+    files = find_localconfigs()
+    if not files:
+        print("no localconfig.vdf found - is Steam installed for this user?")
+        return 1
+    for lc in files:
+        apps = _apps_dict(_load(lc))
+        acct = lc.parent.parent.name
+        if not apps:
+            print(f"[{acct}] no apps block in {lc}")
+            continue
+        base = baseline(apps)
+        rows = [(aid, _ci_get(e, "LaunchOptions") or "") for aid, e in _iter_games(apps)]
+        custom = [(a, o) for a, o in rows if o and o != base]
+        print(f"[{acct}] default ({sum(1 for _a, o in rows if o == base and o)} games): "
+              f"{base or '-'}")
+        print(f"[{acct}] {len(custom)} game(s) with their own options:")
+        base_set = set(base.split())
+        for aid, opt in sorted(custom, key=lambda r: int(r[0])):
+            toks = opt.split()
+            added = [t for t in toks if t not in base_set]
+            dropped = [t for t in base.split() if t not in toks]
+            print(f"  {aid:<8}  {opt}")
+            if added:
+                print(f"            + {' '.join(added)}")
+            if dropped:
+                print(f"            - {' '.join(dropped)}")
+    return 0
+
+
 def do_list() -> int:
     files = find_localconfigs()
     if not files:
-        print("no localconfig.vdf found — is Steam installed for this user?")
+        print("no localconfig.vdf found - is Steam installed for this user?")
         return 1
     for lc in files:
         cfg = _load(lc)
@@ -249,18 +294,19 @@ def do_list() -> int:
         rows = [(aid, _ci_get(e, "LaunchOptions") or "") for aid, e in _iter_games(apps)]
         print(f"[{acct}] {len(rows)} games in {lc}")
         for aid, opt in sorted(rows, key=lambda r: int(r[0])):
-            print(f"  {aid:<8}  {opt}" if opt else f"  {aid:<8}  —")
+            print(f"  {aid:<8}  {opt}" if opt else f"  {aid:<8}  -")
     return 0
 
 
-def _write_all(value: str, only_empty: bool, dry: bool) -> int:
+def _write_all(value: str, only_empty: bool, dry: bool,
+               keep_custom: bool = False) -> int:
     if steam_running():
-        print("Steam is running — quit Steam completely first (it overwrites "
+        print("Steam is running - quit Steam completely first (it overwrites "
               "localconfig.vdf on exit).")
         return 2
     files = find_localconfigs()
     if not files:
-        print("no localconfig.vdf found — is Steam installed for this user?")
+        print("no localconfig.vdf found - is Steam installed for this user?")
         return 1
     total = 0
     for lc in files:
@@ -269,10 +315,14 @@ def _write_all(value: str, only_empty: bool, dry: bool) -> int:
         if not apps:
             print(f"  skip {lc} (no apps block)")
             continue
-        changed = 0
+        changed = kept = 0
+        base = baseline(apps) if keep_custom else ""
         for _aid, entry in _iter_games(apps):
             cur = _ci_get(entry, "LaunchOptions")
             if only_empty and cur:
+                continue
+            if keep_custom and cur and cur != base:
+                kept += 1
                 continue
             if cur == value:
                 continue
@@ -282,6 +332,9 @@ def _write_all(value: str, only_empty: bool, dry: bool) -> int:
                     del entry[k]
             entry["LaunchOptions"] = value
             changed += 1
+        if kept:
+            print(f"  {lc.parent.parent.name}: left {kept} game(s) with their "
+                  f"own options untouched")
         if not changed:
             print(f"  {lc.parent.parent.name}: nothing to change")
             continue
@@ -296,21 +349,21 @@ def _write_all(value: str, only_empty: bool, dry: bool) -> int:
         total += changed
     verb = "would set" if dry else "set"
     print(f"{verb} LaunchOptions on {total} game(s)"
-          + ("" if dry else " — restart Steam to pick it up"))
+          + ("" if dry else " - restart Steam to pick it up"))
     return 0
 
 
 def _remove_token(token: str, dry: bool) -> int:
     if not token.strip():
-        print("empty token — nothing to remove")
+        print("empty token - nothing to remove")
         return 1
     if steam_running():
-        print("Steam is running — quit Steam completely first (it overwrites "
+        print("Steam is running - quit Steam completely first (it overwrites "
               "localconfig.vdf on exit).")
         return 2
     files = find_localconfigs()
     if not files:
-        print("no localconfig.vdf found — is Steam installed for this user?")
+        print("no localconfig.vdf found - is Steam installed for this user?")
         return 1
     total = 0
     for lc in files:
@@ -344,7 +397,7 @@ def _remove_token(token: str, dry: bool) -> int:
         total += changed
     verb = "would strip" if dry else "stripped"
     print(f"{verb} {token!r} from {total} game(s)"
-          + ("" if dry else " — restart Steam to pick it up"))
+          + ("" if dry else " - restart Steam to pick it up"))
     return 0
 
 
@@ -360,7 +413,7 @@ def main() -> int:
     pos = [a for a in rest if not a.startswith("-")]
 
     if cmd == "list":
-        return do_list()
+        return do_list_custom() if "--custom" in rest else do_list()
     if cmd == "clear-all":
         return _write_all("", only_empty=False, dry=dry)
     if cmd == "set-all":
@@ -373,7 +426,8 @@ def main() -> int:
             value = pos[0]
         else:
             sys.exit('set-all needs the launch-options string (or --b64 <blob>)')
-        return _write_all(value, only_empty=only_empty, dry=dry)
+        return _write_all(value, only_empty=only_empty, dry=dry,
+                          keep_custom="--keep-custom" in rest)
     if cmd == "remove-token":
         if "--b64" in rest:
             try:

@@ -1,4 +1,4 @@
-"""tuxthrottle_mangohud_status.py — enable/disable state and the targeted
+"""tuxthrottle_mangohud_status.py - enable/disable state and the targeted
 custom_text_center= line rewrite. No real MangoHud/tray needed.
 """
 import tuxthrottle_mangohud_status as mhs

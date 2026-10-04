@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Keyboard RGB tab — extracted from tuxthrottle.py (module-split pass,
+"""Keyboard RGB tab - extracted from tuxthrottle.py (module-split pass,
 third slice). A mixin: KeyboardTabMixin defines methods that only ever
 run as part of a ToolkitApp instance (self.root, self.user, self._log,
-self._tip, ... all still resolve normally — Python looks those up on
+self._tip, ... all still resolve normally - Python looks those up on
 the instance/MRO at call time, not by which file defines the method)."""
 import shutil
 import subprocess
@@ -41,7 +41,7 @@ class KeyboardTabMixin:
                 frame, bootstyle=WARNING, justify="left", wraplength=1000,
                 text="Install the OpenRGB app (Software tab) to use this.\n\n"
                      "The G15 5515's AW-ELC keyboard has no kernel driver and ignores raw HID "
-                     "writes — OpenRGB's 16-zone protocol is the only thing that drives it. "
+                     "writes - OpenRGB's 16-zone protocol is the only thing that drives it. "
                      "The backlight must also be enabled in BIOS setup (F2 -> Keyboard "
                      "Backlight) or nothing lights.",
             ).pack(anchor="w")
@@ -59,11 +59,11 @@ class KeyboardTabMixin:
         tb.Label(
             note, wraplength=1100, justify="left", bootstyle=SECONDARY,
             text="Driven through OpenRGB (the AW-ELC has no kernel driver). Enable the backlight "
-                 "in BIOS setup (F2 -> Keyboard Backlight) first — if the keys stay dark, that's "
+                 "in BIOS setup (F2 -> Keyboard Backlight) first - if the keys stay dark, that's "
                  "why. This keyboard is a single controllable zone: it does one solid colour "
                  "(pick or preset), a brightness level, or the firmware Spectrum Cycle. There is "
-                 "no per-zone colour or gradient — the hardware ignores zone-scoped writes. "
-                 "Colours don't survive a reboot on their own — apply the KbdBacklightFix tweak "
+                 "no per-zone colour or gradient - the hardware ignores zone-scoped writes. "
+                 "Colours don't survive a reboot on their own - apply the KbdBacklightFix tweak "
                  "(Power tab) to re-assert the last setting at login and after resume.",
         ).pack(anchor="w")
 
@@ -119,7 +119,7 @@ class KeyboardTabMixin:
             variable=self.kbd_match_accent, bootstyle="round-toggle",
             command=self._kbd_toggle_accent),
             "On: the keyboard takes the Plasma accent now and re-reads the "
-            "CURRENT accent on every re-assert (login, resume, tray start) — it "
+            "CURRENT accent on every re-assert (login, resume, tray start) - it "
             "follows the accent if you change it later. Turning this on turns "
             "off the option below.").pack(anchor="w")
         self._kbd_push_toggle = self._tip(tb.Checkbutton(
@@ -128,7 +128,7 @@ class KeyboardTabMixin:
             command=self._kbd_toggle_push),
             "On: every keyboard colour you set here is also written into "
             "Plasma's accent-colour setting (kdeglobals AccentColor), with "
-            "accent-from-wallpaper turned off — the desktop repaints to match. "
+            "accent-from-wallpaper turned off - the desktop repaints to match. "
             "Disabled while Spectrum Cycle is running (no single colour to "
             "copy). Turning this on turns off the option above.")
         self._kbd_push_toggle.pack(anchor="w", pady=(6, 0))
@@ -181,7 +181,7 @@ class KeyboardTabMixin:
 
     def _kbd_run(self, fn, desc: str):
         if self._kbd_busy:
-            self._log("[Keyboard] busy — try again in a moment")
+            self._log("[Keyboard] busy - try again in a moment")
             return
         self._kbd_busy = True
         self._log(f"[Keyboard] {desc} …")
@@ -206,14 +206,14 @@ class KeyboardTabMixin:
         return dict.fromkeys(range(tuxthrottle_kbd.ZONE_COUNT), rgb)
 
     def _kbd_static_mode(self) -> str:
-        """The mode string to persist for a static-colour apply — 'accent'
+        """The mode string to persist for a static-colour apply - 'accent'
         while the keyboard-follows-accent toggle is on, else 'zones'."""
         return "accent" if getattr(self, "kbd_match_accent", None) is not None \
             and self.kbd_match_accent.get() else "zones"
 
     def _kbd_refresh_accent_ui(self):
         """'Desktop accent follows the keyboard' only makes sense for a static
-        colour — disable it while Spectrum Cycle runs. The other toggle stays
+        colour - disable it while Spectrum Cycle runs. The other toggle stays
         enabled always (ticking it just switches the keyboard to a colour)."""
         tog = getattr(self, "_kbd_push_toggle", None)
         if tog is None:
@@ -329,7 +329,7 @@ class KeyboardTabMixin:
         def work():
             sc = sensors.session_cmd
             applied = False
-            # accent-only: NO positional colour-scheme arg — that would force
+            # accent-only: NO positional colour-scheme arg - that would force
             # BreezeLight/Dark and flip the whole session's light/dark mode.
             if shutil.which("plasma-apply-colorscheme"):
                 try:

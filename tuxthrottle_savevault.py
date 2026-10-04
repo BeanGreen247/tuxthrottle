@@ -12,7 +12,7 @@ drive) that holds a copy of each game's save data, laid out as:
 
 Export copies those folders out of a prefix into the vault; import copies
 them back in. Either can target one AppID or `all` prefixes. Nothing is
-deleted — copies overwrite by newest-wins file copy (shutil.copy2).
+deleted - copies overwrite by newest-wins file copy (shutil.copy2).
 
 Usage:
     python3 tuxthrottle_savevault.py list   <vault>
@@ -38,7 +38,7 @@ from tuxthrottle_prefix_relocate import (
 )
 
 # folders under pfx/drive_c/users/steamuser/ worth backing up (save/config
-# data; deliberately NOT AppData/Local — mostly shader/cache bulk)
+# data; deliberately NOT AppData/Local - mostly shader/cache bulk)
 SAVE_FOLDERS = ["Documents", "Saved Games", "AppData/Roaming", "AppData/LocalLow"]
 
 
@@ -56,7 +56,7 @@ def check_vault(raw: str, *, create: bool) -> Path:
     if not probe.exists():
         sys.exit(f"path does not exist: {p}")
     if probe.stat().st_dev == home_dev():
-        sys.exit("the save vault must be on a SEPARATE drive — not the OS / Steam "
+        sys.exit("the save vault must be on a SEPARATE drive - not the OS / Steam "
                  f"drive. {p} is on the same filesystem as your home directory.")
     if create:
         try:
@@ -102,7 +102,7 @@ def export_one(root: Path, appid: str, vault: Path) -> int:
     name = appid_name(root, appid) or appid
     su = steamuser(root, appid)
     if su is None:
-        print(f"  {name} ({appid}): no prefix on disk — launch it once first")
+        print(f"  {name} ({appid}): no prefix on disk - launch it once first")
         return 0
     box = vault / appid
     copied = 0
@@ -137,7 +137,7 @@ def import_one(root: Path, appid: str, vault: Path) -> int:
         return 0
     su = steamuser(root, appid)
     if su is None:
-        print(f"  {name} ({appid}): no prefix on disk — launch it once first")
+        print(f"  {name} ({appid}): no prefix on disk - launch it once first")
         return 0
     got = 0
     for rel in SAVE_FOLDERS:
@@ -193,7 +193,7 @@ def main() -> int:
     vault = check_vault(raw_vault, create=(mode == "export"))
 
     if mode == "import" and steam_running():
-        sys.exit("Steam is running — close Steam (and every game) first, then retry.")
+        sys.exit("Steam is running - close Steam (and every game) first, then retry.")
 
     if who == "all":
         if mode == "export":
@@ -207,7 +207,7 @@ def main() -> int:
         print(f"{mode}: {len(targets)} game(s)\n")
         for ap in targets:
             (export_one if mode == "export" else import_one)(root, ap, vault)
-        print(f"\ndone — vault: {vault}")
+        print(f"\ndone - vault: {vault}")
         return 0
 
     if not who.isdigit():

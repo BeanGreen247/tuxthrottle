@@ -1,4 +1,4 @@
-"""Phase 3.1 — battery_health_info() reads the power-supply sysfs and derives
+"""Phase 3.1 - battery_health_info() reads the power-supply sysfs and derives
 wear %. Model-agnostic; tested against a faked sysfs tree.
 """
 import sensors

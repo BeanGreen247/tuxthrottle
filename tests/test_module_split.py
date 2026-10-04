@@ -3,10 +3,10 @@ tuxthrottle.py into mixin classes that ToolkitApp multiply-inherits. Two
 failure modes this locks down:
 
   * a method left duplicated on ToolkitApp *and* a mixin (dead, MRO-shadowed
-    twin — exactly the Profiles-tab bug found mid-refactor), and
+    twin - exactly the Profiles-tab bug found mid-refactor), and
   * a method name colliding across two mixins ToolkitApp inherits.
 
-Pure AST parsing — no ttkbootstrap / Tk import needed, so it runs everywhere.
+Pure AST parsing - no ttkbootstrap / Tk import needed, so it runs everywhere.
 """
 import ast
 import pathlib
@@ -78,4 +78,4 @@ def test_toolkitapp_inherits_every_mixin():
 
 def test_monolith_stayed_shrunk():
     lines = (ROOT / "tuxthrottle.py").read_text().count("\n")
-    assert lines < 2200, f"tuxthrottle.py regrew to {lines} lines — extract new tab code into a mixin"
+    assert lines < 2200, f"tuxthrottle.py regrew to {lines} lines - extract new tab code into a mixin"

@@ -39,7 +39,7 @@
   },
   "I8kutils": {
     "Content": "i8kutils (fan control)",
-    "Description": "DAMX's fan-control-tab equivalent \u2014 Dell's dell-smm-hwmon kernel driver plus i8kutils/i8kmon for manual or auto fan speed. Not confirmed supported on the G15 5515 specifically (dell-smm-hwmon uses a per-model whitelist, may need the 'force=1' module option) \u2014 best-effort like the RGB item.",
+    "Description": "DAMX's fan-control-tab equivalent - Dell's dell-smm-hwmon kernel driver plus i8kutils/i8kmon for manual or auto fan speed. Not confirmed supported on the G15 5515 specifically (dell-smm-hwmon uses a per-model whitelist, may need the 'force=1' module option) - best-effort like the RGB item.",
     "category": "Power",
     "manager": "shell",
     "check": "test -f /etc/modprobe.d/tuxthrottle-fan.conf",
@@ -52,7 +52,7 @@
   },
   "AutoCpufreq": {
     "Content": "auto-cpufreq",
-    "Description": "Dynamic CPU governor switching for the 5800H. Pick this OR the TLP tweak, not both \u2014 they fight over the governor.",
+    "Description": "Dynamic CPU governor switching for the 5800H. Pick this OR the TLP tweak, not both - they fight over the governor.",
     "category": "Power",
     "manager": "shell",
     "check": "command -v auto-cpufreq >/dev/null",
@@ -64,7 +64,7 @@
   },
   "RyzenAdj": {
     "Content": "ryzenadj",
-    "Description": "CPU undervolt tool for the 5800H \u2014 worth trying against the freeze issue as an alternative to the C-state fix. Needs manual per-boot tuning afterward; start conservative.",
+    "Description": "CPU undervolt tool for the 5800H - worth trying against the freeze issue as an alternative to the C-state fix. Needs manual per-boot tuning afterward; start conservative.",
     "category": "GPU",
     "manager": "shell",
     "check": "command -v ryzenadj >/dev/null",
@@ -82,7 +82,7 @@
     "package": "steam",
     "check": "rpm -q steam >/dev/null 2>&1",
     "binary": "steam",
-    "note": "Native RPM (RPM Fusion) \u2014 the SteamOS-style approach: Steam itself then manages Proton and the Steam Linux Runtime containers. A Flatpak Steam is deliberately NOT treated as satisfying this; its sandbox complicates controller access, external game drives, mods and LD_PRELOAD layers (MangoHud / gamescope / vkBasalt)."
+    "note": "Native RPM (RPM Fusion) - the SteamOS-style approach: Steam itself then manages Proton and the Steam Linux Runtime containers. A Flatpak Steam is deliberately NOT treated as satisfying this; its sandbox complicates controller access, external game drives, mods and LD_PRELOAD layers (MangoHud / gamescope / vkBasalt)."
   },
   "Lutris": {
     "Content": "Lutris",
@@ -138,7 +138,7 @@
   },
   "Gamescope": {
     "Content": "gamescope",
-    "Description": "Valve's micro-compositor \u2014 resolution scaling / HDR / borderless-fullscreen fixes.",
+    "Description": "Valve's micro-compositor - resolution scaling / HDR / borderless-fullscreen fixes.",
     "category": "Gaming",
     "manager": "dnf",
     "package": "gamescope",
@@ -147,7 +147,7 @@
   },
   "OpenRGB": {
     "Content": "OpenRGB",
-    "Description": "Vendor-agnostic RGB control. Best-effort for the AW-ELC per-key keyboard controller \u2014 not guaranteed to work on this model.",
+    "Description": "Vendor-agnostic RGB control. Best-effort for the AW-ELC per-key keyboard controller - not guaranteed to work on this model.",
     "category": "RGB",
     "manager": "dnf",
     "package": "openrgb",
@@ -236,7 +236,7 @@
   },
   "Moonlight": {
     "Content": "Moonlight",
-    "Description": "Game-streaming client \u2014 stream FROM another PC/host TO this laptop.",
+    "Description": "Game-streaming client - stream FROM another PC/host TO this laptop.",
     "category": "Streaming",
     "manager": "flatpak",
     "package": "com.moonlight_stream.Moonlight",
@@ -246,21 +246,9 @@
       "rpm -q moonlight-qt >/dev/null 2>&1"
     ]
   },
-  "ProtonUpQt": {
-    "Content": "ProtonUp-Qt",
-    "Description": "One-click installer/manager for GE-Proton, Wine-GE and Luxtorpeda into Steam and Lutris. The easy way to get a current custom Proton for GTA V. See the 'GTA V Online' section of the README for the full recipe.",
-    "category": "Gaming",
-    "manager": "flatpak",
-    "package": "net.davidotek.pupgui2",
-    "check": "flatpak list 2>/dev/null | grep -q net.davidotek.pupgui2",
-    "binary": "protonup-qt",
-    "provides": [
-      "rpm -q protonup-qt >/dev/null 2>&1"
-    ]
-  },
   "Protontricks": {
     "Content": "Protontricks",
-    "Description": "winetricks for Steam/Proton prefixes \u2014 install DLLs/fonts (vcrun2019, d3dcompiler_47, corefonts\u2026) into a specific game's Proton prefix. Needed for the Rockstar launcher / Social Club under Proton.",
+    "Description": "winetricks for Steam/Proton prefixes - install DLLs/fonts (vcrun2019, d3dcompiler_47, corefonts\u2026) into a specific game's Proton prefix. Needed for the Rockstar launcher / Social Club under Proton.",
     "category": "Gaming",
     "manager": "dnf",
     "package": "protontricks",
@@ -275,7 +263,7 @@
   },
   "Bottles": {
     "Content": "Bottles",
-    "Description": "Isolated Wine-prefix manager with bundled Wine-GE/Soda runners and a dependency installer \u2014 the non-Steam path for the Rockstar Games Launcher + GTA V. See the README's 'GTA V Online' section.",
+    "Description": "Isolated Wine-prefix manager with bundled Wine-GE/Soda runners and a dependency installer - the non-Steam path for the Rockstar Games Launcher + GTA V. See the README's 'GTA V Online' section.",
     "category": "Gaming",
     "manager": "dnf",
     "package": "bottles",
@@ -289,27 +277,27 @@
   },
   "ProtonBattlEyeRuntime": {
     "Content": "Steam: Proton BattlEye Runtime",
-    "Description": "GTA Online uses BattlEye anti-cheat; Proton needs this runtime tool (Steam app 1161040) for it to load. Triggers a Steam install of it \u2014 Steam must be installed and will open. If it doesn't take, install 'Proton BattlEye Runtime' from your Steam library's Tools section manually.",
+    "Description": "GTA Online uses BattlEye anti-cheat; Proton needs this runtime tool (Steam app 1161040) for it to load. Triggers a Steam install of it - Steam must be installed and will open. If it doesn't take, install 'Proton BattlEye Runtime' from your Steam library's Tools section manually.",
     "category": "Gaming",
     "manager": "shell",
     "check": "test -d /home/{USER}/.steam/steam/steamapps/common/'Proton BattlEye Runtime' -o -d /home/{USER}/.local/share/Steam/steamapps/common/'Proton BattlEye Runtime'",
     "install": [
-      "su - {USER} -c 'timeout 30 steam steam://install/1161040 >/dev/null 2>&1 || true'"
+      "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py steam-install 1161040'"
     ]
   },
   "ProtonEacRuntime": {
     "Content": "Steam: Proton EasyAntiCheat Runtime",
-    "Description": "Some Rockstar/other titles use EasyAntiCheat; this is the Proton runtime tool for it (Steam app 1826330). Same behaviour as the BattlEye runtime entry \u2014 opens Steam to install it.",
+    "Description": "Some Rockstar/other titles use EasyAntiCheat; this is the Proton runtime tool for it (Steam app 1826330). Same behaviour as the BattlEye runtime entry - opens Steam to install it.",
     "category": "Gaming",
     "manager": "shell",
     "check": "test -d /home/{USER}/.steam/steam/steamapps/common/'Proton EasyAntiCheat Runtime' -o -d /home/{USER}/.local/share/Steam/steamapps/common/'Proton EasyAntiCheat Runtime'",
     "install": [
-      "su - {USER} -c 'timeout 30 steam steam://install/1826330 >/dev/null 2>&1 || true'"
+      "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py steam-install 1826330'"
     ]
   },
   "VkBasalt": {
     "Content": "vkBasalt",
-    "Description": "Vulkan post-processing layer (CAS sharpening, FXAA, SMAA) \u2014 cheap image-quality boost for games, toggle in-game with a hotkey.",
+    "Description": "Vulkan post-processing layer (CAS sharpening, FXAA, SMAA) - cheap image-quality boost for games, toggle in-game with a hotkey.",
     "category": "Gaming",
     "manager": "dnf",
     "package": "vkBasalt",
@@ -321,7 +309,7 @@
   },
   "PrismLauncher": {
     "Content": "Prism Launcher",
-    "Description": "Open-source Minecraft launcher \u2014 manage multiple instances, mod loaders (Fabric/Forge/Quilt/NeoForge) and modpacks side by side. The recommended MC launcher.",
+    "Description": "Open-source Minecraft launcher - manage multiple instances, mod loaders (Fabric/Forge/Quilt/NeoForge) and modpacks side by side. The recommended MC launcher.",
     "category": "Gaming",
     "manager": "dnf",
     "package": "prismlauncher",
@@ -335,7 +323,7 @@
   },
   "ModrinthApp": {
     "Content": "Modrinth App",
-    "Description": "Modrinth's own Minecraft launcher \u2014 one-click modpack install and mod management from the Modrinth catalogue.",
+    "Description": "Modrinth's own Minecraft launcher - one-click modpack install and mod management from the Modrinth catalogue.",
     "category": "Gaming",
     "manager": "flatpak",
     "package": "com.modrinth.ModrinthApp",
@@ -353,7 +341,7 @@
   },
   "ItchIo": {
     "Content": "itch",
-    "Description": "The itch.io desktop app \u2014 install, update and launch indie games and jam builds.",
+    "Description": "The itch.io desktop app - install, update and launch indie games and jam builds.",
     "category": "Gaming",
     "manager": "flatpak",
     "package": "io.itch.itch",
@@ -362,7 +350,7 @@
   },
   "Minigalaxy": {
     "Content": "Minigalaxy",
-    "Description": "Lightweight GOG client \u2014 download and install your DRM-free GOG library without the Heroic/Lutris overhead.",
+    "Description": "Lightweight GOG client - download and install your DRM-free GOG library without the Heroic/Lutris overhead.",
     "category": "Gaming",
     "manager": "dnf",
     "package": "minigalaxy",
@@ -376,7 +364,7 @@
   },
   "Cartridges": {
     "Content": "Cartridges",
-    "Description": "Unified game library \u2014 auto-imports Steam, Heroic, Lutris, Bottles, itch and Flatpak games into one launcher grid.",
+    "Description": "Unified game library - auto-imports Steam, Heroic, Lutris, Bottles, itch and Flatpak games into one launcher grid.",
     "category": "Gaming",
     "manager": "flatpak",
     "package": "page.kramo.Cartridges",
@@ -387,7 +375,7 @@
   },
   "SteamRomManager": {
     "Content": "Steam ROM Manager",
-    "Description": "Bulk-add non-Steam games and emulator ROMs to Steam with artwork from SteamGridDB \u2014 great for Big Picture / controller use.",
+    "Description": "Bulk-add non-Steam games and emulator ROMs to Steam with artwork from SteamGridDB - great for Big Picture / controller use.",
     "category": "Gaming",
     "manager": "flatpak",
     "package": "com.steamgriddb.steam-rom-manager",
@@ -408,7 +396,7 @@
   },
   "NtfsSupport": {
     "Content": "NTFS read/write support",
-    "Description": "Windows/dual-boot drives: the in-kernel ntfs3 driver (read/write) plus ntfs-3g (FUSE fallback) and ntfsprogs (mkfs.ntfs / ntfsfix). Nobara normally ships all of this already \u2014 this entry just confirms it and reinstalls if something's missing.",
+    "Description": "Windows/dual-boot drives: the in-kernel ntfs3 driver (read/write) plus ntfs-3g (FUSE fallback) and ntfsprogs (mkfs.ntfs / ntfsfix). Nobara normally ships all of this already - this entry just confirms it and reinstalls if something's missing.",
     "category": "Software",
     "manager": "shell",
     "check": "rpm -q ntfs-3g ntfsprogs >/dev/null 2>&1 && command -v mkfs.ntfs mount.ntfs-3g >/dev/null 2>&1",
@@ -471,20 +459,6 @@
       "sudo -u {USER} flatpak info io.github.Faugus.faugus-launcher >/dev/null 2>&1"
     ],
     "flatpak_id": "io.github.Faugus.faugus-launcher"
-  },
-  "ProtonPlus": {
-    "Content": "ProtonPlus",
-    "Description": "Install/manage GE-Proton, Proton-CachyOS, Wine-GE, DXVK/VKD3D builds for Steam, Lutris, Heroic and Bottles from one window (a newer alternative to ProtonUp-Qt).",
-    "category": "Gaming",
-    "manager": "dnf",
-    "package": "protonplus",
-    "check": "rpm -q protonplus >/dev/null 2>&1",
-    "binary": "protonplus",
-    "provides": [
-      "flatpak info com.vysp3r.ProtonPlus >/dev/null 2>&1",
-      "sudo -u {USER} flatpak info com.vysp3r.ProtonPlus >/dev/null 2>&1"
-    ],
-    "flatpak_id": "com.vysp3r.ProtonPlus"
   },
   "UmuLauncher": {
     "Content": "umu-launcher",

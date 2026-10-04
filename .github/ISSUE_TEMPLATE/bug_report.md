@@ -8,7 +8,7 @@ labels: bug
 <!--
 This tool currently targets ONE machine: the Dell G15 5515 Ryzen Edition
 (Ryzen 7 5800H + RTX 3050 Ti Mobile) on Nobara Linux. Broader gaming-laptop
-support is on the roadmap but not here yet — on other hardware/distros most
+support is on the roadmap but not here yet - on other hardware/distros most
 checks and tweaks simply won't apply.
 -->
 
@@ -28,8 +28,8 @@ checks and tweaks simply won't apply.
 
 ### Your hardware / OS
 - [ ] Dell G15 5515 Ryzen Edition + Nobara  (the supported target)
-- [ ] a close relative (other G15 / other Dell AMD+NVIDIA hybrid) — which:
-- [ ] something else — which:
+- [ ] a close relative (other G15 / other Dell AMD+NVIDIA hybrid) - which:
+- [ ] something else - which:
 
 ### Debug report
 <!--

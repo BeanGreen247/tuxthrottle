@@ -8,7 +8,7 @@
 # /dellg15-toolkit, menu entry, hicolor icons). The new uninstall.sh only
 # knows the "tuxthrottle-*" names, so it can't see these. Run this once.
 #
-# It only ever removes paths whose name contains "dellg15" — it will not
+# It only ever removes paths whose name contains "dellg15" - it will not
 # touch your fstab data-disk mounts, the Game-Mode helper scripts, or any
 # tuxthrottle-* install.
 #
@@ -42,11 +42,11 @@ if [[ -n "$U" ]]; then
     UHOME="$(getent passwd "$U" | cut -d: -f6)"
     URUN="/run/user/$(id -u "$U" 2>/dev/null || echo 1000)"
 else
-    c_warn "couldn't determine the desktop user — per-user files won't be cleaned"
+    c_warn "couldn't determine the desktop user - per-user files won't be cleaned"
     UHOME="" URUN=""
 fi
 
-# do() — run a command, or just print it under --dry-run
+# do() - run a command, or just print it under --dry-run
 run() { if [[ $DRY -eq 1 ]]; then printf '   would: %s\n' "$*"; else "$@" >/dev/null 2>&1 || true; fi; }
 urun() {
     [[ -n "$U" ]] || return 0
@@ -80,7 +80,7 @@ if [[ $MIGRATE -eq 1 && -n "$UHOME" ]]; then
     NEW="$UHOME/.config/tuxthrottle"
     if [[ -d "$OLD" ]]; then
         if [[ -d "$NEW" ]]; then
-            c_warn "$NEW already exists — not overwriting; old files will just be deleted"
+            c_warn "$NEW already exists - not overwriting; old files will just be deleted"
         else
             run mkdir -p "$NEW"
             run sh -c "cp -a '$OLD/.' '$NEW/'"
@@ -148,5 +148,5 @@ if grep -qs 'dellg15-toolkit AutoMountDrives' /etc/fstab; then
     c_warn "left /etc/fstab AutoMountDrives block intact (it mounts your data disks)."
     c_warn "  re-add it from the new tool if you want, or edit the marker by hand."
 fi
-c_ok "Legacy dellg15-* cleanup done.$([[ $DRY -eq 1 ]] && echo '  (dry run — nothing changed)')"
+c_ok "Legacy dellg15-* cleanup done.$([[ $DRY -eq 1 ]] && echo '  (dry run - nothing changed)')"
 echo

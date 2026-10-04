@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Btrfs filesystem-level snapshot-before-apply — stdlib only, no GUI deps.
+"""Btrfs filesystem-level snapshot-before-apply - stdlib only, no GUI deps.
 
 `tuxthrottle_profiles.snapshot()` already captures a JSON *config* snapshot
 (platform_profile, TDP, fan curve, ...) before anything risky. This module is
@@ -7,15 +7,15 @@ the complementary filesystem-level safety net the CachyOS "rollback is
 chef's kiss" habit is built on: on a Btrfs root, take a real read-only
 subvolume snapshot before a risky batch of tweaks runs, so a change that
 breaks the *system* (not just TuxThrottle's own config) can still be undone
-by booting into the snapshot — the standard `snapper rollback` /
+by booting into the snapshot - the standard `snapper rollback` /
 `grub-btrfs` flow, not anything this module reimplements itself.
 
 Deliberately narrow scope: this module only *creates* snapshots. It never
-touches the bootloader, the default subvolume, or does the actual rollback —
+touches the bootloader, the default subvolume, or does the actual rollback -
 that is `snapper rollback <number>` (well-tested, standard tooling) followed
 by a reboot, left to the user/CLI printing the exact command. Reimplementing
 subvolume-swap logic here would be the same class of mistake as the reverted
-D-Bus policy that bricked boot (see project memory) — this stays additive
+D-Bus policy that bricked boot (see project memory) - this stays additive
 and safe-by-construction: if Btrfs/snapper aren't there or don't cooperate,
 every function reports "unavailable" and TuxThrottle proceeds without one.
 
@@ -74,12 +74,12 @@ def available() -> bool:
 
 
 def create_snapshot(description: str = "pre-apply") -> dict:
-    """Take a read-only snapshot before a risky change. Best-effort — never
+    """Take a read-only snapshot before a risky change. Best-effort - never
     raises; callers should log `msg` either way and proceed regardless."""
     m = method()
     if m is None:
         return {"ok": False, "method": None, "id": None,
-                "msg": "not on a Btrfs root with snapper configured — skipped"}
+                "msg": "not on a Btrfs root with snapper configured - skipped"}
 
     if m == "snapper":
         try:
@@ -103,7 +103,7 @@ def create_snapshot(description: str = "pre-apply") -> dict:
 
 def list_snapshots(limit: int = 10) -> list[dict]:
     """Recent TuxThrottle-created snapshots, newest first. Empty if snapper
-    isn't available — this never falls back to guessing raw subvolume paths."""
+    isn't available - this never falls back to guessing raw subvolume paths."""
     if not snapper_available():
         return []
     try:
@@ -133,7 +133,7 @@ def list_snapshots(limit: int = 10) -> list[dict]:
 
 
 def rollback_hint(number: str) -> str:
-    """The exact command the user runs to actually roll back — this module
+    """The exact command the user runs to actually roll back - this module
     never runs it itself (see module docstring)."""
     return f"sudo snapper -c {SNAPPER_CONFIG} rollback {number}   # then reboot"
 
