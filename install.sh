@@ -39,7 +39,7 @@ refresh_caches() {
 
 do_uninstall() {
     c_info "Removing ${APPID}…"
-    rm -f "$BIN" "$(dirname "$BIN")/tuxthrottlectl" "$DESKTOP"
+    rm -f "$BIN" "$(dirname "$BIN")/tuxthrottlectl" "$(dirname "$BIN")/tuxthrottle-tray" "$DESKTOP"
     for s in "${ICON_SIZES[@]}"; do rm -f "${ICONBASE}/${s}x${s}/apps/${APPID}.png"; done
     rm -f "${ICONBASE}/scalable/apps/${APPID}.svg"
     rm -rf "$LIBDIR"

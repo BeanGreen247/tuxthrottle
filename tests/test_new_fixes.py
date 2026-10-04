@@ -339,3 +339,28 @@ def test_every_sidebar_entry_has_an_icon_defined():
         labels |= {v["category"] for v in data.values() if v.get("category")}
     missing = sorted(lbl for lbl in labels if lbl not in icons)
     assert missing == [], f"no sidebar icon for: {missing}"
+
+
+def test_power_profile_is_read_over_dbus_not_via_the_python_cli(monkeypatch):
+    """`powerprofilesctl get` (a PyGObject script) segfaulted on exit when
+    polled; the profile now comes from the daemon's D-Bus property."""
+    import sensors
+    calls = []
+
+    class _R:
+        def __init__(self, rc, out):
+            self.returncode, self.stdout = rc, out
+
+    def fake_run(cmd, **_k):
+        calls.append(cmd[0])
+        return _R(0, 's "performance"\n') if cmd[0] == "busctl" else _R(0, "balanced\n")
+    monkeypatch.setattr(sensors, "which", lambda n: "/usr/bin/" + n)
+    monkeypatch.setattr(sensors.subprocess, "run", fake_run)
+    assert sensors.active_power_profile() == "performance"
+    assert calls == ["busctl"]
+    # no busctl / no daemon on the bus: fall back to the CLI
+    monkeypatch.setattr(sensors.subprocess, "run",
+                        lambda cmd, **_k: _R(1, "") if cmd[0] == "busctl" else _R(0, "balanced\n"))
+    assert sensors.active_power_profile() == "balanced"
+    monkeypatch.setattr(sensors, "which", lambda n: None)
+    assert sensors.active_power_profile() == ""

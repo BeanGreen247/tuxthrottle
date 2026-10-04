@@ -889,14 +889,41 @@ def rapl_permissions_ok() -> bool:
         return False
 
 
+_PPD_BUS = (("net.hadess.PowerProfiles", "/net/hadess/PowerProfiles"),
+            ("org.freedesktop.UPower.PowerProfiles", "/org/freedesktop/UPower/PowerProfiles"))
+
+
+def active_power_profile() -> str:
+    """The active power profile ('performance' / 'balanced' / 'power-saver',
+    '' if unknown). Read straight from power-profiles-daemon's D-Bus property
+    with busctl. `powerprofilesctl get` is a Python/GObject script, and being
+    polled it left a python3 coredump every so often (a PyGObject teardown
+    race on Python 3.14: the value prints, then the interpreter segfaults on
+    exit). It is only the fallback now."""
+    if which("busctl"):
+        for name, path in _PPD_BUS:
+            try:
+                out = subprocess.run(
+                    ["busctl", "--system", "get-property", name, path, name, "ActiveProfile"],
+                    capture_output=True, text=True, timeout=5)
+            except Exception:  # noqa: BLE001
+                continue
+            m = re.match(r's\s+"([^"]*)"', out.stdout.strip()) if out.returncode == 0 else None
+            if m:
+                return m.group(1)
+    if which("powerprofilesctl"):
+        try:
+            out = subprocess.run(["powerprofilesctl", "get"], capture_output=True,
+                                 text=True, timeout=5)
+            return out.stdout.strip()
+        except Exception:  # noqa: BLE001
+            pass
+    return ""
+
+
 def get_game_mode_state() -> bool:
-    if not which("powerprofilesctl"):
-        return False
-    try:
-        out = subprocess.run(["powerprofilesctl", "get"], capture_output=True, text=True, timeout=5)
-        return out.stdout.strip() == _game_mode_value()
-    except Exception:  # noqa: BLE001
-        return False
+    prof = active_power_profile()
+    return bool(prof) and prof == _game_mode_value()
 
 
 def notify(summary: str, body: str = "") -> None:

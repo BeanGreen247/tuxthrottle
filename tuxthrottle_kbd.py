@@ -39,6 +39,7 @@ import glob
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -233,8 +234,8 @@ def restart_server(force: bool = False) -> bool:
     """Kick the OpenRGB SDK server. After a lot of mode changes this AW-ELC
     controller wedges - the CLI still exits 0 but the keyboard stops
     responding ('frozen'). Restarting the server (which re-opens the HID
-    device) clears it. Tries the systemd unit first, then a plain pkill so it
-    respawns / a later call falls back to the standalone --noautoconnect path.
+    device) clears it. Tries the systemd unit first, then stops the server
+    process itself so it respawns / a later call falls back to the standalone --noautoconnect path.
     Rate-limited (see `_restart_too_recent`) unless `force`. Returns True if it
     did something."""
     if not force and _restart_too_recent():
@@ -251,12 +252,37 @@ def restart_server(force: bool = False) -> bool:
                 return True
         except (OSError, subprocess.SubprocessError):
             pass
-    try:
-        subprocess.run(["pkill", "-f", "openrgb --server"], capture_output=True, timeout=10)
+    pids = openrgb_server_pids()
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    if pids:
         time.sleep(2.0)
-        return True
-    except (OSError, subprocess.SubprocessError):
-        return False
+    return bool(pids)
+
+
+def openrgb_server_pids(proc: str = "/proc") -> list[int]:
+    """PIDs of the OpenRGB SDK server: a process whose executable is named
+    `openrgb` and that was started with `--server`. Read from /proc by exact
+    argument, never matched as a command-line substring."""
+    pids = []
+    try:
+        entries = os.listdir(proc)
+    except OSError:
+        return pids
+    for name in entries:
+        if not name.isdigit():
+            continue
+        try:
+            with open(f"{proc}/{name}/cmdline", "rb") as fh:
+                argv = fh.read().split(b"\x00")
+        except OSError:
+            continue
+        if argv and os.path.basename(argv[0]) == b"openrgb" and b"--server" in argv[1:]:
+            pids.append(int(name))
+    return pids
 
 
 def reset() -> None:

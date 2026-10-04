@@ -57,9 +57,28 @@ c_info "Uninstalling TuxThrottle${U:+ (user: $U)}$([[ $DO_PURGE -eq 1 ]] && echo
 echo
 
 # ---- stop anything the tool has running --------------------------------
-pkill -f 'tuxthrottle.py'     2>/dev/null || true
+# Exact matches only, never `pkill -f <substring>`: a substring also hits an
+# editor, a terminal or a browser tab that merely has the file name in its
+# command line. A process is ours when it is python3 running one of these
+# scripts by its absolute installed path.
+kill_script() {   # $1 = absolute script path, $2 = optional argument that must be present
+    local p pid a
+    for p in /proc/[0-9]*; do
+        pid="${p#/proc/}"
+        [[ "$pid" == "$$" ]] && continue
+        mapfile -d '' -t a < "$p/cmdline" 2>/dev/null || continue
+        [[ "${a[0]##*/}" == python3* && "${a[1]:-}" == "$1" ]] || continue
+        if [[ -n "${2:-}" ]]; then
+            [[ " ${a[*]:2} " == *"$2"* ]] || continue
+        fi
+        kill "$pid" 2>/dev/null || true
+    done
+}
+for s in tuxthrottle.py tray_monitor.py tuxthrottle_powerd.py; do
+    kill_script "/opt/tuxthrottle/$s"
+done
 # legacy: pre-single-zone versions ran software keyboard-wave daemons
-pkill -f 'tuxthrottle_kbd.py .*-wave' 2>/dev/null || true
+kill_script "/opt/tuxthrottle/tuxthrottle_kbd.py" "-wave"
 [[ -n "$UHOME" && -f "$UHOME/.config/tuxthrottle/fx.pid" ]] && \
     kill "$(cat "$UHOME/.config/tuxthrottle/fx.pid" 2>/dev/null)" 2>/dev/null || true
 
@@ -68,6 +87,7 @@ if [[ -x "$SRC/install.sh" ]]; then
     "$SRC/install.sh" --uninstall || true
 else
     rm -rf /opt/tuxthrottle /usr/local/bin/tuxthrottle /usr/local/bin/tuxthrottlectl \
+           /usr/local/bin/tuxthrottle-tray \
            /usr/share/applications/tuxthrottle.desktop
     for s in 16 24 32 48 64 128 256 512; do
         rm -f "/usr/share/icons/hicolor/${s}x${s}/apps/tuxthrottle.png"
@@ -79,7 +99,8 @@ fi
 # ---- per-user toolkit files ------------------------------------------
 if [[ -n "$UHOME" ]]; then
     rm -rf "$UHOME/.config/tuxthrottle" \
-           "$UHOME/.local/share/applications/tuxthrottle.desktop"
+           "$UHOME/.local/share/applications/tuxthrottle.desktop" \
+           "$UHOME/.config/autostart/tuxthrottle-tray.desktop"
     c_ok "removed per-user config ($UHOME/.config/tuxthrottle) + menu entry"
 fi
 
@@ -124,6 +145,27 @@ rm -f /usr/local/bin/tuxthrottle-kbd \
       /usr/local/bin/mangohud-global-on /usr/local/bin/mangohud-global-off \
       /usr/local/bin/tuxthrottle-wait-mounts \
       /etc/cron.d/tuxthrottle-drivehealth
+# Everything else the tweaks installed carries the tool's name. Sweep by name
+# rather than by a hand-kept list, which had fallen behind (nvpl / tdp / nvclk
+# / irq-rt / powerd / reassert / scx units, their sudoers rules and helpers,
+# the sysctl / udev / environment.d / modprobe drop-ins were all left behind).
+shopt -s nullglob
+for unit in /etc/systemd/system/tuxthrottle-*.service /etc/systemd/system/tuxthrottle-*.timer; do
+    run systemctl disable --now "$(basename "$unit")"
+    rm -f "$unit"
+done
+rm -f /usr/lib/systemd/system-sleep/tuxthrottle-* \
+      /usr/local/bin/tuxthrottle-* \
+      /etc/sudoers.d/tuxthrottle-* \
+      /etc/cron.d/tuxthrottle-* \
+      /etc/environment.d/*tuxthrottle*.conf \
+      /etc/modprobe.d/*tuxthrottle*.conf \
+      /etc/sysctl.d/*tuxthrottle*.conf \
+      /etc/udev/rules.d/*tuxthrottle*.rules
+shopt -u nullglob
+run sysctl --system
+run udevadm control --reload-rules
+c_ok "removed every tuxthrottle-named unit, helper, sudoers rule and sysctl/udev/env drop-in"
 # the per-game MangoHud gate shadows /usr/bin/mangohud - only remove OUR script
 if grep -q tuxthrottle-mangohud-gate /usr/local/bin/mangohud 2>/dev/null; then
     rm -f /usr/local/bin/mangohud
