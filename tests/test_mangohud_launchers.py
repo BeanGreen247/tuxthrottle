@@ -2,6 +2,8 @@
 import json
 import sqlite3
 
+import pytest
+
 import tuxthrottle_mangohud_launchers as ml
 
 
@@ -50,6 +52,7 @@ def test_heroic_lists_and_toggles(monkeypatch, tmp_path):
 
 
 def test_lutris_lists_and_toggles(monkeypatch, tmp_path):
+    pytest.importorskip("yaml")          # Lutris game configs are YAML
     db = tmp_path / "pga.db"
     con = sqlite3.connect(db)
     con.execute("CREATE TABLE games (id INTEGER, name TEXT, runner TEXT, directory TEXT, "

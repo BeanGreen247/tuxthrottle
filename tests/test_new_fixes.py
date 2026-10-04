@@ -322,15 +322,20 @@ def test_steam_client_crash_is_recognised_and_repairs_the_double_start(monkeypat
 def test_every_sidebar_entry_has_an_icon_defined():
     """A tab or tweak/app category with no entry in _NAV_TILES shows up bare
     in the nav rail (Monitoring, Streaming and RGB once did)."""
+    import ast
     import json
     import re
     from pathlib import Path
-
-    import tuxthrottle_gui_widgets as gw
     base = Path(cw.__file__).parent
+    # read the icon table from the source: importing the widgets module needs
+    # ttkbootstrap, which the plain test job does not install
+    tree = ast.parse((base / "tuxthrottle_gui_widgets.py").read_text())
+    tiles = next(n.value for n in ast.walk(tree) if isinstance(n, ast.Assign)
+                 and getattr(n.targets[0], "id", "") == "_NAV_TILES")
+    icons = {k.value for k in tiles.keys}
     labels = set(re.findall(r'add_lazy\("([^"]+)"', (base / "tuxthrottle.py").read_text()))
     for f in ("tweaks.json", "apps.json"):
         data = json.loads((base / "config" / f).read_text())
         labels |= {v["category"] for v in data.values() if v.get("category")}
-    missing = sorted(lbl for lbl in labels if lbl not in gw._NAV_TILES)
+    missing = sorted(lbl for lbl in labels if lbl not in icons)
     assert missing == [], f"no sidebar icon for: {missing}"
