@@ -1,30 +1,30 @@
-# TuxThrottle — todo: "gaming-laptop tool, not one laptop's tool"
+# TuxThrottle - todo: "gaming-laptop tool, not one laptop's tool"
 
 Full plan: `tasks/plan.md`. Prior (completed) backlog archived at
 `tasks/*-archive-2026-08-backlog.md`. g15 stays the test machine; COPR release
 (direction A) deferred.
 
-**Order:** dead-code deletion (was 2.2) is pulled to the front — it shrinks
+**Order:** dead-code deletion (was 2.2) is pulled to the front - it shrinks
 `tuxthrottle_kbd.py` before Phase 0 routes it through the model profile. Then
 Phase 0 → 1 → rest of 2 → 3. Phase 3 scope = Battery health page + MangoHud
 bridge only (post-game summary + scheduled profiles → backlog).
 
-## Phase P — Dead keyboard code deletion (pulled forward from 2.2)
+## Phase P - Dead keyboard code deletion (pulled forward from 2.2)
 
 - [x] **P.1 Branch `chore/kbd-dead-code`.** Audit every `stop_fx()` call-site in
       live paths first; note what each does and its replacement (usually nothing).
 - [x] **P.2 Delete** `rainbow_wave` / `gradient_wave` / `_Sdk` / `_stream_wave` /
       `stop_fx` and any now-orphaned helpers (`fx.pid` handling, SDK-socket code
       kept only for the waves).
-- [x] **P.3 `verify-install.sh`** — drop the `rainbow-test` / `gradient-test`
+- [x] **P.3 `verify-install.sh`** - drop the `rainbow-test` / `gradient-test`
       invocations; keep the rest of the keyboard block.
-- [x] **P.4 Deployed to g15** (2026-08-31) — `install.sh` OK, `verify-install.sh`
+- [x] **P.4 Deployed to g15** (2026-08-31) - `install.sh` OK, `verify-install.sh`
       **27 passed / 0 failed**, kbd CLI smoke passes. `tuxthrottle_kbd.py`
       1293 → 480 lines; no `stop_fx` refs anywhere. **User camera-verify pending:**
       solid colour, Spectrum Cycle, brightness up/down, off.
 - [x] **P.5** Merged `chore/kbd-dead-code` → main (ff), pushed, branch deleted.
 
-## Phase 0 — Model-profile plumbing (spine)
+## Phase 0 - Model-profile plumbing (spine)
 
 - [x] **0.1 Schema pass on `models/g15-5515.json`.** Confirm every hard-coded
       value in `sensors.py` has a home in the schema; add missing fields with the
@@ -48,11 +48,11 @@ bridge only (post-game summary + scheduled profiles → backlog).
 - [x] **0.4 Fallback tests.** `tests/test_model_routing.py`: profile field
       present → used; absent → 5515 fallback; unknown DMI → g15-5515 profile.
       *Accept:* pytest green, coverage on every `_prof_*` helper.
-- [x] **0.5 Checkpoint 0** — byte-diff `--report`, `verify-install.sh` 27/0,
+- [x] **0.5 Checkpoint 0** - byte-diff `--report`, `verify-install.sh` 27/0,
       headless GUI smoke, pytest. Commit `refactor(sensors): route hw specifics
       through model_profile`.
 
-## Phase 1 — Second-model onboarding (B)
+## Phase 1 - Second-model onboarding (B)
 
 - [x] **1.1 `tuxthrottlectl collect-model`.** Emit `models/<slug>.json` scaffold
       from the live machine: DMI match block, detected CPU/fan hwmon names, PCI
@@ -74,9 +74,9 @@ bridge only (post-game summary + scheduled profiles → backlog).
       *Accept:* a reader with a new laptop could follow it unaided.
 - [x] **1.5 Checkpoint 1.**
 
-## Phase 2 — Harden (C)
+## Phase 2 - Harden (C)
 
-- [~] **2.1 D-Bus + polkit control plane — ATTEMPTED, REVERTED 2026-08-31.**
+- [~] **2.1 D-Bus + polkit control plane - ATTEMPTED, REVERTED 2026-08-31.**
       Built it (`tuxthrottle_dbus.py` system-bus service + `DbusPolkitIntegration`
       tweak). The tweak's `dbus/*.conf` **hard-bricked the g15 boot**: dbus-broker
       refuses to start the system bus when a `system.d` policy has a
@@ -84,25 +84,25 @@ bridge only (post-game summary + scheduled profiles → backlog).
       at boot (passed a live `ReloadConfig`). Whole D-Bus layer removed; the
       `/run/tuxthrottle/control.sock` socket stays the only control plane.
       **Any retry: boot-test in a VM first, no `send_interface` in policy.**
-- [x] **2.2 Dead keyboard code** — pulled forward, see Phase P.
+- [x] **2.2 Dead keyboard code** - pulled forward, see Phase P.
 - [x] **2.3 CI depth.** Headless Xvfb GUI-smoke job (build `ToolkitApp`, pump
       `update()`); `ruff` + `mypy` steps (start non-blocking, then gate); extra
       `powerd` tests (fan-curve interp, schedule).
       *Accept:* CI green with the new jobs; lint baseline recorded.
 - [x] **2.4 Checkpoint 2.**
 
-## Phase 3 — New capability (D) — user picked 3.1 + 3.2
+## Phase 3 - New capability (D) - user picked 3.1 + 3.2
 
-- [x] **3.1 Battery health page** — wear %, cycle count, design vs full
+- [x] **3.1 Battery health page** - wear %, cycle count, design vs full
       capacity + charge-limit controls on one nav page. Pure sysfs, model-
       agnostic.
-- [x] **3.2 MangoHud bridge** — `clients/mangohud/` custom overlay line fed by
+- [x] **3.2 MangoHud bridge** - `clients/mangohud/` custom overlay line fed by
       `tuxthrottlectl status --json` (profile / TDP / temps in-game).
 - [x] **3.3 Checkpoint 3.**
 
 ## Deferred / not now
 
-- Direction A: COPR release, `v*` tag, CHANGELOG — after B/C/D land on the g15.
+- Direction A: COPR release, `v*` tag, CHANGELOG - after B/C/D land on the g15.
 - D-Bus item was also Tier-3-deferred; now folded into 2.1.
 - Phase 3 backlog (not this round): post-game session summary; scheduled /
   conditional profiles (`powerd.json` `schedule` block).

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Keep one MangoHud config line updated with TuxThrottle's live state (Game
 Mode / fan boost / temps) so it shows in the in-game overlay without ever
-alt-tabbing out. Stdlib only — meant to be polled from the tray (already a
+alt-tabbing out. Stdlib only - meant to be polled from the tray (already a
 persistent background process reading sensors every 2s).
 
-MangoHud watches its config file (inotify) and hot-reloads on change — the
+MangoHud watches its config file (inotify) and hot-reloads on change - the
 existing MangoHud box in tuxthrottle.py already relies on this (atomic
 replace, see _mh_write_conf's comment), so a periodic rewrite of just the
 `custom_text_center=` line is enough; no game restart needed.

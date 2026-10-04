@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dell G15 tray monitor — CPU/GPU clocks & temps + Game Mode toggle.
+"""TuxThrottle tray monitor - CPU/GPU clocks & temps + Game Mode toggle.
 
 The "live dashboard + dedicated-key toggle" piece of this Toolkit, inspired
 by Div-Acer-Manager-Max's (DAMX) monitoring dashboard and Nitro/PredatorSense
@@ -8,14 +8,14 @@ button binding: https://github.com/PXDiv/Div-Acer-Manager-Max
 Runs as a normal user process (unprivileged) and lives in the system tray
 via Qt's StatusNotifierItem support (native on KDE Plasma). Only the actual
 Game Mode toggle shells out through pkexec/sudo (see sensors.set_game_mode),
-since that needs root — the monitor itself never needs elevation.
+since that needs root - the monitor itself never needs elevation.
 
 All sensor reads and the Game Mode toggle live in sensors.py (no GUI
 dependency), shared with tuxthrottle.py's in-app Dashboard tab.
 
 Requires: PySide6 (dnf install python3-pyside6, or: pip install --user PySide6)
 Reuses the gaming-performance/gaming-balanced, amdgpu-perf-high/auto, and
-nvidia-max-perf helper scripts installed by tuxthrottle.py's tweaks —
+nvidia-max-perf helper scripts installed by tuxthrottle.py's tweaks -
 install those first (Presets > Safe Baseline covers the power-profile ones;
 Competitive Gaming covers the GPU perf-state ones).
 """
@@ -35,14 +35,14 @@ import tuxthrottle_fixlog as fixlog  # noqa: E402
 import tuxthrottle_mangohud_status as mangohud_status  # noqa: E402
 
 APP_NAME = "TuxThrottle"
-APP_BLURB = "Dell G15 power & gaming tuning"
+APP_BLURB = "Nobara Linux power & gaming tuning"
 APP_AUTHOR = "by BeanGreen247"
 PROJECT_URL = "https://github.com/BeanGreen247/tuxthrottle"
 
 
 def _reassert_keyboard_rgb() -> None:
     """Re-apply the last saved AW-ELC keyboard colour/effect when the tray
-    starts (login). Best-effort and off the Qt thread — the helper waits for
+    starts (login). Best-effort and off the Qt thread - the helper waits for
     the OpenRGB SDK server + USB HID device to come up, which can take a few
     seconds after a cold boot. No-op if nothing is saved or OpenRGB is
     absent."""
@@ -60,7 +60,7 @@ def _launch_gui() -> tuple[bool, str]:
 
     The GUI self-elevates with `pkexec`, and pkexec can only reach the
     polkit-kde auth agent if the process it spawns is still attached to the
-    graphical session — so do NOT start a new session here, and prefer
+    graphical session - so do NOT start a new session here, and prefer
     `kstart`, which launches the command as a proper session app.
     """
     cmd = (shutil.which("tuxthrottle")
@@ -126,10 +126,10 @@ POLL_MS = 2000
 
 
 class MiniOverlay(QWidget):
-    """A small always-on-top, frameless, draggable strip — temps, Game Mode,
-    a one-click fan boost — for glancing at state without alt-tabbing out of
+    """A small always-on-top, frameless, draggable strip - temps, Game Mode,
+    a one-click fan boost - for glancing at state without alt-tabbing out of
     a fullscreen game. Toggled from the tray menu; position is kept only for
-    the life of the process (simplest thing that works — no config file)."""
+    the life of the process (simplest thing that works - no config file)."""
 
     def __init__(self, monitor: "TrayMonitor"):
         super().__init__(None, Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
@@ -147,8 +147,8 @@ class MiniOverlay(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(10, 8, 10, 8)
         lay.setSpacing(4)
-        self.cpu_lbl = QLabel("CPU: —")
-        self.dgpu_lbl = QLabel("dGPU: —")
+        self.cpu_lbl = QLabel("CPU: -")
+        self.dgpu_lbl = QLabel("dGPU: -")
         lay.addWidget(self.cpu_lbl)
         lay.addWidget(self.dgpu_lbl)
 
@@ -207,10 +207,10 @@ class TrayMonitor:
             icon = QIcon.fromTheme("computer")
         self.tray = QSystemTrayIcon(icon)
         self.tray.setToolTip(
-            f"{APP_NAME} — {APP_BLURB}\n{APP_AUTHOR}\nClick to open")
+            f"{APP_NAME} - {APP_BLURB}\n{APP_AUTHOR}\nClick to open")
 
         self.menu = QMenu()
-        # keep a ref on self — a parent-less QAction added to a QMenu is not
+        # keep a ref on self - a parent-less QAction added to a QMenu is not
         # owned by it and would be GC'd out of the menu once __init__ returns
         self.about_action = QAction(f"{APP_NAME} {APP_AUTHOR}", self.menu)
         self.about_action.triggered.connect(self._open_project_page)
@@ -297,10 +297,10 @@ class TrayMonitor:
         if sensors.rapl_permissions_ok():
             self.rapl_warning_action.setVisible(False)
         else:
-            self.rapl_warning_action.setText("⚠ CPU power locked — install RaplPowerPermissions tweak")
+            self.rapl_warning_action.setText("⚠ CPU power locked - install RaplPowerPermissions tweak")
             self.rapl_warning_action.setVisible(True)
         self.tray.setToolTip(
-            f"{APP_NAME} — {APP_BLURB}\n{APP_AUTHOR}\n"
+            f"{APP_NAME} - {APP_BLURB}\n{APP_AUTHOR}\n"
             f"Click to open  ·  CPU {sensors.read_cpu_temp_c()}  ·  "
             f"dGPU {sensors.read_dgpu_clock_temp_util()}"
         )
@@ -360,7 +360,7 @@ class TrayMonitor:
     def _crashwatch_scan_worker(self):
         try:
             findings = crashwatch.scan(since_seconds=35)
-        except Exception:  # noqa: BLE001 — never take the tray down over this
+        except Exception:  # noqa: BLE001 - never take the tray down over this
             return
         for f in findings:
             fixlog.log_event("crashwatch", f["label"],
@@ -391,7 +391,7 @@ class TrayMonitor:
 
 
 def _single_instance_or_exit() -> None:
-    """One tray icon only — autostart + a manual 'Launch tray now' must not
+    """One tray icon only - autostart + a manual 'Launch tray now' must not
     stack. Hold an flock on a runtime lockfile for the life of the process."""
     import fcntl
     rundir = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"

@@ -1,4 +1,4 @@
-"""tuxthrottle_shadercache.py — config persistence, the 3-number size split,
+"""tuxthrottle_shadercache.py - config persistence, the 3-number size split,
 and clean(). No Steam / network needed.
 """
 import tuxthrottle_shadercache as sc
@@ -7,6 +7,10 @@ import tuxthrottle_shadercache as sc
 def _isolate(monkeypatch, tmp_path):
     cfg = tmp_path / "shadercache.json"
     monkeypatch.setattr(sc, "_config_path", lambda: cfg)
+    # set_config() repoints every real Steam library's shadercache symlink at
+    # the configured dir - without this the suite aimed them at tmp_path, which
+    # dangled once /tmp was cleaned and Steam failed with "disk write error".
+    monkeypatch.setattr(sc, "_find_steam_root", lambda: None)
     return cfg
 
 
@@ -59,3 +63,19 @@ def test_human_readable():
     assert sc._human(512) == "512 B"
     assert sc._human(1536).endswith("KiB")
     assert sc._human(5 * 1024**3).endswith("GiB")
+
+
+def test_heal_repairs_dangling_steam_link(monkeypatch, tmp_path):
+    _isolate(monkeypatch, tmp_path)
+    base = sc.set_config(str(tmp_path / "c"))
+    lib = tmp_path / "lib"
+    (lib / "steamapps").mkdir(parents=True)
+    link = lib / "steamapps" / "shadercache"
+    link.symlink_to(tmp_path / "gone")
+    monkeypatch.setattr(sc, "_find_steam_root", lambda: lib)
+    monkeypatch.setattr(sc, "all_libraries", lambda root: [lib])
+    assert not sc.steam_link_status()["ok"]
+    ok, _msg = sc.heal_steam_links()
+    assert ok
+    assert link.resolve() == (base / "steam-shadercache").resolve()
+    assert sc.heal_steam_links() == (True, "healthy - nothing to repair")

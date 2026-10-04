@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""About tab — extracted from tuxthrottle.py (module-split pass,
+"""About tab - extracted from tuxthrottle.py (module-split pass,
 eighth slice)."""
 import os
 import pwd
@@ -37,35 +37,37 @@ class AboutTabMixin:
                  font=("Monospace", 10)).pack(anchor="w")
 
         tb.Label(frame, wraplength=1000, justify="left", text=(
-            "A checkbox-driven GUI, tray monitor and G-key listener that applies "
-            "hardware-specific tweaks, drivers and gaming setup to the Dell G15 5515 "
-            "Ryzen Edition (Ryzen 7 5800H + RTX 3050 Ti Mobile) running Nobara Linux. "
-            "Every check/apply command is written against that board — it is not a "
-            "general-purpose distro tool.")).pack(anchor="w", pady=(0, 10))
+            "A checkbox-driven GUI and tray monitor for gaming on Nobara Linux: "
+            "tweaks, drivers and app installs, Steam and Proton management, per-game "
+            "MangoHud and GPU switches, drive health and updates. Those parts work on "
+            "any Nobara / Fedora machine. The hardware tabs (keyboard RGB, fans, power "
+            "limits, the G-key) are written for the Dell G15 5515 it was developed on; "
+            "on other hardware the tool says so at the top of the window."
+            )).pack(anchor="w", pady=(0, 10))
 
-        # "What's inside" — a click-to-expand dropdown listing every section
+        # "What's inside" - a click-to-expand dropdown listing every section
         feat = tb.Frame(frame)
         feat.pack(fill="x", pady=(4, 8))
         self._about_open = False
-        self._about_btn = tb.Button(feat, text="▸   What's inside  —  click to see every section",
+        self._about_btn = tb.Button(feat, text="▸   What's inside  -  click to see every section",
                                     style="Disclosure.TButton", takefocus=False,
                                     command=self._toggle_about_features)
         self._about_btn.pack(fill="x")
         self._about_body = tb.Frame(feat, style="Card.TFrame", padding=(16, 12, 12, 12))
         for name, desc in (
-            ("Dashboard", "8 live ring gauges (2×4) — CPU temp/clock/power, iGPU clock, dGPU temp/clock/util/power — with rolling sparkline history, a session CSV log and a Game Mode toggle; built lazily on tab entry"),
-            ("Keyboard", "Alienware AW-ELC RGB via OpenRGB — whole-keyboard solid colour, presets, brightness, firmware Spectrum Cycle; two mutually-exclusive toggles that sync the colour with the KDE accent (keyboard→accent or accent→keyboard); colour re-asserted at login by the tray / KbdBacklightFix service"),
+            ("Dashboard", "8 live ring gauges (2×4) - CPU temp/clock/power, iGPU clock, dGPU temp/clock/util/power - with rolling sparkline history, a session CSV log and a Game Mode toggle; built lazily on tab entry"),
+            ("Keyboard", "Alienware AW-ELC RGB via OpenRGB - whole-keyboard solid colour, presets, brightness, firmware Spectrum Cycle; two mutually-exclusive toggles that sync the colour with the KDE accent (keyboard→accent or accent→keyboard); colour re-asserted at login by the tray / KbdBacklightFix service"),
             ("Fans", "thermal profile (balanced/performance/custom), additive fan boost + Silent/Balanced/Aggressive presets, guarded manual PWM, and a 10-point closed-loop custom fan curve run by the daemon"),
             ("Power & Limits", "CPU TDP sliders (ryzenadj STAPM/fast/slow) + presets; Curve Optimizer all-core undervolt with a 5-min stress-test + auto-revert harness; NVIDIA power-limit slider or a firmware-locked note; NVIDIA graphics-clock lock; hybrid-graphics mode (EnvyControl); battery charge limit (sysfs / Dell libsmbios) + express/standard charging; panel refresh-rate switch; AC↔battery auto-switch for profile/TDP/refresh; thermal-event alerts"),
             ("Battery", "design-vs-full wear %, charge cycles, chemistry; a live Now card (charge, power flow, time-to-empty/full); the charge-limit control mirrored from Power & Limits; an Adaptive-Sync (VRR) status line"),
             ("VRAM", "live per-GPU video-memory bars + top consumers; a Regular/Medium/Extreme KWin budget that strips desktop eye-candy to shrink the compositor footprint (reversible to a captured baseline); a Free-VRAM action (AMD/Intel driver eviction + optional compositor restart); a desktop-GPU selector (KWIN_DRM_DEVICES); a dGPU runtime-power-management toggle"),
             ("Profiles", "capture / apply / delete named full-state bundles (profile, TDP, battery, NVIDIA limits, fan curve, refresh, hybrid GPU, keyboard); an automatic snapshot before every apply with per-row + latest rollback; a per-game auto-profile map and a time-of-day schedule run by the daemon"),
-            ("Presets", "one-click curated bundles of tweaks + app installs — Safe Baseline, Competitive Gaming, Streaming Rig, Game Launchers, and Maximum Performance (aggressive: mitigations-off / PCIe-NVMe-latency kernel args, forced governors, NVIDIA max-PowerMizer + PAT/ReBAR, RADV-GPL GPU env, RT-priority IRQ threads, masked idle services — no fan/thermal changes) — plus a global “apply all recommended” button"),
+            ("Presets", "one-click curated bundles of tweaks + app installs - Safe Baseline, Competitive Gaming, Streaming Rig, Game Launchers, and Maximum Performance (aggressive: mitigations-off / PCIe-NVMe-latency kernel args, forced governors, NVIDIA max-PowerMizer + PAT/ReBAR, RADV-GPL GPU env, RT-priority IRQ threads, masked idle services - no fan/thermal changes) - plus a global “apply all recommended” button"),
             ("Updates", "nobara-sync wrapper (check / cli / install / fixups / repair) + per-manager dnf, Flatpak and fwupd sections and a Fedora-GPG-key fix; pending count tagged with the metadata age"),
-            ("Setup Games", "per-game click-through walkthroughs (GTA V Online first) — each step has a status pill and either a streamed Run button or a manual Copy-command step"),
-            ("Game Tools", "any-game Steam/Proton helpers — Proton-prefix relocation off NTFS/exFAT, a save-game vault, one shared shader/pipeline-cache folder with Steam-link repair plus a force-rebuild-Steam's-shader-cache button and a background-Vulkan-shader-processing switch, a Steam-client low-resource mode (CEF flags + a soft memory-cap systemd scope + no-auto-chat + hidden-on-login autostart), a launch-options builder (MangoHud / gamemoderun / gamescope / PRIME / shader caches / ntsync / anti-cheat-safe layer set) with an Apply-to-every-game action, and a full MangoHud overlay editor (per-GPU fields, drag-to-place, Feral-GameMode status line, per-game configs)"),
-            ("Tweaks & Apps", "reversible system tweaks by category — Gaming, GPU, Power, Performance (curated + aggressive extras: mitigations-off / PCIe-NVMe kernel args, VM-writeback sysctls, NVIDIA aggressive module options, RADV-GPL GPU env, RT-priority IRQ threads, ananicy-cpp, idle-service masking, quiet-GameMode), KDE (14 Plasma 6 toggles), Stability — each with check/undo; plus one-directional native/Flatpak app installs with cross-manager “already installed” detection"),
-            ("System tray", "an always-on PySide6 tray icon — left-click opens this window, middle-click toggles Game Mode, right-click shows live CPU/GPU readouts and quick actions; an About-tab toggle adds/removes it from login autostart"),
+            ("Setup Games", "per-game click-through walkthroughs (GTA V Online first) - each step has a status pill and either a streamed Run button or a manual Copy-command step"),
+            ("Game Tools", "any-game Steam/Proton helpers - Proton-prefix relocation off NTFS/exFAT, a save-game vault, one shared shader/pipeline-cache folder with Steam-link repair plus a force-rebuild-Steam's-shader-cache button and a background-Vulkan-shader-processing switch, a Steam-client low-resource mode (CEF flags + a soft memory-cap systemd scope + no-auto-chat + hidden-on-login autostart), a launch-options builder (MangoHud / gamemoderun / gamescope / PRIME / shader caches / ntsync / anti-cheat-safe layer set) with an Apply-to-every-game action, and a full MangoHud overlay editor (per-GPU fields, drag-to-place, Feral-GameMode status line, per-game configs)"),
+            ("Tweaks & Apps", "reversible system tweaks by category - Gaming, GPU, Power, Performance (curated + aggressive extras: mitigations-off / PCIe-NVMe kernel args, VM-writeback sysctls, NVIDIA aggressive module options, RADV-GPL GPU env, RT-priority IRQ threads, ananicy-cpp, idle-service masking, quiet-GameMode), KDE (14 Plasma 6 toggles), Stability - each with check/undo; plus one-directional native/Flatpak app installs with cross-manager “already installed” detection"),
+            ("System tray", "an always-on PySide6 tray icon - left-click opens this window, middle-click toggles Game Mode, right-click shows live CPU/GPU readouts and quick actions; an About-tab toggle adds/removes it from login autostart"),
             ("tuxthrottled", "systemd daemon: closed-loop fan curve, AC↔battery auto-switch, per-game auto-profiles with a post-game summary, a time-of-day schedule, thermal-event notifications and fan-stall auto-recovery, and a root-only control socket the GUI + CLI write through"),
             ("tuxthrottlectl", "headless CLI (status / watch / get / set / profile / snapshot / rollback / gamemode / schedule / daemon / vram / collect-model, --json) for scripts, keybinds and ssh; routes through the daemon socket when it's up"),
             ("Panel clients", "optional waybar module, KDE plasmoid and MangoHud bridge showing CPU/GPU temp + a one-click profile switch (clients/, over tuxthrottlectl --json)"),
@@ -121,12 +123,12 @@ class AboutTabMixin:
         meta.pack(fill="x", pady=6)
         m = sensors.detect_model()
         for k, v in (
-            ("Target hardware", "Dell G15 5515 Ryzen Edition (0R3CDX)"),
+            ("Reference hardware", "Dell G15 5515 Ryzen Edition (0R3CDX)"),
             ("This machine", f"{m['vendor']} {m['product']}"
                              + (f", BIOS {m['bios']}" if m['bios'] else "")),
             ("Distro target", "Nobara Linux (Fedora 43 base, KDE Plasma / Wayland)"),
-            ("Status", "developed and tested live on the target hardware"),
-            ("License", "MIT — © 2026 BeanGreen247"),
+            ("Status", "developed and tested live on the reference hardware"),
+            ("License", "MIT - © 2026 BeanGreen247"),
             ("Install path", "/opt/tuxthrottle"),
         ):
             r = tb.Frame(meta); r.pack(fill="x", pady=1)
@@ -165,7 +167,7 @@ class AboutTabMixin:
         applied = getattr(self, "_theme_applied", name)
         self._theme_hint.configure(
             text="" if name == applied
-            else f"“{name}” saved — restart TuxThrottle to apply it.")
+            else f"“{name}” saved - restart TuxThrottle to apply it.")
 
     # ---------- system-tray autostart ----------
 
@@ -231,6 +233,6 @@ class AboutTabMixin:
         try:
             subprocess.Popen(argv, start_new_session=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            self._tray_status_lbl.configure(text="launched — check your tray")
+            self._tray_status_lbl.configure(text="launched - check your tray")
         except (OSError, subprocess.SubprocessError) as exc:
             messagebox.showwarning("Tray", f"Couldn't start it:\n{exc}")

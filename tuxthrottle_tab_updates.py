@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Updates tab — extracted from tuxthrottle.py (module-split pass,
+"""Updates tab - extracted from tuxthrottle.py (module-split pass,
 seventh slice)."""
 import os
 import pwd
@@ -79,7 +79,7 @@ class UpdatesTabMixin:
             update_all, "update everything", reboot=True)
 
         # ---- dnf / Nobara ----
-        r1 = section("System — dnf" + (" / nobara-sync" if have_ns else ""), INFO)
+        r1 = section("System - dnf" + (" / nobara-sync" if have_ns else ""), INFO)
         if have_ns:
             add(r1, "Check for updates", (INFO, "outline"),
                 "nobara-sync check-updates || true", "check for updates")
@@ -115,7 +115,7 @@ class UpdatesTabMixin:
 
         # ---- Firmware ----
         if have_fwupd:
-            rw = section("Firmware — fwupd", WARNING)
+            rw = section("Firmware - fwupd", WARNING)
             add(rw, "Refresh metadata", (INFO, "outline"),
                 "fwupdmgr refresh --force || true", "refresh firmware metadata")
             add(rw, "Show updates", (INFO, "outline"),
@@ -137,7 +137,7 @@ class UpdatesTabMixin:
         """Count pending updates per package manager, off-thread. Result goes to
         _upd_count_var via _upd_count_q (drained in _poll_busy_queue).
 
-        dnf is queried with --cacheonly so this never blocks on slow mirrors —
+        dnf is queried with --cacheonly so this never blocks on slow mirrors -
         the number is "as of the last metadata sync" and becomes exact right
         after any Check/Update action (which refreshes the cache; this then
         re-runs). '?' means the query failed or timed out.
@@ -182,7 +182,7 @@ class UpdatesTabMixin:
             any_unknown = any(v == "?" for _, v in parts)
             shown = f"~{total}" if (stale and not any_unknown) else str(total)
             if age:
-                stamp = f"   —   {'⚠ ' if stale else ''}dnf list {age}"
+                stamp = f"   -   {'⚠ ' if stale else ''}dnf list {age}"
                 if stale:
                     stamp += "; run “Check for updates” to refresh"
             else:
@@ -196,9 +196,9 @@ class UpdatesTabMixin:
 
     def _run_updates(self, cmd: str, desc: str, reboot: bool = False):
         if self._busy:
-            messagebox.showinfo("Busy", "An operation is already running — check the log.")
+            messagebox.showinfo("Busy", "An operation is already running - check the log.")
             return
-        self._begin_busy(f"Updates — {desc}", steps=0)
+        self._begin_busy(f"Updates - {desc}", steps=0)
         self._progress(step=desc)
         self._log(f"[Updates] {desc} …")
 
@@ -223,12 +223,12 @@ class UpdatesTabMixin:
                 tail.append(f"[Updates FAILED] {exc}")
             finally:
                 result = "done ✓" if rc == 0 else f"exit {rc}"
-                self._log(f"[Updates] {desc} — {result}")
+                self._log(f"[Updates] {desc} - {result}")
                 # _poll_busy_queue (main thread) reads this after unlocking, to
-                # pop a failure dialog or the reboot prompt — Tk isn't thread-safe.
+                # pop a failure dialog or the reboot prompt - Tk isn't thread-safe.
                 self._upd_last = {"ok": rc == 0, "rc": rc, "desc": desc,
                                   "reboot": reboot, "tail": tail}
-                self._busy_queue.put(f"Updates: {desc} — {result}")
+                self._busy_queue.put(f"Updates: {desc} - {result}")
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -253,7 +253,7 @@ class UpdatesTabMixin:
             webbrowser.open(url)
             self._log(f"[About] opened {url}")
         except Exception as exc:  # noqa: BLE001
-            self._log(f"[About] couldn't open a browser ({exc}) — copy the link instead")
+            self._log(f"[About] couldn't open a browser ({exc}) - copy the link instead")
 
     def _copy_text(self, text: str, what: str = "link"):
         try:
@@ -267,8 +267,8 @@ class UpdatesTabMixin:
         self._about_open = not self._about_open
         if self._about_open:
             self._about_body.pack(fill="x")
-            self._about_btn.configure(text="▾   What's inside  —  click to collapse")
+            self._about_btn.configure(text="▾   What's inside  -  click to collapse")
         else:
             self._about_body.pack_forget()
-            self._about_btn.configure(text="▸   What's inside  —  every section, expanded")
+            self._about_btn.configure(text="▸   What's inside  -  every section, expanded")
 

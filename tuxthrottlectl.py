@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""tuxthrottlectl — headless control/status for TuxThrottle.
+"""tuxthrottlectl - headless control/status for TuxThrottle.
 
 A thin argparse wrapper over sensors.py so scripts, the tray, keybinds and
 `ssh` sessions can read state and set limits without the GUI. stdlib only.
@@ -213,7 +213,7 @@ def cmd_set(args) -> int:
     if args.target == "gpumode":
         ok, err = sensors.gpu_mode_set(args.value[0] if args.value else "")
         if ok:
-            print("switched — log out or reboot to apply")
+            print("switched - log out or reboot to apply")
         return 0 if ok else _fail(err)
     if args.target == "refresh":
         if not args.value:
@@ -283,7 +283,7 @@ def _print_profile_results(rows: list) -> int:
     bad = 0
     for r in rows:
         print(f"  [{'ok ' if r['ok'] else 'ERR'}] {r['key']}"
-              + (f" — {r['msg']}" if r.get("msg") else ""))
+              + (f" - {r['msg']}" if r.get("msg") else ""))
         bad += not r["ok"]
     return 1 if bad else 0
 
@@ -448,7 +448,7 @@ def main() -> int:
     if args.cmd == "daemon":
         pres = control.presence()
         if pres != "up":
-            msg = ("running, but root-only — re-run with sudo"
+            msg = ("running, but root-only - re-run with sudo"
                    if pres == "root-only" else "not running")
             print(json.dumps({"up": False, "state": pres}) if args.json
                   else f"tuxthrottled control socket: {msg}")

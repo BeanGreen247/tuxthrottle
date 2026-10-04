@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""VRAM tab (tier presets, free-VRAM, compositor-GPU selector) — extracted
+"""VRAM tab (tier presets, free-VRAM, compositor-GPU selector) - extracted
 from tuxthrottle.py (module-split pass, fifth slice)."""
 import queue
 import threading
@@ -71,7 +71,7 @@ class VramTabMixin:
         b2 = tb.Button(br, text="Restart compositor", bootstyle=(WARNING, "outline"),
                        command=self._vram_restart_compositor)
         b2.pack(side="left", padx=8)
-        self._tip(b2, "Also restart KWin — releases allocations the evict can't. "
+        self._tip(b2, "Also restart KWin - releases allocations the evict can't. "
                   "Windows stay open; the screen blacks for about a second.")
 
         lf2 = Card(frame, "VRAM budget tier")
@@ -85,7 +85,7 @@ class VramTabMixin:
                      justify="left").pack(anchor="w", padx=26)
         tb.Label(lf2, bootstyle=SECONDARY, wraplength=1000, justify="left",
                  text="“Regular” restores the exact KWin/Plasma values captured "
-                      "the first time you left it — not necessarily stock Plasma "
+                      "the first time you left it - not necessarily stock Plasma "
                       "defaults.").pack(anchor="w", pady=(8, 0))
 
         lf3 = Card(frame, "Which GPU renders the desktop")
@@ -121,7 +121,7 @@ class VramTabMixin:
                 command=self._vram_apply_rtd3).pack(anchor="w")
             tb.Label(lf4, bootstyle=SECONDARY, wraplength=1000, justify="left",
                      text="Frees its VRAM and ~5 W when nothing uses it; it wakes "
-                          "on its own for a PRIME-offloaded app. Live only — add "
+                          "on its own for a PRIME-offloaded app. Live only - add "
                           "the “NVIDIA runtime power management” tweak on the GPU "
                           "tab to make it stick across reboots.").pack(
                 anchor="w", pady=(2, 0))

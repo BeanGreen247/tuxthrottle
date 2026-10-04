@@ -1,4 +1,4 @@
-"""tuxthrottle_protondb.py — disk-cache logic and label formatting.
+"""tuxthrottle_protondb.py - disk-cache logic and label formatting.
 No real network calls: urllib.request.urlopen is monkeypatched.
 """
 import io

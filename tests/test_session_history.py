@@ -1,4 +1,4 @@
-"""Rolling session-history jsonl (Phase 3b) — daemon side."""
+"""Rolling session-history jsonl (Phase 3b) - daemon side."""
 import json
 
 import tuxthrottle_powerd as pd

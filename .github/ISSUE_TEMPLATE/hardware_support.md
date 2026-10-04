@@ -1,7 +1,7 @@
 ---
 name: New hardware support
 about: Request support for another gaming laptop model
-title: "[hw] <vendor> <model> — "
+title: "[hw] <vendor> <model> - "
 labels: hardware
 ---
 

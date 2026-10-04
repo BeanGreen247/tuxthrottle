@@ -189,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.out:
         Path(a.out).write_text(text + "\n")
         n = len(prof["_todo"])
-        print(f"wrote {a.out}  — {n} field(s) still need manual completion "
+        print(f"wrote {a.out}  - {n} field(s) still need manual completion "
               f'(see the "_todo" list); delete "_todo"/"_generated" when done.')
     else:
         print(text)

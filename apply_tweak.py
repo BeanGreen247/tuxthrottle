@@ -7,7 +7,7 @@ already enabled, and usable standalone:
     sudo python3 apply_tweak.py KbdBacklightFix
     sudo python3 apply_tweak.py CpuMaxPerformance --only-if-present
 
---only-if-present : do nothing unless the tweak is already installed — i.e.
+--only-if-present : do nothing unless the tweak is already installed - i.e.
                     its `check` passes now, OR any path in its optional
                     `reinstall_if` list exists (globs allowed). This is how
                     install.sh refreshes units without force-enabling a
@@ -65,7 +65,7 @@ def main() -> int:
                     present = True
                     break
         if not present:
-            print(f"apply_tweak: {a.tweak_id} not enabled — skipped")
+            print(f"apply_tweak: {a.tweak_id} not enabled - skipped")
             return 3  # distinct from apply-failure so install.sh can tell
 
     apply_cmds = [sub(c) for c in t.get("apply", [])]

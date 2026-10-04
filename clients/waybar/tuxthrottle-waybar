@@ -7,7 +7,7 @@ Emits one line of waybar JSON from `tuxthrottlectl status --json`:
 
 `class` is one of cool / warm / hot / critical (style it in your waybar CSS).
 With `--toggle` it cycles the platform profile (balanced -> performance ->
-balanced) via tuxthrottlectl and exits — wire that to `on-click`.
+balanced) via tuxthrottlectl and exits - wire that to `on-click`.
 
 waybar config:
 
@@ -34,7 +34,7 @@ def _ctl(*args: str) -> subprocess.CompletedProcess:
 
 def _ctl_root(*args: str) -> subprocess.CompletedProcess:
     """A privileged tuxthrottlectl call (set / profile apply). Tries directly
-    first (works when tuxthrottled's socket is up), then via `pkexec` — the
+    first (works when tuxthrottled's socket is up), then via `pkexec` - the
     PolkitTuxthrottlectl tweak makes that passwordless for an active local
     user; without it pkexec shows a normal auth dialog."""
     r = _ctl(*args)

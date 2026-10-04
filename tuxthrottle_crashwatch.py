@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Recognise known crash/freeze signatures from `coredumpctl` and the journal,
 so the tray can surface a plain-English cause instead of the user having to
-SSH in and grep logs by hand every time — the exact manual steps this module
+SSH in and grep logs by hand every time - the exact manual steps this module
 automates were worked out live for: a benign Proton bootstrap self-quit
-(wine-preloader/d3ddriverquery64.exe, harmless — Steam's own DirectX-driver
+(wine-preloader/d3ddriverquery64.exe, harmless - Steam's own DirectX-driver
 probe), a steamwebhelper CEF crash-loop, and an NTFS volume left dirty by
 Windows. New signatures should be added to SIGNATURES as they're diagnosed.
 
@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 # Each signature: match against a coredump's EXE path and/or its full command
-# line (both substring, case-insensitive). First match wins, top to bottom —
+# line (both substring, case-insensitive). First match wins, top to bottom -
 # put more specific rules first. `benign=True` entries are recognised and
 # logged but never raise a tray notification (they're normal operation that
 # only *looks* like a crash to a coredump/KCrash listener).
@@ -39,7 +39,7 @@ SIGNATURES: list[dict[str, Any]] = [
         "match_cmdline": "d3ddriverquery64.exe",
         "benign": True,
         "label": "Proton bootstrap driver check (normal)",
-        "hint": "Steam quits this helper itself after querying your GPU driver — not a real crash.",
+        "hint": "Steam quits this helper itself after querying your GPU driver - not a real crash.",
     },
     {
         "id": "steamwebhelper-crash",
@@ -47,20 +47,30 @@ SIGNATURES: list[dict[str, Any]] = [
         "benign": False,
         "label": "Steam's web UI (steamwebhelper) crashed",
         "hint": "If this repeats, open Game Tools -> Steam client low-resource mode and make sure "
-                "no custom -cef-single-process / -no-cef-sandbox / -no-browser flags are set — "
+                "no custom -cef-single-process / -no-cef-sandbox / -no-browser flags are set - "
                 "those are known to crash-loop the CEF process on current Steam builds.",
+    },
+    {
+        "id": "steam-client-crash",
+        "match_exe": "ubuntu12_32/steam",
+        "benign": False,
+        "label": "The Steam client crashed",
+        "hint": "If it happens right after login, Steam was probably started twice: a "
+                "leftover `steam.desktop.<something>` backup in ~/.config/autostart is "
+                "run as a second Steam, the two race each other and one segfaults. "
+                "TuxThrottle moves such files out automatically when it sees this.",
     },
     {
         "id": "wine-preloader-crash",
         "match_exe": "wine-preloader",
         "benign": False,
         "label": "A Windows game/Proton process crashed",
-        "hint": "Usually game-specific — check that game's Proton log "
+        "hint": "Usually game-specific - check that game's Proton log "
                 "(compatdata/<appid>/pfx or PROTON_LOG=1) for the real error.",
     },
 ]
 
-# Plain journal-message signatures (not coredumps) — checked separately since
+# Plain journal-message signatures (not coredumps) - checked separately since
 # an NTFS-dirty refusal or a stalled sched_ext scheduler never dumps core.
 JOURNAL_SIGNATURES: list[dict[str, Any]] = [
     {
@@ -74,7 +84,7 @@ JOURNAL_SIGNATURES: list[dict[str, Any]] = [
         "id": "scx-stall",
         "pattern": re.compile(r"sched_ext.*(disabl|error)|scx_lavd.*(stall|error)", re.I),
         "label": "The sched_ext scheduler (scx_lavd) reported a problem",
-        "hint": "See project notes: scx_lavd is known to stall/freeze on some kernels — "
+        "hint": "See project notes: scx_lavd is known to stall/freeze on some kernels - "
                 "leave it off and use the stock EEVDF scheduler.",
     },
 ]
@@ -117,12 +127,30 @@ def _classify(exe: str, cmdline: str):
     return None
 
 
+def _steam_double_start(sig: dict) -> dict:
+    """A Steam client crash with a stray autostart backup lying around is the
+    double-start race: move the stray out (so the next login starts one Steam)
+    and say so instead of the generic hint."""
+    try:
+        import tuxthrottle_steamperf as sp
+        moved = sp._migrate_stray_bak() if os.geteuid() != 0 else []
+    except Exception:  # noqa: BLE001 - diagnosing must never crash the watcher
+        return sig
+    if not moved:
+        return sig
+    names = ", ".join(m.name for m in moved)
+    return {**sig, "label": "Steam was started twice at login and one copy crashed",
+            "hint": f"Cause: {names} in ~/.config/autostart was being run as a second "
+                    f"Steam. It has been moved to ~/.local/share/tuxthrottle - from the "
+                    f"next login only one Steam starts."}
+
+
 def _coredump_events(since_seconds: int) -> list[dict]:
     """Use --json=short, not the plain-text table: a text EXE column can
-    contain spaces (e.g. a real path seen in the wild —
+    contain spaces (e.g. a real path seen in the wild -
     '.../Proton - Experimental/files/lib/wine/x86_64-unix/wine-preloader')
     and some rows carry a trailing '-' placeholder column, both of which
-    silently corrupt a whitespace-split parse (this shipped once — the
+    silently corrupt a whitespace-split parse (this shipped once - the
     'unknown-crash' fallback below showed up as a bare '- crashed')."""
     try:
         out = subprocess.run(
@@ -189,6 +217,8 @@ def scan(since_seconds: int = 120, user: str | None = None) -> list[dict]:
             name = Path(ev["exe"]).name if ev["exe"] else "An unidentified process"
             sig = {"id": "unknown-crash", "label": f"{name} crashed",
                   "hint": "No known signature for this one yet.", "benign": False}
+        if sig["id"] == "steam-client-crash":
+            sig = _steam_double_start(sig)
         findings.append({**sig, "detail": ev["exe"]})
 
     for ev in _journal_events(since_seconds):
@@ -231,7 +261,7 @@ def main() -> int:
     else:
         for f in findings:
             tag = "benign" if f.get("benign") else "!"
-            print(f"[{tag}] {f['label']} — {f['hint']}")
+            print(f"[{tag}] {f['label']} - {f['hint']}")
     return 0
 
 

@@ -1,4 +1,4 @@
-"""tuxthrottle_items.py — the Item/tweaks-engine data layer, extracted from
+"""tuxthrottle_items.py - the Item/tweaks-engine data layer, extracted from
 tuxthrottle.py's monolith in the modular-refactor pass. This was previously
 untestable in isolation (buried inside an 8000-line Tkinter file); now it's
 pure logic with tmp_path isolation for the ledger.
@@ -210,6 +210,6 @@ def test_dnf_metadata_age_and_staleness_buckets(monkeypatch):
     at(3 * 3600);     assert ti._dnf_metadata_age() == "as of 3 h ago"
     at(3 * 86400);    assert ti._dnf_metadata_age() == "as of 3 d ago"
 
-    at(3600);         assert ti._dnf_metadata_stale() is False     # 1 h — fresh
-    at(7 * 3600);     assert ti._dnf_metadata_stale() is True      # 7 h — stale
+    at(3600);         assert ti._dnf_metadata_stale() is False     # 1 h - fresh
+    at(7 * 3600);     assert ti._dnf_metadata_stale() is True      # 7 h - stale
     at(3600);         assert ti._dnf_metadata_stale(1800) is True  # custom threshold

@@ -1,4 +1,4 @@
-"""Phase 0 — the hardware specifics in sensors.py / tuxthrottle_kbd.py /
+"""Phase 0 - the hardware specifics in sensors.py / tuxthrottle_kbd.py /
 hotkey_listener.py are now read from the model profile, with the 5515 values
 as the fallback. These tests pin both directions: a profile field is used
 when present, and its absence falls back to the reference value.
@@ -121,7 +121,7 @@ def test_gating_helpers(monkeypatch):
 
 def test_kbd_no_server_restart_when_reasserting_the_same_effect(monkeypatch):
     """A spectrum re-assert (tray / boot / resume, saved mode == 'spectrum')
-    must NOT bounce the OpenRGB SDK server — overlapping re-asserts used to
+    must NOT bounce the OpenRGB SDK server - overlapping re-asserts used to
     turn that into a restart storm that SIGSEGV'd Steam's HID enumeration."""
     import tuxthrottle_kbd as kbd
     calls = []

@@ -1,5 +1,5 @@
 /*
- * TuxThrottle plasmoid — reads `tuxthrottlectl status --json` on a timer and
+ * TuxThrottle plasmoid - reads `tuxthrottlectl status --json` on a timer and
  * shows CPU/GPU temps in the panel with a click-to-switch power profile.
  * Read-only except the two profile buttons: they run
  * `pkexec /usr/local/bin/tuxthrottlectl set power-profile ...`. The
@@ -45,7 +45,7 @@ PlasmoidItem {
             } else if (source.indexOf("status --json") !== -1) {
                 root.reachable = false
             } else {
-                poll.restart()   // a `set` finished — refresh now
+                poll.restart()   // a `set` finished - refresh now
             }
         }
         function run(cmd) { connectSource(cmd) }
@@ -61,7 +61,7 @@ PlasmoidItem {
     }
 
     function setProfile(p) {
-        // pkexec against the installed launcher — path must match the
+        // pkexec against the installed launcher - path must match the
         // PolkitTuxthrottlectl action's exec.path annotation exactly.
         exec.run("pkexec /usr/local/bin/tuxthrottlectl set power-profile " + p)
     }
@@ -86,7 +86,7 @@ PlasmoidItem {
             }
             PC.Label {
                 text: root.reachable && root.cpuT() !== null
-                      ? root.cpuT() + "°" : "–"
+                      ? root.cpuT() + "°" : "-"
                 font.pointsize: Kirigami.Theme.smallFont.pointSize
             }
         }

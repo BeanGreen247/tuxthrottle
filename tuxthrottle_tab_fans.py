@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fans tab (thermal profile, fan boost, the custom fan-curve editor with
 its live position dot, the 60s boost quick action, keyboard-color-tied-to-
-profile) — extracted from tuxthrottle.py (module-split pass, fourth slice)."""
+profile) - extracted from tuxthrottle.py (module-split pass, fourth slice)."""
 import json
 import os
 import pwd
@@ -69,7 +69,7 @@ class FanTabMixin:
         tb.Label(
             note, wraplength=1100, justify="left", bootstyle=SECONDARY,
             text="Thermal profile + fan boost steer the firmware (AWCC-style) fan "
-                 "curve — boost only adds airflow on top, it can't slow a fan below "
+                 "curve - boost only adds airflow on top, it can't slow a fan below "
                  "the automatic curve. Manual PWM (advanced) takes the EC off its "
                  "curve entirely; it's floored so the fans never fully stop, but "
                  "watch temperatures and hit “Restore automatic” when done. Nothing "
@@ -102,7 +102,7 @@ class FanTabMixin:
             r = tb.Frame(lf); r.pack(fill="x", pady=6)
             tb.Label(r, text=fan["label"], font=("Sans", 10, "bold"), width=16,
                      anchor="w").pack(side="left")
-            rpm_lab = tb.Label(r, text="— rpm", width=11, anchor="w",
+            rpm_lab = tb.Label(r, text="- rpm", width=11, anchor="w",
                                bootstyle=SECONDARY)
             rpm_lab.pack(side="left")
             self._fan_rpm_labels[i] = rpm_lab
@@ -130,13 +130,13 @@ class FanTabMixin:
         self._tip(tb.Button(pr, text="⏱ Boost 100% for 60s", bootstyle=(WARNING, "outline"),
                   command=self._fan_boost_60s),
                   "Spin every fan to max right now, then automatically put boost "
-                  "back to whatever it was before — for the 'about to load into "
+                  "back to whatever it was before - for the 'about to load into "
                   "a match' moment, without committing to a whole profile change. "
                   "The revert is a background timer independent of this window, "
                   "so it still happens even if you close the app.").pack(side="left", padx=(12, 4))
 
         if sensors.get_pwm_state():
-            adv = Card(frame, "Manual PWM — advanced / risky", border="danger")
+            adv = Card(frame, "Manual PWM - advanced / risky", border="danger")
             adv.pack(fill="x", pady=(14, 6))
             tb.Checkbutton(adv, variable=self._fan_manual, bootstyle="round-toggle",
                            text="Enable manual PWM control (takes the EC off its "
@@ -161,7 +161,7 @@ class FanTabMixin:
 
         self._build_fancurve_section(frame)
         # live polling is started/stopped by _on_nav_page when this tab is
-        # shown/hidden — see ToolkitApp._TAB_LIVE.
+        # shown/hidden - see ToolkitApp._TAB_LIVE.
 
     # --- closed-loop fan curve (tuxthrottle_powerd.py) ---
 
@@ -356,7 +356,7 @@ class FanTabMixin:
 
     # Quiet=blue / Balanced=white / Performance=red, matching the physical
     # LED-per-profile convention other vendor tools (LenovoLegionLinux /
-    # Legion-Linux-Toolkit) use — free status indicator on a single-zone
+    # Legion-Linux-Toolkit) use - free status indicator on a single-zone
     # keyboard. Opt-in (off by default): see the checkbox in the Fans tab.
     _KBD_PROFILE_COLORS = {"quiet": "3B82F6", "balanced": "FFFFFF", "performance": "FF3B3B"}
 
@@ -375,7 +375,7 @@ class FanTabMixin:
             return
         # tuxthrottle_kbd.set_all() blocks ~1-4s (OpenRGB round-trip + its
         # own retry write) and is internally lock-serialized against other
-        # writers — always call it off the GUI thread, never in a loop.
+        # writers - always call it off the GUI thread, never in a loop.
         def work():
             try:
                 tuxthrottle_kbd.set_all(color)
@@ -405,14 +405,14 @@ class FanTabMixin:
                 capture_output=True, timeout=10, text=True,
             )
             was = ", ".join(f"fan {i}: {round(v / 255 * 100)}%" for i, v in prev_raw.items())
-            self._log(f"[Fans] boosted to 100% for 60s — auto-restoring to ({was}) after; "
+            self._log(f"[Fans] boosted to 100% for 60s - auto-restoring to ({was}) after; "
                       "the revert runs as an independent timer, so it still fires even if "
                       "you close TuxThrottle")
             fixlog.log_event("fan-boost-60s", f"boosted to 100% for 60s, will restore {was}",
                              user=self.user)
         except (OSError, subprocess.SubprocessError) as exc:
             self._log(f"[Fans] boosted to 100% but couldn't schedule the auto-revert "
-                      f"({exc}) — set the sliders back manually in ~60s")
+                      f"({exc}) - set the sliders back manually in ~60s")
 
     def _fan_manual_toggle(self):
         on = self._fan_manual.get()

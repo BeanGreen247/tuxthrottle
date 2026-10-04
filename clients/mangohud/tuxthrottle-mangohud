@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """MangoHud custom-line bridge for TuxThrottle.
 
-Prints ONE short line for MangoHud's `exec=` directive — the current
+Prints ONE short line for MangoHud's `exec=` directive - the current
 platform-profile, CPU package power + temp, and (if the dGPU is awake) its
 temp. Reads `tuxthrottlectl status --json` so it works whether the daemon is
 up (socket / D-Bus) or not (direct sensor reads).

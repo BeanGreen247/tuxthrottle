@@ -1,7 +1,7 @@
 """Lazy tab construction + per-tab live-poll gating (the Phase-1 speed work).
 
 Needs a real Tk root, so it's skipped where ttkbootstrap isn't importable
-(this sandbox — PIL/ImageTk); runs on g15 and in the gui-smoke CI job.
+(this sandbox - PIL/ImageTk); runs on g15 and in the gui-smoke CI job.
 """
 import pytest
 

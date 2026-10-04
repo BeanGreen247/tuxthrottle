@@ -1,19 +1,19 @@
-# Implementation Plan: TuxThrottle backlog — "go full ham"
+# Implementation Plan: TuxThrottle backlog - "go full ham"
 
-Source: user request 2026-08-30 — implement the improvement backlog, UI + core
+Source: user request 2026-08-30 - implement the improvement backlog, UI + core
 first, plus show live CPU/GPU clockspeeds. Compare-to-peers gaps
 (asusctl / LenovoLegionLinux / CoreCtrl / LACT / TuxClocker).
 
 ## Architecture decisions
 - New core lives in `sensors.py` (no GUI deps) so tray/hotkey can reuse it.
 - Risky/system-persistent bits ship as `config/tweaks.json` entries + helper
-  scripts in `/usr/local/bin` + narrow sudoers rules — same pattern as
+  scripts in `/usr/local/bin` + narrow sudoers rules - same pattern as
   `PowerProfileScripts` / `CpuMaxPerformance`.
 - New GUI surface: a **"Power & Limits"** tab (category `Power`, built like the
-  Fans tab — live scales + presets, worker→queue, `_begin_busy` for slow ops).
+  Fans tab - live scales + presets, worker→queue, `_begin_busy` for slow ops).
 - Fan curve + AC/battery auto-switch run as a small daemon
   `tuxthrottle_powerd.py` (stdlib only) behind a tweak-installed systemd unit.
-- Everything gates on DMI (`sensors.detect_model`) — no new hard 5515 assumptions
+- Everything gates on DMI (`sensors.detect_model`) - no new hard 5515 assumptions
   without a model check (roadmap note in CLAUDE.md).
 
 ## Phases
@@ -25,7 +25,7 @@ first, plus show live CPU/GPU clockspeeds. Compare-to-peers gaps
       already existed). 8 gauges, 2×4 grid. Wired in `_poll_dash_queue`.
 - [x] Standing rule saved to memory: load all skills each session.
 
-### Phase 1: CPU TDP control (ryzenadj)   — core + UI
+### Phase 1: CPU TDP control (ryzenadj)   - core + UI
 - [ ] `sensors.py`: `ryzenadj_path()`, `read_ryzenadj_info()` (parse
       `ryzenadj -i` → stapm/fast/slow limits + values + tctl), `set_ryzenadj(fast,
       slow, stapm)`. All return `(ok, msg)` / dict; `exit 0` on noise.
@@ -34,7 +34,7 @@ first, plus show live CPU/GPU clockspeeds. Compare-to-peers gaps
       `/usr/local/bin/tuxthrottle-tdp` wrapper + `tuxthrottle-tdp.service`
       (re-applies saved limits at boot) + sudoers rule for the wrapper.
       State: `~/.config/tuxthrottle/tdp.json`.
-- [ ] Power&Limits tab: 3 sliders (STAPM / fast / slow, 10–80 W), live "current"
+- [ ] Power&Limits tab: 3 sliders (STAPM / fast / slow, 10-80 W), live "current"
       readout, presets (Quiet 25/30/35, Balanced 35/45/54, Performance
       54/65/80), "Reset to firmware default" button.
 - [ ] Test: `--report` still clean; slider write reflected in `ryzenadj -i`.
@@ -47,7 +47,7 @@ first, plus show live CPU/GPU clockspeeds. Compare-to-peers gaps
 - [ ] `config/tweaks.json` → `BatteryChargeLimit`: udev rule +
       `tuxthrottle-battery-limit.service` to persist the % across reboots.
       State `~/.config/tuxthrottle/battery.json`.
-- [ ] Power&Limits tab: slider 50–100 (step 5) + "Full charge once" button
+- [ ] Power&Limits tab: slider 50-100 (step 5) + "Full charge once" button
       (sets 100 until next reboot). Hidden with a note if unsupported.
 
 ### Phase 3: NVIDIA power-limit slider
@@ -93,15 +93,15 @@ first, plus show live CPU/GPU clockspeeds. Compare-to-peers gaps
       `sensors.py`: `get|set profile|tdp|fans|nvpl|battery`, `--json`.
       Non-zero exit on failure. Man-page-ish `--help`.
 
-### Phase 8: Hybrid graphics mode (supergfxctl-lite)  — lowest priority
+### Phase 8: Hybrid graphics mode (supergfxctl-lite)  - lowest priority
 - [ ] Wrap `envycontrol`/PRIME: `sensors.gpu_mode_get/set(hybrid|integrated|nvidia)`.
       Likely just surface EnvyControl (already an app) in the GPU tab with a
       warning it needs logout.
 
 ## Checkpoints
-- After Phase 1–3: deploy to g15, `--report` clean, sliders round-trip, GUI
+- After Phase 1-3: deploy to g15, `--report` clean, sliders round-trip, GUI
   smoke (`root.update()` loop). Relaunch on g15 desktop.
-- After Phase 5–6: verify daemon restores fan auto on stop; unplug/replug AC.
+- After Phase 5-6: verify daemon restores fan auto on stop; unplug/replug AC.
 - Final: `verify-install.sh` passes; README + CLAUDE.md updated; memory backlog
   entry updated.
 

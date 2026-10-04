@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Profiles tab (snapshots, named profiles, export/import, rollback) —
+"""Profiles tab (snapshots, named profiles, export/import, rollback) -
 extracted from tuxthrottle.py (module-split pass, sixth slice)."""
 import os
 import pwd
@@ -22,7 +22,7 @@ class ProfilesTabMixin:
         frame = self._scroll_body(outer, pad=16)
 
         tb.Label(frame, wraplength=1100, justify="left", bootstyle=SECONDARY, text=(
-            "A profile is a named snapshot of the whole power surface — thermal "
+            "A profile is a named snapshot of the whole power surface - thermal "
             "profile, CPU TDP, battery limit, NVIDIA limit, fan curve, "
             "auto-switch, keyboard colour. Applying one (or the tweak “Apply "
             "Selected”, or a rollback) first drops an automatic snapshot here, so "
@@ -43,14 +43,14 @@ class ProfilesTabMixin:
         pf = Card(frame, "Saved profiles")
         pf.pack(fill="x", pady=6)
         tb.Label(pf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
-            "A saved profile is a plain JSON file — export one to share a "
+            "A saved profile is a plain JSON file - export one to share a "
             "known-good curve/TDP loadout with another G15 owner, or import "
             "one someone shared with you.")).pack(anchor="w", pady=(0, 6))
         tb.Button(pf, text="Import profile…", bootstyle=(INFO, "outline"),
                   command=self._profile_import).pack(anchor="w", pady=(0, 8))
         self._prof_list = tb.Frame(pf); self._prof_list.pack(fill="x")
 
-        sf = Card(frame, "Snapshots — automatic rollback points")
+        sf = Card(frame, "Snapshots - automatic rollback points")
         sf.pack(fill="x", pady=6)
         tb.Button(sf, text="↩  Roll back to the latest snapshot", bootstyle=(WARNING, "outline"),
                   command=lambda: self._snapshot_rollback("last")).pack(anchor="w", pady=(0, 8))
@@ -59,7 +59,7 @@ class ProfilesTabMixin:
         gpf = Card(frame, "Per-game auto-profiles")
         gpf.pack(fill="x", pady=6)
         tb.Label(gpf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
-            "When a listed process is running (match on the executable name — for "
+            "When a listed process is running (match on the executable name - for "
             "Proton games that's the Windows .exe), the daemon snapshots the "
             "current state and applies the chosen profile, then restores it when "
             "the game exits. Use \"*\" to match any Feral GameMode session. Needs "
@@ -101,7 +101,7 @@ class ProfilesTabMixin:
         lf = Card(parent, "Time schedule")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, wraplength=1000, justify="left", bootstyle=SECONDARY, text=(
-            "The daemon applies a profile by time of day — e.g. Quiet 22:00–07:00. "
+            "The daemon applies a profile by time of day - e.g. Quiet 22:00-07:00. "
             "“Apply” is a preset (Quiet / Balanced / Performance) or a saved "
             "profile name; times are 24-hour and may wrap past midnight. Tick the "
             "weekdays a rule runs on (all ticked = every day). A running per-game "
@@ -306,7 +306,7 @@ class ProfilesTabMixin:
             rows = tuxthrottle_profiles.apply_state(st, self.user, with_gpu_mode=with_gpu)
             for r in rows:
                 self._log(f"[Profiles] {name}: {r['key']} "
-                          + ("ok" if r["ok"] else f"FAILED — {r['msg']}")
+                          + ("ok" if r["ok"] else f"FAILED - {r['msg']}")
                           + (f" ({r['msg']})" if r["ok"] and r["msg"] else ""))
         except Exception as exc:  # noqa: BLE001
             self._log(f"[Profiles] apply '{name}' failed: {exc}")
@@ -324,7 +324,7 @@ class ProfilesTabMixin:
             rows = tuxthrottle_profiles.rollback(target, self.user)
             for r in rows:
                 self._log(f"[Profiles] rollback: {r['key']} "
-                          + ("ok" if r["ok"] else f"FAILED — {r['msg']}"))
+                          + ("ok" if r["ok"] else f"FAILED - {r['msg']}"))
         except Exception as exc:  # noqa: BLE001
             self._log(f"[Profiles] rollback failed: {exc}")
         self.root.after(0, self._profiles_refresh)

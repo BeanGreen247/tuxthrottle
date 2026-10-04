@@ -2,7 +2,7 @@
 %global gittag   %{?_gittag}%{!?_gittag:main}
 
 Name:           tuxthrottle
-Version:        %{?_version}%{!?_version:26.09.28}
+Version:        %{?_version}%{!?_version:26.10.04}
 Release:        %{?_release}%{!?_release:1}%{?dist}
 Summary:        Gaming, power and thermal control panel for the Dell G15 5515 (Ryzen) on Nobara/KDE
 
@@ -23,9 +23,14 @@ Recommends:     libsmbios
 Recommends:     python3-pyside6
 Recommends:     polkit
 Recommends:     gamemode
+Recommends:     python3-pillow-tk
+Recommends:     google-noto-sans-symbols-2-fonts
+Recommends:     smartmontools
+Recommends:     ntfsprogs
+Recommends:     cronie
 
 # The in-app "tweaks" (systemd units, sudoers, kwriteconfig6 …) stay strictly
-# opt-in and are applied from the GUI / apply_tweak.py — never from %post.
+# opt-in and are applied from the GUI / apply_tweak.py - never from %post.
 
 %description
 TuxThrottle is a Tk control-panel GUI plus a system-tray monitor, a background
@@ -64,7 +69,7 @@ and are never applied from %post.
 %autosetup -n %{name}-%{gittag}
 
 %build
-# nothing to build — pure Python + JSON + shell
+# nothing to build - pure Python + JSON + shell
 
 %install
 install -d %{buildroot}%{appdir}

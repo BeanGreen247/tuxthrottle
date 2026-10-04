@@ -4,12 +4,12 @@
     "Tab": "GTA V Online",
     "order": 1,
     "appid": "3240220",
-    "Description": "Grand Theft Auto V Enhanced / GTA Online on Nobara via Steam + Proton — Steam AppID 3240220 (the old 'GTA V Legacy' is 271590; set \"appid\" to that if you run the legacy copy). GTA Online is driven by BattlEye anti-cheat, so the prefix has to carry the Proton BattlEye Runtime and a recent GE-Proton, and BattlEye's servers have to be blocked in /etc/hosts (step 6b). That gets GTA Online into closed crew / closed friend / invite-only sessions; public sessions still kick you. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted. This mirrors README “GTA V Online → Route A”.",
+    "Description": "Grand Theft Auto V Enhanced / GTA Online on Nobara via Steam + Proton - Steam AppID 3240220 (the old 'GTA V Legacy' is 271590; set \"appid\" to that if you run the legacy copy). GTA Online is driven by BattlEye anti-cheat, so the prefix has to carry the Proton BattlEye Runtime and a recent GE-Proton, and BattlEye's servers have to be blocked in /etc/hosts (step 6b). That gets GTA Online into closed crew / closed friend / invite-only sessions; public sessions still kick you. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted. This mirrors README “GTA V Online → Route A”.",
     "steps": [
       {
         "id": "steam",
         "title": "1 · Install Steam (native)",
-        "desc": "Native RPM Steam (RPM Fusion) — the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
+        "desc": "Native RPM Steam (RPM Fusion) - the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
         "check": "rpm -q steam >/dev/null 2>&1",
         "run": "dnf install -y steam"
       },
@@ -23,28 +23,27 @@
       {
         "id": "protontricks",
         "title": "3 · Install Protontricks",
-        "desc": "winetricks for Steam/Proton prefixes — used later to drop vcrun2019 / d3dcompiler_47 / corefonts into GTA V's prefix and to flip the prefix to Windows 10 if the Rockstar / Social Club sign-in loops.",
+        "desc": "winetricks for Steam/Proton prefixes - used later to drop vcrun2019 / d3dcompiler_47 / corefonts into GTA V's prefix and to flip the prefix to Windows 10 if the Rockstar / Social Club sign-in loops.",
         "check": "rpm -q protontricks >/dev/null 2>&1 || sudo -u {USER} flatpak info com.github.Matoking.protontricks >/dev/null 2>&1",
         "run": "dnf install -y protontricks"
       },
       {
         "id": "protonup",
-        "title": "4 · Install ProtonUp-Qt",
-        "desc": "GUI to manage GE-Proton / wine-GE versions per launcher. Installed as a Flatpak for {USER}. You can use it instead of step 5 if you prefer clicking.",
-        "check": "flatpak info net.davidotek.pupgui2 >/dev/null 2>&1 || sudo -u {USER} flatpak info net.davidotek.pupgui2 >/dev/null 2>&1",
-        "run": "dnf install -y flatpak && flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo && sudo -u {USER} flatpak install -y --noninteractive flathub net.davidotek.pupgui2"
+        "title": "4 · Other Proton builds  (optional)",
+        "desc": "Nothing to install here any more: TuxThrottle's own “Proton & Runtimes” tab downloads and manages GE-Proton, Proton-CachyOS, Proton-EM and friends for Steam, Heroic, Lutris and Bottles, and Valve's Proton / Steam Linux Runtime tools. Use it if you want a specific version instead of the latest GE-Proton from the next step.",
+        "manual": true
       },
       {
         "id": "geproton",
         "title": "5 · Install the latest GE-Proton",
-        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub and unpacks it into Steam's compatibilitytools.d for {USER}. Restart Steam afterwards so it shows up under Compatibility.",
+        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. Restart Steam afterwards so it shows up under Compatibility.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'set -e; d=\"$HOME/.local/share/Steam/compatibilitytools.d\"; [ -d \"$HOME/.steam/root\" ] && d=\"$HOME/.steam/root/compatibilitytools.d\"; mkdir -p \"$d\"; url=$(curl -fsSL https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep -oP \"https://[^\\x22]+GE-Proton[^\\x22]+tar[.]gz\" | head -1); test -n \"$url\"; echo \"Downloading $url\"; curl -fL \"$url\" -o /tmp/geproton.tar.gz; tar -xzf /tmp/geproton.tar.gz -C \"$d\"; rm -f /tmp/geproton.tar.gz; echo \"compatibilitytools.d now holds:\"; ls -1 \"$d\"'"
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
-        "desc": "If GTA V lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there — creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
+        "desc": "If GTA V lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
         "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
         "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
         "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
@@ -54,19 +53,19 @@
         "title": "6 · Install the Proton BattlEye Runtime",
         "desc": "GTA Online's BattlEye only loads if this Steam tool (app 1161040) is present. This triggers the install; Steam will open. If it doesn't take, install “Proton BattlEye Runtime” from your Steam Library → Tools list by hand.",
         "check": "test -d \"/home/{USER}/.steam/steam/steamapps/common/Proton BattlEye Runtime\" -o -d \"/home/{USER}/.local/share/Steam/steamapps/common/Proton BattlEye Runtime\"",
-        "run": "su - {USER} -c 'timeout 45 steam steam://install/1161040 >/dev/null 2>&1 || true'"
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py steam-install 1161040'"
       },
       {
         "id": "behosts",
         "title": "6b · Block BattlEye's servers in /etc/hosts",
-        "desc": "Without this, GTA Online connects and BattlEye kicks you shortly after joining. Pointing paradiseenhanced-s1, paradise-s1 (GTA V Legacy) and test-s1 .battleye.com at 0.0.0.0 lets GTA Online load into closed crew / closed friend / invite-only sessions; PUBLIC sessions still kick you (“kicked by BattlEye”) — that part is server-side and no local fix changes it. Backs /etc/hosts up first. Remove the lines again to undo. Restart Steam (or reboot) afterwards so nothing keeps a cached lookup. Known quirk: opening the Steam overlay in-game can kill all game input until you restart the game — avoid Shift+Tab.",
+        "desc": "Without this, GTA Online connects and BattlEye kicks you shortly after joining. Pointing paradiseenhanced-s1, paradise-s1 (GTA V Legacy) and test-s1 .battleye.com at 0.0.0.0 lets GTA Online load into closed crew / closed friend / invite-only sessions; PUBLIC sessions still kick you (“kicked by BattlEye”) - that part is server-side and no local fix changes it. Backs /etc/hosts up first. Remove the lines again to undo. Restart Steam (or reboot) afterwards so nothing keeps a cached lookup. Known quirk: opening the Steam overlay in-game can kill all game input until you restart the game - avoid Shift+Tab.",
         "check": "grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+paradiseenhanced-s1\\.battleye\\.com([[:space:]]|$)' /etc/hosts && grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+paradise-s1\\.battleye\\.com([[:space:]]|$)' /etc/hosts && grep -Eq '^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+test-s1\\.battleye\\.com([[:space:]]|$)' /etc/hosts",
         "run": "cp -a /etc/hosts /etc/hosts.bak-gtav && grep -q '^# GTA V Online on Proton: BattlEye block' /etc/hosts || printf '\\n# GTA V Online on Proton: BattlEye block (closed crew/friend/invite-only sessions)\\n' >> /etc/hosts; for h in paradiseenhanced-s1 paradise-s1 test-s1; do grep -Eq \"^[[:space:]]*0\\.0\\.0\\.0[[:space:]]+$h\\.battleye\\.com([[:space:]]|\\$)\" /etc/hosts || { c=''; [ $h = paradise-s1 ] && c=' # GTA V Legacy Online'; echo \"0.0.0.0 $h.battleye.com$c\" >> /etc/hosts; }; done; grep battleye /etc/hosts"
       },
       {
         "id": "sysctl",
         "title": "7 · Raise vm.max_map_count",
-        "desc": "Modern Proton titles (and GTA V with mods) can exhaust the default mmap limit and crash on load. Writes a persistent /etc/sysctl.d/80-gtav.conf and applies it now. Nobara often sets this already — the step is a no-op then.",
+        "desc": "Modern Proton titles (and GTA V with mods) can exhaust the default mmap limit and crash on load. Writes a persistent /etc/sysctl.d/80-gtav.conf and applies it now. Nobara often sets this already - the step is a no-op then.",
         "check": "[ \"$(cat /proc/sys/vm/max_map_count 2>/dev/null || echo 0)\" -ge 1048576 ]",
         "run": "printf 'vm.max_map_count=2147483642\\n' > /etc/sysctl.d/80-gtav.conf && sysctl -p /etc/sysctl.d/80-gtav.conf"
       },
@@ -85,27 +84,27 @@
       {
         "id": "compat",
         "title": "10 · Force GE-Proton on GTA V  (manual)",
-        "desc": "Steam Library → right-click Grand Theft Auto V → Properties → Compatibility → tick “Force the use of a specific Steam Play compatibility tool” → choose the GE-Proton from step 5. GTA Online needs GE-Proton — Valve's Proton / Proton Experimental don't get past BattlEye.",
+        "desc": "Steam Library → right-click Grand Theft Auto V → Properties → Compatibility → tick “Force the use of a specific Steam Play compatibility tool” → choose the GE-Proton from step 5. GTA Online needs GE-Proton - Valve's Proton / Proton Experimental don't get past BattlEye.",
         "manual": true
       },
       {
         "id": "launchopts",
         "title": "11 · Set the launch options  (manual)",
-        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). PROTON_BATTLEYE_RUNTIME points GE-Proton at the BattlEye Runtime from step 6 (absolute path, quoted because of the spaces — a quoted ~ does NOT expand, so don't shorten it to ~/…). It keeps the Vulkan layer stack CLEAN for BattlEye — MANGOHUD=0 + DISABLE_VKBASALT=1 + VK_LOADER_LAYERS_DISABLE=~implicit~ turn off every injected implicit layer (overlay / post-fx), which is what avoids anti-cheat bans and startup crashes; gamemoderun is a plain wrapper (not a layer) so it stays. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU — drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). DXVK_ASYNC=1 cuts shader-compile stutter (GE-Proton's DXVK supports it). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder. BattlEye installs itself into the prefix on the first launch — let it finish, then start the game again.",
+        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). PROTON_BATTLEYE_RUNTIME points GE-Proton at the BattlEye Runtime from step 6 (absolute path, quoted because of the spaces - a quoted ~ does NOT expand, so don't shorten it to ~/…). It keeps the Vulkan layer stack CLEAN for BattlEye - MANGOHUD=0 + DISABLE_VKBASALT=1 + VK_LOADER_LAYERS_DISABLE=~implicit~ turn off every injected implicit layer (overlay / post-fx), which is what avoids anti-cheat bans and startup crashes; gamemoderun is a plain wrapper (not a layer) so it stays. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU - drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). DXVK_ASYNC=1 cuts shader-compile stutter (GE-Proton's DXVK supports it). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder. BattlEye installs itself into the prefix on the first launch - let it finish, then start the game again.",
         "manual": true,
         "copy": "PROTON_BATTLEYE_RUNTIME=\"/home/{USER}/.local/share/Steam/steamapps/common/Proton BattlEye Runtime\" __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia MANGOHUD=0 DISABLE_VKBASALT=1 VK_LOADER_LAYERS_DISABLE=~implicit~ DXVK_ASYNC=1 gamemoderun %command%"
       },
       {
         "id": "prefixdeps",
         "title": "12 · Rockstar launcher / Social Club deps  (manual)",
-        "desc": "Only needed if the Rockstar Games Launcher or Social Club sign-in is black, blank or loops. Launch GTA V once first so Proton creates the prefix, quit, then run the command below (Copy) — it drops vcrun2019, d3dcompiler_47 and corefonts into AppID {APPID}'s prefix non-interactively. Use `protontricks {APPID} --gui` instead if you also need to flip the prefix to Windows 10.",
+        "desc": "Only needed if the Rockstar Games Launcher or Social Club sign-in is black, blank or loops. Launch GTA V once first so Proton creates the prefix, quit, then run the command below (Copy) - it drops vcrun2019, d3dcompiler_47 and corefonts into AppID {APPID}'s prefix non-interactively. Use `protontricks {APPID} --gui` instead if you also need to flip the prefix to Windows 10.",
         "manual": true,
         "copy": "su - {USER} -c 'protontricks --no-bwrap {APPID} -q vcrun2019 d3dcompiler_47 corefonts'"
       },
       {
         "id": "firstrun",
         "title": "13 · First launch  (manual)",
-        "desc": "Start GTA V from Steam. First launch pulls in BattlEye and the Rockstar Games Launcher inside the prefix — let it finish, then start the game again. If Social Club still misbehaves, do step 12; if a window stays black, try a different GE-Proton version (step 5 / ProtonUp-Qt).",
+        "desc": "Start GTA V from Steam. First launch pulls in BattlEye and the Rockstar Games Launcher inside the prefix - let it finish, then start the game again. If Social Club still misbehaves, do step 12; if a window stays black, try a different GE-Proton version (step 5 / ProtonUp-Qt).",
         "manual": true
       }
     ]
@@ -115,12 +114,12 @@
     "Tab": "GTA III · DE",
     "order": 2,
     "appid": "1546970",
-    "Description": "Grand Theft Auto III – The Definitive Edition on Nobara via Steam + Proton — Steam AppID 1546970. It boots through the Rockstar Games Launcher (like GTA V Enhanced), so it needs a recent GE-Proton and the Proton prefix kept off NTFS/exFAT (tuxthrottle_prefix_relocate.py); if the launcher / Social Club sign-in loops or renders black, drop vcrun2019 / d3dcompiler_47 / corefonts into the prefix and set it to Windows 10. It is single-player (no BattlEye), so the clean-Vulkan-layer launch string GTA Online needs isn't required — a plain gamemoderun mangohud %command% (+ PRIME offload on the hybrid G15) is enough. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted.",
+    "Description": "Grand Theft Auto III - The Definitive Edition on Nobara via Steam + Proton - Steam AppID 1546970. It boots through the Rockstar Games Launcher (like GTA V Enhanced), so it needs a recent GE-Proton and the Proton prefix kept off NTFS/exFAT (tuxthrottle_prefix_relocate.py); if the launcher / Social Club sign-in loops or renders black, drop vcrun2019 / d3dcompiler_47 / corefonts into the prefix and set it to Windows 10. It is single-player (no BattlEye), so the clean-Vulkan-layer launch string GTA Online needs isn't required - a plain gamemoderun %command% (+ PRIME offload on the hybrid G15) is enough. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted.",
     "steps": [
       {
         "id": "steam",
         "title": "1 · Install Steam (native)",
-        "desc": "Native RPM Steam (RPM Fusion) — the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
+        "desc": "Native RPM Steam (RPM Fusion) - the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
         "check": "rpm -q steam >/dev/null 2>&1",
         "run": "dnf install -y steam"
       },
@@ -134,28 +133,27 @@
       {
         "id": "protontricks",
         "title": "3 · Install Protontricks",
-        "desc": "winetricks for Steam/Proton prefixes — used later to drop vcrun2019 / d3dcompiler_47 / corefonts into GTA III Definitive's prefix and to flip the prefix to Windows 10 if the Rockstar Games Launcher / Social Club sign-in loops or renders black.",
+        "desc": "winetricks for Steam/Proton prefixes - used later to drop vcrun2019 / d3dcompiler_47 / corefonts into GTA III Definitive's prefix and to flip the prefix to Windows 10 if the Rockstar Games Launcher / Social Club sign-in loops or renders black.",
         "check": "rpm -q protontricks >/dev/null 2>&1 || sudo -u {USER} flatpak info com.github.Matoking.protontricks >/dev/null 2>&1",
         "run": "dnf install -y protontricks"
       },
       {
         "id": "protonup",
-        "title": "4 · Install ProtonUp-Qt",
-        "desc": "GUI to manage GE-Proton / wine-GE versions per launcher. Installed as a Flatpak for {USER}. You can use it instead of step 5 if you prefer clicking.",
-        "check": "flatpak info net.davidotek.pupgui2 >/dev/null 2>&1 || sudo -u {USER} flatpak info net.davidotek.pupgui2 >/dev/null 2>&1",
-        "run": "dnf install -y flatpak && flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo && sudo -u {USER} flatpak install -y --noninteractive flathub net.davidotek.pupgui2"
+        "title": "4 · Other Proton builds  (optional)",
+        "desc": "Nothing to install here any more: TuxThrottle's own “Proton & Runtimes” tab downloads and manages GE-Proton, Proton-CachyOS, Proton-EM and friends for Steam, Heroic, Lutris and Bottles, and Valve's Proton / Steam Linux Runtime tools. Use it if you want a specific version instead of the latest GE-Proton from the next step.",
+        "manual": true
       },
       {
         "id": "geproton",
         "title": "5 · Install the latest GE-Proton",
-        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub and unpacks it into Steam's compatibilitytools.d for {USER}. The Definitive Editions boot through the Rockstar Games Launcher and need a recent GE-Proton, same as GTA V Enhanced. Restart Steam afterwards so it shows up under Compatibility.",
+        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. The Definitive Editions boot through the Rockstar Games Launcher and need a recent GE-Proton, same as GTA V Enhanced. Restart Steam afterwards so it shows up under Compatibility.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'set -e; d=\"$HOME/.local/share/Steam/compatibilitytools.d\"; [ -d \"$HOME/.steam/root\" ] && d=\"$HOME/.steam/root/compatibilitytools.d\"; mkdir -p \"$d\"; url=$(curl -fsSL https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep -oP \"https://[^\\x22]+GE-Proton[^\\x22]+tar[.]gz\" | head -1); test -n \"$url\"; echo \"Downloading $url\"; curl -fL \"$url\" -o /tmp/geproton.tar.gz; tar -xzf /tmp/geproton.tar.gz -C \"$d\"; rm -f /tmp/geproton.tar.gz; echo \"compatibilitytools.d now holds:\"; ls -1 \"$d\"'"
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
-        "desc": "If GTA III Definitive lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there — creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
+        "desc": "If GTA III Definitive lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
         "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
         "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
         "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
@@ -175,21 +173,21 @@
       {
         "id": "launchopts",
         "title": "8 · Set the launch options  (manual)",
-        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). This is a single-player title with no BattlEye, so the clean-Vulkan-layer stack GTA Online needs isn't required — a plain gamemoderun mangohud %command% is enough. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU on the hybrid G15 — drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder.",
+        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). This is a single-player title with no BattlEye, so the clean-Vulkan-layer stack GTA Online needs isn't required - a plain gamemoderun %command% is enough. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU on the hybrid G15 - drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder.",
         "manual": true,
-        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun mangohud %command%"
+        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun %command%"
       },
       {
         "id": "prefixdeps",
         "title": "9 · Rockstar launcher / Social Club deps  (manual)",
-        "desc": "Only needed if the Rockstar Games Launcher or Social Club sign-in is black, blank or loops. Launch GTA III Definitive once first so Proton creates the prefix, quit, then run the command below (Copy) — it drops vcrun2019, d3dcompiler_47 and corefonts into AppID {APPID}'s prefix non-interactively. If the sign-in still loops or renders black, run `protontricks {APPID} --gui` and set the prefix to Windows 10 (win10).",
+        "desc": "Only needed if the Rockstar Games Launcher or Social Club sign-in is black, blank or loops. Launch GTA III Definitive once first so Proton creates the prefix, quit, then run the command below (Copy) - it drops vcrun2019, d3dcompiler_47 and corefonts into AppID {APPID}'s prefix non-interactively. If the sign-in still loops or renders black, run `protontricks {APPID} --gui` and set the prefix to Windows 10 (win10).",
         "manual": true,
         "copy": "su - {USER} -c 'protontricks --no-bwrap {APPID} -q vcrun2019 d3dcompiler_47 corefonts'"
       },
       {
         "id": "firstrun",
         "title": "10 · First launch  (manual)",
-        "desc": "Start GTA III Definitive from Steam. First launch pulls in the Rockstar Games Launcher inside the prefix — let it finish, then start the game again. If Social Club still misbehaves, do step 9; if a window stays black, try a different GE-Proton version (step 5 / ProtonUp-Qt).",
+        "desc": "Start GTA III Definitive from Steam. First launch pulls in the Rockstar Games Launcher inside the prefix - let it finish, then start the game again. If Social Club still misbehaves, do step 9; if a window stays black, try a different GE-Proton version (step 5 / ProtonUp-Qt).",
         "manual": true
       }
     ]
@@ -199,12 +197,12 @@
     "Tab": "GTA VC · DE",
     "order": 3,
     "appid": "1546990",
-    "Description": "Grand Theft Auto: Vice City – The Definitive Edition on Nobara via Steam + Proton — Steam AppID 1546990. It boots through the Rockstar Games Launcher (like GTA V Enhanced), so it needs a recent GE-Proton and the Proton prefix kept off NTFS/exFAT (tuxthrottle_prefix_relocate.py); if the launcher / Social Club sign-in loops or renders black, drop vcrun2019 / d3dcompiler_47 / corefonts into the prefix and set it to Windows 10. It is single-player (no BattlEye), so the clean-Vulkan-layer launch string GTA Online needs isn't required — a plain gamemoderun mangohud %command% (+ PRIME offload on the hybrid G15) is enough. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted.",
+    "Description": "Grand Theft Auto: Vice City - The Definitive Edition on Nobara via Steam + Proton - Steam AppID 1546990. It boots through the Rockstar Games Launcher (like GTA V Enhanced), so it needs a recent GE-Proton and the Proton prefix kept off NTFS/exFAT (tuxthrottle_prefix_relocate.py); if the launcher / Social Club sign-in loops or renders black, drop vcrun2019 / d3dcompiler_47 / corefonts into the prefix and set it to Windows 10. It is single-player (no BattlEye), so the clean-Vulkan-layer launch string GTA Online needs isn't required - a plain gamemoderun %command% (+ PRIME offload on the hybrid G15) is enough. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted.",
     "steps": [
       {
         "id": "steam",
         "title": "1 · Install Steam (native)",
-        "desc": "Native RPM Steam (RPM Fusion) — the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
+        "desc": "Native RPM Steam (RPM Fusion) - the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
         "check": "rpm -q steam >/dev/null 2>&1",
         "run": "dnf install -y steam"
       },
@@ -218,28 +216,27 @@
       {
         "id": "protontricks",
         "title": "3 · Install Protontricks",
-        "desc": "winetricks for Steam/Proton prefixes — used later to drop vcrun2019 / d3dcompiler_47 / corefonts into GTA Vice City Definitive's prefix and to flip the prefix to Windows 10 if the Rockstar Games Launcher / Social Club sign-in loops or renders black.",
+        "desc": "winetricks for Steam/Proton prefixes - used later to drop vcrun2019 / d3dcompiler_47 / corefonts into GTA Vice City Definitive's prefix and to flip the prefix to Windows 10 if the Rockstar Games Launcher / Social Club sign-in loops or renders black.",
         "check": "rpm -q protontricks >/dev/null 2>&1 || sudo -u {USER} flatpak info com.github.Matoking.protontricks >/dev/null 2>&1",
         "run": "dnf install -y protontricks"
       },
       {
         "id": "protonup",
-        "title": "4 · Install ProtonUp-Qt",
-        "desc": "GUI to manage GE-Proton / wine-GE versions per launcher. Installed as a Flatpak for {USER}. You can use it instead of step 5 if you prefer clicking.",
-        "check": "flatpak info net.davidotek.pupgui2 >/dev/null 2>&1 || sudo -u {USER} flatpak info net.davidotek.pupgui2 >/dev/null 2>&1",
-        "run": "dnf install -y flatpak && flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo && sudo -u {USER} flatpak install -y --noninteractive flathub net.davidotek.pupgui2"
+        "title": "4 · Other Proton builds  (optional)",
+        "desc": "Nothing to install here any more: TuxThrottle's own “Proton & Runtimes” tab downloads and manages GE-Proton, Proton-CachyOS, Proton-EM and friends for Steam, Heroic, Lutris and Bottles, and Valve's Proton / Steam Linux Runtime tools. Use it if you want a specific version instead of the latest GE-Proton from the next step.",
+        "manual": true
       },
       {
         "id": "geproton",
         "title": "5 · Install the latest GE-Proton",
-        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub and unpacks it into Steam's compatibilitytools.d for {USER}. The Definitive Editions boot through the Rockstar Games Launcher and need a recent GE-Proton, same as GTA V Enhanced. Restart Steam afterwards so it shows up under Compatibility.",
+        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. The Definitive Editions boot through the Rockstar Games Launcher and need a recent GE-Proton, same as GTA V Enhanced. Restart Steam afterwards so it shows up under Compatibility.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'set -e; d=\"$HOME/.local/share/Steam/compatibilitytools.d\"; [ -d \"$HOME/.steam/root\" ] && d=\"$HOME/.steam/root/compatibilitytools.d\"; mkdir -p \"$d\"; url=$(curl -fsSL https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep -oP \"https://[^\\x22]+GE-Proton[^\\x22]+tar[.]gz\" | head -1); test -n \"$url\"; echo \"Downloading $url\"; curl -fL \"$url\" -o /tmp/geproton.tar.gz; tar -xzf /tmp/geproton.tar.gz -C \"$d\"; rm -f /tmp/geproton.tar.gz; echo \"compatibilitytools.d now holds:\"; ls -1 \"$d\"'"
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
-        "desc": "If GTA Vice City Definitive lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there — creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
+        "desc": "If GTA Vice City Definitive lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
         "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
         "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
         "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
@@ -259,21 +256,21 @@
       {
         "id": "launchopts",
         "title": "8 · Set the launch options  (manual)",
-        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). This is a single-player title with no BattlEye, so the clean-Vulkan-layer stack GTA Online needs isn't required — a plain gamemoderun mangohud %command% is enough. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU on the hybrid G15 — drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder.",
+        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). This is a single-player title with no BattlEye, so the clean-Vulkan-layer stack GTA Online needs isn't required - a plain gamemoderun %command% is enough. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU on the hybrid G15 - drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder.",
         "manual": true,
-        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun mangohud %command%"
+        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun %command%"
       },
       {
         "id": "prefixdeps",
         "title": "9 · Rockstar launcher / Social Club deps  (manual)",
-        "desc": "Only needed if the Rockstar Games Launcher or Social Club sign-in is black, blank or loops. Launch GTA Vice City Definitive once first so Proton creates the prefix, quit, then run the command below (Copy) — it drops vcrun2019, d3dcompiler_47 and corefonts into AppID {APPID}'s prefix non-interactively. If the sign-in still loops or renders black, run `protontricks {APPID} --gui` and set the prefix to Windows 10 (win10).",
+        "desc": "Only needed if the Rockstar Games Launcher or Social Club sign-in is black, blank or loops. Launch GTA Vice City Definitive once first so Proton creates the prefix, quit, then run the command below (Copy) - it drops vcrun2019, d3dcompiler_47 and corefonts into AppID {APPID}'s prefix non-interactively. If the sign-in still loops or renders black, run `protontricks {APPID} --gui` and set the prefix to Windows 10 (win10).",
         "manual": true,
         "copy": "su - {USER} -c 'protontricks --no-bwrap {APPID} -q vcrun2019 d3dcompiler_47 corefonts'"
       },
       {
         "id": "firstrun",
         "title": "10 · First launch  (manual)",
-        "desc": "Start GTA Vice City Definitive from Steam. First launch pulls in the Rockstar Games Launcher inside the prefix — let it finish, then start the game again. If Social Club still misbehaves, do step 9; if a window stays black, try a different GE-Proton version (step 5 / ProtonUp-Qt).",
+        "desc": "Start GTA Vice City Definitive from Steam. First launch pulls in the Rockstar Games Launcher inside the prefix - let it finish, then start the game again. If Social Club still misbehaves, do step 9; if a window stays black, try a different GE-Proton version (step 5 / ProtonUp-Qt).",
         "manual": true
       }
     ]
@@ -283,12 +280,12 @@
     "Tab": "GTA SA · DE",
     "order": 4,
     "appid": "1547000",
-    "Description": "Grand Theft Auto: San Andreas – The Definitive Edition on Nobara via Steam + Proton — Steam AppID 1547000. It boots through the Rockstar Games Launcher (like GTA V Enhanced), so it needs a recent GE-Proton and the Proton prefix kept off NTFS/exFAT (tuxthrottle_prefix_relocate.py); if the launcher / Social Club sign-in loops or renders black, drop vcrun2019 / d3dcompiler_47 / corefonts into the prefix and set it to Windows 10. It is single-player (no BattlEye), so the clean-Vulkan-layer launch string GTA Online needs isn't required — a plain gamemoderun mangohud %command% (+ PRIME offload on the hybrid G15) is enough. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted.",
+    "Description": "Grand Theft Auto: San Andreas - The Definitive Edition on Nobara via Steam + Proton - Steam AppID 1547000. It boots through the Rockstar Games Launcher (like GTA V Enhanced), so it needs a recent GE-Proton and the Proton prefix kept off NTFS/exFAT (tuxthrottle_prefix_relocate.py); if the launcher / Social Club sign-in loops or renders black, drop vcrun2019 / d3dcompiler_47 / corefonts into the prefix and set it to Windows 10. It is single-player (no BattlEye), so the clean-Vulkan-layer launch string GTA Online needs isn't required - a plain gamemoderun %command% (+ PRIME offload on the hybrid G15) is enough. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted.",
     "steps": [
       {
         "id": "steam",
         "title": "1 · Install Steam (native)",
-        "desc": "Native RPM Steam (RPM Fusion) — the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
+        "desc": "Native RPM Steam (RPM Fusion) - the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
         "check": "rpm -q steam >/dev/null 2>&1",
         "run": "dnf install -y steam"
       },
@@ -302,28 +299,27 @@
       {
         "id": "protontricks",
         "title": "3 · Install Protontricks",
-        "desc": "winetricks for Steam/Proton prefixes — used later to drop vcrun2019 / d3dcompiler_47 / corefonts into GTA San Andreas Definitive's prefix and to flip the prefix to Windows 10 if the Rockstar Games Launcher / Social Club sign-in loops or renders black.",
+        "desc": "winetricks for Steam/Proton prefixes - used later to drop vcrun2019 / d3dcompiler_47 / corefonts into GTA San Andreas Definitive's prefix and to flip the prefix to Windows 10 if the Rockstar Games Launcher / Social Club sign-in loops or renders black.",
         "check": "rpm -q protontricks >/dev/null 2>&1 || sudo -u {USER} flatpak info com.github.Matoking.protontricks >/dev/null 2>&1",
         "run": "dnf install -y protontricks"
       },
       {
         "id": "protonup",
-        "title": "4 · Install ProtonUp-Qt",
-        "desc": "GUI to manage GE-Proton / wine-GE versions per launcher. Installed as a Flatpak for {USER}. You can use it instead of step 5 if you prefer clicking.",
-        "check": "flatpak info net.davidotek.pupgui2 >/dev/null 2>&1 || sudo -u {USER} flatpak info net.davidotek.pupgui2 >/dev/null 2>&1",
-        "run": "dnf install -y flatpak && flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo && sudo -u {USER} flatpak install -y --noninteractive flathub net.davidotek.pupgui2"
+        "title": "4 · Other Proton builds  (optional)",
+        "desc": "Nothing to install here any more: TuxThrottle's own “Proton & Runtimes” tab downloads and manages GE-Proton, Proton-CachyOS, Proton-EM and friends for Steam, Heroic, Lutris and Bottles, and Valve's Proton / Steam Linux Runtime tools. Use it if you want a specific version instead of the latest GE-Proton from the next step.",
+        "manual": true
       },
       {
         "id": "geproton",
         "title": "5 · Install the latest GE-Proton",
-        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub and unpacks it into Steam's compatibilitytools.d for {USER}. The Definitive Editions boot through the Rockstar Games Launcher and need a recent GE-Proton, same as GTA V Enhanced. Restart Steam afterwards so it shows up under Compatibility.",
+        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. The Definitive Editions boot through the Rockstar Games Launcher and need a recent GE-Proton, same as GTA V Enhanced. Restart Steam afterwards so it shows up under Compatibility.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'set -e; d=\"$HOME/.local/share/Steam/compatibilitytools.d\"; [ -d \"$HOME/.steam/root\" ] && d=\"$HOME/.steam/root/compatibilitytools.d\"; mkdir -p \"$d\"; url=$(curl -fsSL https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep -oP \"https://[^\\x22]+GE-Proton[^\\x22]+tar[.]gz\" | head -1); test -n \"$url\"; echo \"Downloading $url\"; curl -fL \"$url\" -o /tmp/geproton.tar.gz; tar -xzf /tmp/geproton.tar.gz -C \"$d\"; rm -f /tmp/geproton.tar.gz; echo \"compatibilitytools.d now holds:\"; ls -1 \"$d\"'"
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
-        "desc": "If GTA San Andreas Definitive lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there — creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
+        "desc": "If GTA San Andreas Definitive lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
         "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
         "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
         "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
@@ -343,21 +339,21 @@
       {
         "id": "launchopts",
         "title": "8 · Set the launch options  (manual)",
-        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). This is a single-player title with no BattlEye, so the clean-Vulkan-layer stack GTA Online needs isn't required — a plain gamemoderun mangohud %command% is enough. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU on the hybrid G15 — drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder.",
+        "desc": "Properties → General → Launch Options. Paste the string below (Copy button). This is a single-player title with no BattlEye, so the clean-Vulkan-layer stack GTA Online needs isn't required - a plain gamemoderun %command% is enough. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU on the hybrid G15 - drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). Want a persistent shader cache too? build the string on the Game Tools tab after setting a cache folder.",
         "manual": true,
-        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun mangohud %command%"
+        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun %command%"
       },
       {
         "id": "prefixdeps",
         "title": "9 · Rockstar launcher / Social Club deps  (manual)",
-        "desc": "Only needed if the Rockstar Games Launcher or Social Club sign-in is black, blank or loops. Launch GTA San Andreas Definitive once first so Proton creates the prefix, quit, then run the command below (Copy) — it drops vcrun2019, d3dcompiler_47 and corefonts into AppID {APPID}'s prefix non-interactively. If the sign-in still loops or renders black, run `protontricks {APPID} --gui` and set the prefix to Windows 10 (win10).",
+        "desc": "Only needed if the Rockstar Games Launcher or Social Club sign-in is black, blank or loops. Launch GTA San Andreas Definitive once first so Proton creates the prefix, quit, then run the command below (Copy) - it drops vcrun2019, d3dcompiler_47 and corefonts into AppID {APPID}'s prefix non-interactively. If the sign-in still loops or renders black, run `protontricks {APPID} --gui` and set the prefix to Windows 10 (win10).",
         "manual": true,
         "copy": "su - {USER} -c 'protontricks --no-bwrap {APPID} -q vcrun2019 d3dcompiler_47 corefonts'"
       },
       {
         "id": "firstrun",
         "title": "10 · First launch  (manual)",
-        "desc": "Start GTA San Andreas Definitive from Steam. First launch pulls in the Rockstar Games Launcher inside the prefix — let it finish, then start the game again. If Social Club still misbehaves, do step 9; if a window stays black, try a different GE-Proton version (step 5 / ProtonUp-Qt).",
+        "desc": "Start GTA San Andreas Definitive from Steam. First launch pulls in the Rockstar Games Launcher inside the prefix - let it finish, then start the game again. If Social Club still misbehaves, do step 9; if a window stays black, try a different GE-Proton version (step 5 / ProtonUp-Qt).",
         "manual": true
       }
     ]
@@ -367,12 +363,12 @@
     "Tab": "SWBF2 Classic",
     "order": 5,
     "appid": "6060",
-    "Description": "Star Wars Battlefront II (2005) — the Classic release on Steam, AppID 6060 — via Proton. It's a 32-bit DirectX 9 title from 2005 with no anti-cheat, so it doesn't need the BattlEye/EAC handling the GTA entries do — a plain gamemoderun mangohud %command% (+ PRIME offload on the hybrid G15) is normally enough. CONFIRMED on the G15 (2026-09-14, Proton Experimental, NVIDIA driver 595.91.07): the loading screen flashes then the game dies with `err:vulkan:vkDestroySwapchainKHR Exception 0xc0000005 in Unix call` inside `libnvidia-glcore.so`, right after DXVK logs `Presenter: Got VK_SUBOPTIMAL_KHR, recreating swapchain` — the game's window grows from its initial 800×600 Vulkan surface to the real desktop size, and NVIDIA's 32-bit proprietary driver segfaults recreating the swapchain for that resize, inside the Steam Linux Runtime container. Step 9 below (gamescope) fixes this by giving the game one fixed-size surface so that resize never happens; step 10 (wined3d) is the fallback if gamescope isn't enough — it bypasses DXVK/Vulkan for this title's D3D9 renderer entirely. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted.",
+    "Description": "Star Wars Battlefront II (2005) - the Classic release on Steam, AppID 6060 - via Proton. It's a 32-bit DirectX 9 title from 2005 with no anti-cheat, so it doesn't need the BattlEye/EAC handling the GTA entries do - a plain gamemoderun %command% (+ PRIME offload on the hybrid G15) is normally enough. CONFIRMED on the G15 (2026-09-14, Proton Experimental, NVIDIA driver 595.91.07): the loading screen flashes then the game dies with `err:vulkan:vkDestroySwapchainKHR Exception 0xc0000005 in Unix call` inside `libnvidia-glcore.so`, right after DXVK logs `Presenter: Got VK_SUBOPTIMAL_KHR, recreating swapchain` - the game's window grows from its initial 800×600 Vulkan surface to the real desktop size, and NVIDIA's 32-bit proprietary driver segfaults recreating the swapchain for that resize, inside the Steam Linux Runtime container. Step 9 below (gamescope) fixes this by giving the game one fixed-size surface so that resize never happens; step 10 (wined3d) is the fallback if gamescope isn't enough - it bypasses DXVK/Vulkan for this title's D3D9 renderer entirely. Work through the steps top to bottom: the ones with a Run button do the work for you; the manual ones are quick clicks inside Steam that can't be scripted.",
     "steps": [
       {
         "id": "steam",
         "title": "1 · Install Steam (native)",
-        "desc": "Native RPM Steam (RPM Fusion) — the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
+        "desc": "Native RPM Steam (RPM Fusion) - the SteamOS-style setup where Steam manages Proton and the Linux Runtime containers itself. A Flatpak Steam is deliberately not used here (its sandbox complicates controller access, game drives and the MangoHud / gamescope / vkBasalt layers).",
         "check": "rpm -q steam >/dev/null 2>&1",
         "run": "dnf install -y steam"
       },
@@ -386,28 +382,27 @@
       {
         "id": "protontricks",
         "title": "3 · Install Protontricks",
-        "desc": "winetricks for Steam/Proton prefixes — used later to drop vcrun2005/xact/d3dx9 into Battlefront II's prefix if audio or video is missing, and to flip the prefix to Windows XP/7 if the launcher renders wrong.",
+        "desc": "winetricks for Steam/Proton prefixes - used later to drop vcrun2005/xact/d3dx9 into Battlefront II's prefix if audio or video is missing, and to flip the prefix to Windows XP/7 if the launcher renders wrong.",
         "check": "rpm -q protontricks >/dev/null 2>&1 || sudo -u {USER} flatpak info com.github.Matoking.protontricks >/dev/null 2>&1",
         "run": "dnf install -y protontricks"
       },
       {
         "id": "protonup",
-        "title": "4 · Install ProtonUp-Qt",
-        "desc": "GUI to manage GE-Proton / wine-GE versions per launcher. Installed as a Flatpak for {USER}. Old titles like this one sometimes run better on an older GE-Proton than on the newest Proton Experimental — this lets you keep several installed side by side.",
-        "check": "flatpak info net.davidotek.pupgui2 >/dev/null 2>&1 || sudo -u {USER} flatpak info net.davidotek.pupgui2 >/dev/null 2>&1",
-        "run": "dnf install -y flatpak && flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo && sudo -u {USER} flatpak install -y --noninteractive flathub net.davidotek.pupgui2"
+        "title": "4 · Other Proton builds  (optional)",
+        "desc": "Nothing to install here any more: TuxThrottle's own “Proton & Runtimes” tab downloads and manages GE-Proton, Proton-CachyOS, Proton-EM and friends for Steam, Heroic, Lutris and Bottles, and Valve's Proton / Steam Linux Runtime tools. Use it if you want a specific version instead of the latest GE-Proton from the next step.",
+        "manual": true
       },
       {
         "id": "geproton",
         "title": "5 · Install the latest GE-Proton",
-        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub and unpacks it into Steam's compatibilitytools.d for {USER}. Restart Steam afterwards so it shows up under Compatibility. If the newest GE-Proton doesn't get this game running, use ProtonUp-Qt (step 4) to also grab an older GE-Proton or plain Proton 7-8 — this title is old enough that a slightly older Proton sometimes behaves better than the newest one.",
+        "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. Restart Steam afterwards so it shows up under Compatibility. If the newest GE-Proton doesn't get this game running, use ProtonUp-Qt (step 4) to also grab an older GE-Proton or plain Proton 7-8 - this title is old enough that a slightly older Proton sometimes behaves better than the newest one.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'set -e; d=\"$HOME/.local/share/Steam/compatibilitytools.d\"; [ -d \"$HOME/.steam/root\" ] && d=\"$HOME/.steam/root/compatibilitytools.d\"; mkdir -p \"$d\"; url=$(curl -fsSL https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep -oP \"https://[^\\x22]+GE-Proton[^\\x22]+tar[.]gz\" | head -1); test -n \"$url\"; echo \"Downloading $url\"; curl -fL \"$url\" -o /tmp/geproton.tar.gz; tar -xzf /tmp/geproton.tar.gz -C \"$d\"; rm -f /tmp/geproton.tar.gz; echo \"compatibilitytools.d now holds:\"; ls -1 \"$d\"'"
+        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
-        "desc": "If Star Wars Battlefront II lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there — creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
+        "desc": "If Star Wars Battlefront II lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
         "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
         "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
         "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
@@ -421,54 +416,54 @@
       {
         "id": "compat",
         "title": "7 · Force a compatibility tool on Battlefront II  (manual)",
-        "desc": "Steam Library → right-click Star Wars Battlefront II → Properties → Compatibility → tick “Force the use of a specific Steam Play compatibility tool” → choose the GE-Proton from step 5. If it still won't launch, try a plain Proton 7 or 8 instead — this 2005 title sometimes runs worse on the newest Proton/GE-Proton than on an older one.",
+        "desc": "Steam Library → right-click Star Wars Battlefront II → Properties → Compatibility → tick “Force the use of a specific Steam Play compatibility tool” → choose the GE-Proton from step 5. If it still won't launch, try a plain Proton 7 or 8 instead - this 2005 title sometimes runs worse on the newest Proton/GE-Proton than on an older one.",
         "manual": true
       },
       {
         "id": "launchopts",
         "title": "8 · Set the launch options  (manual)",
-        "desc": "Properties → General → Launch Options. Paste the string below (Copy button) — no anti-cheat here, so a plain gamemoderun mangohud %command% is enough. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU on the hybrid G15 — drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). Build a fuller string (shader cache, gamescope, etc.) on the Game Tools tab's launch-options builder instead if you want more of those toggles.",
+        "desc": "Properties → General → Launch Options. Paste the string below (Copy button) - no anti-cheat here, so a plain gamemoderun %command% is enough. The three __…OFFLOAD / optimus / GLX vars render on the NVIDIA dGPU on the hybrid G15 - drop them if you've switched to nvidia-only graphics mode (Power & Limits → hybrid graphics). Build a fuller string (shader cache, gamescope, etc.) on the Game Tools tab's launch-options builder instead if you want more of those toggles.",
         "manual": true,
-        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun mangohud %command%"
+        "copy": "__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun %command%"
       },
       {
         "id": "gamescope",
         "title": "9 · Crashes on the loading screen: wrap it in gamescope  (manual)",
-        "desc": "CONFIRMED fix for a reproducible crash on the G15: the game starts its Vulkan swapchain at 800×600, then resizes to the desktop resolution, and NVIDIA's proprietary driver segfaults recreating that swapchain (`vkDestroySwapchainKHR Exception 0xc0000005`, right after DXVK logs `Got VK_SUBOPTIMAL_KHR, recreating swapchain`) — captured with PROTON_LOG=1 in $HOME/steam-6060.log. gamescope (installed in step 2) gives the game one fixed-size surface up front so that resize — and the crash — never happens. Replace the launch options from step 8 with the string below (Copy button); `-f` runs gamescope fullscreen at your desktop's native resolution. TWO gotchas found the hard way on the G15: (1) the PRIME/NVIDIA env vars must go AFTER gamescope's `--` — putting them before gamescope forces gamescope's own nested Xwayland onto the NVIDIA-only vendor path too and crashes IT instead (xwl_glamor_init abort, falls back to a headless backend); (2) gamescope execs its child directly with no shell, so a bare `VAR=value` after `--` isn't parsed as an env assignment — it's tried as the program to run and fails (\"No such file or directory\") — `env` is what actually applies them.",
+        "desc": "CONFIRMED fix for a reproducible crash on the G15: the game starts its Vulkan swapchain at 800×600, then resizes to the desktop resolution, and NVIDIA's proprietary driver segfaults recreating that swapchain (`vkDestroySwapchainKHR Exception 0xc0000005`, right after DXVK logs `Got VK_SUBOPTIMAL_KHR, recreating swapchain`) - captured with PROTON_LOG=1 in $HOME/steam-6060.log. gamescope (installed in step 2) gives the game one fixed-size surface up front so that resize - and the crash - never happens. Replace the launch options from step 8 with the string below (Copy button); `-f` runs gamescope fullscreen at your desktop's native resolution. TWO gotchas found the hard way on the G15: (1) the PRIME/NVIDIA env vars must go AFTER gamescope's `--` - putting them before gamescope forces gamescope's own nested Xwayland onto the NVIDIA-only vendor path too and crashes IT instead (xwl_glamor_init abort, falls back to a headless backend); (2) gamescope execs its child directly with no shell, so a bare `VAR=value` after `--` isn't parsed as an env assignment - it's tried as the program to run and fails (\"No such file or directory\") - `env` is what actually applies them.",
         "manual": true,
-        "copy": "gamescope -f -- env __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun mangohud %command%"
+        "copy": "gamescope -f -- env __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun %command%"
       },
       {
         "id": "wined3d",
         "title": "10 · Still crashing: force wined3d  (manual)",
         "desc": "If gamescope (step 9) doesn't fix it, add PROTON_USE_WINED3D=1 into the `env` list right after gamescope's `--` (same place as the other env vars) and relaunch. This bypasses DXVK/Vulkan for this title's legacy fixed-function Direct3D 9 renderer entirely (trading some speed for the older, more compatible OpenGL-backed wined3d path), so the NVIDIA Vulkan swapchain bug in step 9's description can't happen at all.",
         "manual": true,
-        "copy": "gamescope -f -- env PROTON_USE_WINED3D=1 __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun mangohud %command%"
+        "copy": "gamescope -f -- env PROTON_USE_WINED3D=1 __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia gamemoderun %command%"
       },
       {
         "id": "prefixdeps",
         "title": "11 · Missing audio / video codecs  (manual)",
-        "desc": "Only needed if the intro movies don't play or menu audio is missing/crackly. Launch Battlefront II once first so Proton creates the prefix, quit, then run the command below (Copy) — it drops vcrun2005 and xact (DirectSound/XACT audio) into AppID {APPID}'s prefix non-interactively.",
+        "desc": "Only needed if the intro movies don't play or menu audio is missing/crackly. Launch Battlefront II once first so Proton creates the prefix, quit, then run the command below (Copy) - it drops vcrun2005 and xact (DirectSound/XACT audio) into AppID {APPID}'s prefix non-interactively.",
         "manual": true,
         "copy": "su - {USER} -c 'protontricks --no-bwrap {APPID} -q vcrun2005 xact'"
       },
       {
         "id": "firstrun",
         "title": "12 · First launch  (manual)",
-        "desc": "Start Star Wars Battlefront II from Steam. If the loading screen flashes and it dies, use step 9's gamescope launch string first — that's the confirmed fix for this game's crash on the G15. Still failing after that? Try step 10 (wined3d). For any other crash, enable PROTON_LOG=1 in the launch options (steam-6060.log lands in $HOME) so the real error can be pinned down instead of guessed at.",
+        "desc": "Start Star Wars Battlefront II from Steam. If the loading screen flashes and it dies, use step 9's gamescope launch string first - that's the confirmed fix for this game's crash on the G15. Still failing after that? Try step 10 (wined3d). For any other crash, enable PROTON_LOG=1 in the launch options (steam-6060.log lands in $HOME) so the real error can be pinned down instead of guessed at.",
         "manual": true
       },
       {
         "id": "widescreen",
         "title": "13 · Widescreen menus + stretched HUD  (manual)",
-        "desc": "This 2005 game's menus and Galactic Conquest screen are hardcoded to 800×600 — forcing a higher resolution makes gameplay render correctly (Hor+) but leaves menus pixelated/stretched and the HUD/crosshair misaligned (documented on PCGamingWiki). Two things fix it: (1) add a resolution launch argument (append it into the `env` list right after gamescope's `--`, alongside the other flags from step 9/10) — `-resolution 1920 1080` (swap in your desktop's actual resolution); this only works up to 16:9/16:10, which covers the G15's panel. (2) Install the community mod “Star Wars Battlefront II Remastered” (HD interface mod, ModDB) — it fixes the stretched/pixelated menus at forced resolutions, includes the Unofficial v1.3 Patch and AI Hero script, and adds a proper settings page (so don't also install v1.3 separately). Since it's a Windows installer, run it inside the same Proton prefix with protontricks-launch (Copy button below) — point it at the top-level “Star Wars Battlefront II Classic” folder when it asks, NOT the GameData or addon subfolder.",
+        "desc": "This 2005 game's menus and Galactic Conquest screen are hardcoded to 800×600 - forcing a higher resolution makes gameplay render correctly (Hor+) but leaves menus pixelated/stretched and the HUD/crosshair misaligned (documented on PCGamingWiki). Two things fix it: (1) add a resolution launch argument (append it into the `env` list right after gamescope's `--`, alongside the other flags from step 9/10) - `-resolution 1920 1080` (swap in your desktop's actual resolution); this only works up to 16:9/16:10, which covers the G15's panel. (2) Install the community mod “Star Wars Battlefront II Remastered” (HD interface mod, ModDB) - it fixes the stretched/pixelated menus at forced resolutions, includes the Unofficial v1.3 Patch and AI Hero script, and adds a proper settings page (so don't also install v1.3 separately). Since it's a Windows installer, run it inside the same Proton prefix with protontricks-launch (Copy button below) - point it at the top-level “Star Wars Battlefront II Classic” folder when it asks, NOT the GameData or addon subfolder.",
         "manual": true,
         "copy": "su - {USER} -c 'protontricks-launch --appid {APPID} /path/to/BF2_Remaster_Installer.exe'"
       },
       {
         "id": "fov",
         "title": "14 · Narrow field of view (FOV)  (manual)",
-        "desc": "The retail FOV is fixed and can feel narrow. The Unofficial v1.3 Patch (already included if you installed step 13's Remastered mod — install it standalone from ModDB otherwise) adds a “Fake Console”: pause the game in a match, open Fake Console from the pause menu, and set your FOV value there. Higher FOV values can show incomplete first-person hand/weapon models — that's a known limitation of the patch, not a sign something's broken.",
+        "desc": "The retail FOV is fixed and can feel narrow. The Unofficial v1.3 Patch (already included if you installed step 13's Remastered mod - install it standalone from ModDB otherwise) adds a “Fake Console”: pause the game in a match, open Fake Console from the pause menu, and set your FOV value there. Higher FOV values can show incomplete first-person hand/weapon models - that's a known limitation of the patch, not a sign something's broken.",
         "manual": true
       }
     ]
@@ -525,7 +520,7 @@
       {
         "id": "skins",
         "title": "7 · Import skins / beatmaps  (manual)",
-        "desc": "Double-click a .osk skin or .osz beatmap (or drag it onto the osu! window) — step 2 registered the file types. Skin folders in ~/Downloads can be zipped and renamed to .osk first.",
+        "desc": "Double-click a .osk skin or .osz beatmap (or drag it onto the osu! window) - step 2 registered the file types. Skin folders in ~/Downloads can be zipped and renamed to .osk first.",
         "manual": true
       },
       {

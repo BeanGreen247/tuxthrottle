@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One configurable, persistent home for the shader/pipeline caches that
 Proton (DXVK), Mesa (AMD iGPU), the NVIDIA driver, and Steam itself each
-maintain separately — so they can all live on a drive/folder of the user's
+maintain separately - so they can all live on a drive/folder of the user's
 choosing instead of scattered under ~/.cache and each game's own prefix.
 
 Config: ~/.config/tuxthrottle/shadercache.json
@@ -11,7 +11,7 @@ plain file, so it survives a reboot on its own. What actually *uses* the
 chosen location:
   - `tuxthrottle.py`'s launch-options builder points MESA_SHADER_CACHE_DIR /
     DXVK_STATE_CACHE_PATH / __GL_SHADER_DISK_CACHE_PATH here (pasted into a
-    game's Steam/Lutris launch options — persists because Steam remembers
+    game's Steam/Lutris launch options - persists because Steam remembers
     per-game launch options; regenerate + re-paste if you move the location).
   - the `NvidiaShaderCache` tweak's boot-time /etc/environment.d file reads
     this config at apply time (system-wide, survives reboot without re-pasting
@@ -23,6 +23,7 @@ Usage:
     tuxthrottle_shadercache.py show [--json]
     tuxthrottle_shadercache.py set <dir> [--size GB]
     tuxthrottle_shadercache.py link-steam [--undo]
+    tuxthrottle_shadercache.py heal
     tuxthrottle_shadercache.py rebuild [all|<AppID>]
     tuxthrottle_shadercache.py steam-bg-shaders {on|off|status}
     tuxthrottle_shadercache.py clean [mesa-shader-cache|dxvk-state-cache|
@@ -30,12 +31,12 @@ Usage:
 
 `rebuild` deletes **Steam's** shader cache only (the fossilize cache in
 `steamapps/shadercache`) so Steam regenerates it from scratch on the next
-launch — the Mesa / DXVK / NVIDIA caches are left untouched; `steam-bg-shaders
+launch - the Mesa / DXVK / NVIDIA caches are left untouched; `steam-bg-shaders
 off` unticks Steam's "Allow background processing of Vulkan shaders" (stops the
 `fossilize_replay` background compiles). Both refuse while Steam is running.
 
 Run as the real user (not root); `link-steam` / `clean` refuse while Steam
-is running. Nothing here is required — cleaning in particular is optional,
+is running. Nothing here is required - cleaning in particular is optional,
 the caches are self-limiting (Mesa/NVIDIA respect a max size; DXVK and
 Steam's own cache do not expose one).
 """
@@ -104,7 +105,7 @@ def set_config(directory: str, size_gb: int | None = None) -> Path:
     save(cfg)
     base = ensure_dirs()
     # A library the user already ran 'link-steam' on has
-    # steamapps/shadercache symlinked into the OLD folder — repoint those, or
+    # steamapps/shadercache symlinked into the OLD folder - repoint those, or
     # they dangle the moment the old folder is cleaned/removed and Steam then
     # fails every shader write with "disk write error".
     _relink_steam_shadercache(base)
@@ -114,7 +115,7 @@ def set_config(directory: str, size_gb: int | None = None) -> Path:
 def _relink_steam_shadercache(base: Path) -> None:
     """Point every Steam library's `steamapps/shadercache` *symlink* at
     `base/steam-shadercache`. Only touches existing symlinks (libraries the
-    user linked before) — never converts a real directory, never needs Steam
+    user linked before) - never converts a real directory, never needs Steam
     closed (Steam resolves the path fresh on each open)."""
     dest = base / "steam-shadercache"
     root = _find_steam_root()
@@ -129,7 +130,7 @@ def _relink_steam_shadercache(base: Path) -> None:
             if sc.resolve(strict=True) == dest.resolve():
                 continue                       # already correct
         except OSError:
-            pass                               # broken link — fall through
+            pass                               # broken link - fall through
         try:
             sc.unlink()
             sc.symlink_to(dest)
@@ -198,7 +199,7 @@ def link_steam_shadercache() -> tuple[bool, str]:
                 if sc.resolve(strict=True) == dest.resolve():
                     continue                   # already linked correctly
             except OSError:
-                pass                           # dangling — repair below
+                pass                           # dangling - repair below
             try:
                 sc.unlink()
                 sc.symlink_to(dest)
@@ -215,14 +216,14 @@ def link_steam_shadercache() -> tuple[bool, str]:
         sc.symlink_to(dest)
         linked.append(str(sc))
     if not linked:
-        return True, "nothing to do — already linked, or no library has a shadercache folder yet"
+        return True, "nothing to do - already linked, or no library has a shadercache folder yet"
     return True, "linked: " + ", ".join(linked)
 
 
 def steam_link_status() -> dict:
     """Health of each Steam library's steamapps/shadercache vs our folder.
     Per library: 'unlinked' (real dir / absent), 'ok' (symlink → current
-    steam-shadercache), or 'broken' (dangling or points somewhere else — Steam
+    steam-shadercache), or 'broken' (dangling or points somewhere else - Steam
     will fail shader writes with 'disk write error'). `ok` overall = no broken.
     """
     root = _find_steam_root()
@@ -249,7 +250,7 @@ def steam_link_status() -> dict:
     linked = [x for x in libs if x["state"] == "ok"]
     if broken:
         summary = (f"{len(broken)} broken shadercache link"
-                   f"{'s' if len(broken) != 1 else ''} — Steam writes will fail; "
+                   f"{'s' if len(broken) != 1 else ''} - Steam writes will fail; "
                    f"press “Link Steam cache” to repair")
     elif linked:
         summary = f"{len(linked)}/{len(libs)} librar" \
@@ -258,6 +259,22 @@ def steam_link_status() -> dict:
         summary = "not linked (each library keeps its own shadercache)"
     return {"ok": not broken, "libs": libs, "summary": summary,
             "broken": len(broken), "linked": len(linked)}
+
+
+def heal_steam_links() -> tuple[bool, str]:
+    """Repair any broken (dangling / pointing elsewhere) steamapps/shadercache
+    symlink back onto the configured folder. Safe with Steam running and a
+    no-op when everything is healthy - this is what the self-heal cron job
+    runs, so a wiped or moved cache folder never surfaces as Steam's
+    "disk write error"."""
+    before = steam_link_status()
+    if before["ok"]:
+        return True, "healthy - nothing to repair"
+    _relink_steam_shadercache(ensure_dirs())
+    after = steam_link_status()
+    if after["ok"]:
+        return True, f"repaired {before['broken']} broken shadercache link(s)"
+    return False, after["summary"]
 
 
 def unlink_steam_shadercache() -> tuple[bool, str]:
@@ -324,13 +341,13 @@ def _empty_dir(d: Path) -> bool:
 
 def rebuild(target: str = "all") -> tuple[bool, str]:
     """Force a clean rebuild of **Steam's** Vulkan pipeline / shader cache by
-    deleting it — the fossilize cache in `steamapps/shadercache` (and our
-    `steam-shadercache` folder it's linked to) — so Steam regenerates it on
+    deleting it - the fossilize cache in `steamapps/shadercache` (and our
+    `steam-shadercache` folder it's linked to) - so Steam regenerates it on
     the next launch. Leaves the Mesa / DXVK / NVIDIA caches alone.
 
     `target` is 'all' or a numeric Steam AppID. Refuses while Steam is
     running (it keeps its shader cache open). Only ever deletes inside a
-    `steamapps/shadercache` / `steam-shadercache` folder — never a game
+    `steamapps/shadercache` / `steam-shadercache` folder - never a game
     install or a prefix.
     """
     if steam_running():
@@ -355,7 +372,7 @@ def rebuild(target: str = "all") -> tuple[bool, str]:
             return True, (f"cleared Steam's shader cache for AppID {target} "
                           f"({hit} location{'s' if hit != 1 else ''}); Steam rebuilds "
                           f"it on the next launch")
-        return True, f"no Steam shader cache found for AppID {target} — nothing to do"
+        return True, f"no Steam shader cache found for AppID {target} - nothing to do"
 
     cleared = []
     for scdir in _all_steam_shadercache_dirs():
@@ -364,7 +381,7 @@ def rebuild(target: str = "all") -> tuple[bool, str]:
     if not cleared:
         return True, "Steam's shader cache was already empty"
     return True, ("cleared " + ", ".join(cleared)
-                  + " — Steam rebuilds its shader cache on the next launch")
+                  + " - Steam rebuilds its shader cache on the next launch")
 
 
 # --- Steam "Allow background processing of Vulkan shaders" ---------------- #
@@ -469,6 +486,8 @@ def main(argv=None) -> int:
     lc = sub.add_parser("link-check")
     lc.add_argument("--json", action="store_true")
 
+    sub.add_parser("heal", help="repair broken Steam shadercache symlinks")
+
     rb = sub.add_parser("rebuild",
                         help="delete Steam's shader cache so Steam rebuilds it clean")
     rb.add_argument("target", nargs="?", default="all",
@@ -513,6 +532,10 @@ def main(argv=None) -> int:
             for x in stt["libs"]:
                 print(f"  [{x['state']:8}] {x['path']}  ({x['detail']})")
         return 0 if stt["ok"] else 1
+    if args.cmd == "heal":
+        ok, msg = heal_steam_links()
+        print(msg)
+        return 0 if ok else 1
     if args.cmd == "rebuild":
         ok, msg = rebuild(args.target)
         print(msg)

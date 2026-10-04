@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Diagnostics / debug-report / new-hardware-onboarding helpers — the
+"""Diagnostics / debug-report / new-hardware-onboarding helpers - the
 heavy read-only report builders, pulled out of tuxthrottle.py so the
 Diagnostics tab mixin can import them without a circular dependency
 (module-split pass, sixth slice). No Tk / GUI deps."""
@@ -66,7 +66,7 @@ _DEBUG_CMDS = [
     ("Memory / zram", "free -h; echo; zramctl 2>/dev/null; swapon --show 2>/dev/null", 14),
     ("── GPU ──", None, 0),
     ("PCI display devices", "lspci -nnk 2>/dev/null | grep -iA3 -E 'vga compatible|3d controller|display controller'", 24),
-    ("NVIDIA", "nvidia-smi 2>/dev/null | head -18 || echo '(nvidia-smi unavailable — driver missing or dGPU runtime-suspended)'", 20),
+    ("NVIDIA", "nvidia-smi 2>/dev/null | head -18 || echo '(nvidia-smi unavailable - driver missing or dGPU runtime-suspended)'", 20),
     ("NVIDIA runtime PM", "for d in /sys/bus/pci/devices/*; do [ \"$(cat $d/vendor 2>/dev/null)\" = 0x10de ] && "
      "echo \"$(basename $d)  class=$(cat $d/class 2>/dev/null)  power=$(cat $d/power/runtime_status 2>/dev/null)\"; done", 6),
     ("AMD iGPU", "for c in /sys/class/drm/card[0-9]*/device; do [ \"$(cat $c/vendor 2>/dev/null)\" = 0x1002 ] && { "
@@ -110,7 +110,7 @@ _DEBUG_CMDS = [
      "\"$(systemctl is-enabled $s 2>/dev/null)\" \"$(systemctl is-active $s 2>/dev/null)\"; done", 6),
     ("kbd saved state", "u=$(logname 2>/dev/null || echo \"${SUDO_USER:-$USER}\"); "
      "h=$(getent passwd \"$u\" | cut -d: -f6); cat \"$h/.config/tuxthrottle/kbd.json\" 2>/dev/null "
-     "|| echo '(no kbd.json — colour not saved / KbdBacklightFix not used)'", 24),
+     "|| echo '(no kbd.json - colour not saved / KbdBacklightFix not used)'", 24),
     ("── TWEAK SERVICES / SUDOERS ──", None, 0),
     ("tuxthrottle units", "systemctl list-unit-files 2>/dev/null | grep -E 'tuxthrottle|hotkey' ; "
      "systemctl --user list-unit-files 2>/dev/null | grep -E 'tuxthrottle|hotkey'", 12),
@@ -118,9 +118,9 @@ _DEBUG_CMDS = [
     ("── PACKAGES ──", None, 0),
     ("Kernels installed", "rpm -q kernel --qf '%{VERSION}-%{RELEASE}.%{ARCH}\\n' 2>/dev/null | sort -V", 10),
     ("NVIDIA packages", "rpm -qa 2>/dev/null | grep -iE 'nvidia|akmod-nvidia|cuda' | sort "
-     "|| echo '(no NVIDIA packages — driver may be from a -NV image or missing)'", 12),
+     "|| echo '(no NVIDIA packages - driver may be from a -NV image or missing)'", 12),
     ("Relevant packages", "rpm -q openrgb gamemode mangohud goverlay gamescope vkbasalt lm_sensors "
-     "nobara-updater tlp auto-cpufreq 2>&1 | sed 's/ is not installed/  — NOT installed/'", 14),
+     "nobara-updater tlp auto-cpufreq 2>&1 | sed 's/ is not installed/  - NOT installed/'", 14),
     ("Update tooling", "dnf --version 2>/dev/null | head -1; command -v nobara-sync >/dev/null && echo 'nobara-sync: present'; "
      "command -v flatpak >/dev/null && flatpak --version; command -v fwupdmgr >/dev/null && echo 'fwupd: present'", 6),
     ("── LOGS ──", None, 0),
@@ -131,12 +131,12 @@ _DEBUG_CMDS = [
      "platform.?profile|pstate' "
      "| grep -viE 'Mode Validation Warning|Unknown Status failed|Console: switching|fbcon' "
      "| sed -E 's/^\\[[0-9. ]+\\] //' | awk '!seen[$0]++' | tail -40 "
-     "|| echo '(dmesg not readable — run the toolkit with sudo, or kernel.dmesg_restrict=1)'", 42),
+     "|| echo '(dmesg not readable - run the toolkit with sudo, or kernel.dmesg_restrict=1)'", 42),
     ("journal errors (this boot)", "journalctl -b -p err --no-pager 2>/dev/null "
      "| grep -viE 'Module lib.*from rpm|^ *Module |drkonqi|KCrash|Stack trace|"
      "^ *#[0-9]+ +0x|libQt6|libKF6|libc\\.so|__libc_start' "
      "| awk '!seen[$0]++' | tail -35 || echo '(journalctl unavailable)'", 37),
-    ("journal — kbd / fan / gpu units (this boot)", "journalctl -b --no-pager "
+    ("journal - kbd / fan / gpu units (this boot)", "journalctl -b --no-pager "
      "-u 'tuxthrottle-*' -u 'tuxthrottle-*.service' 2>/dev/null | tail -25; "
      "journalctl -b --no-pager 2>/dev/null | grep -iE "
      "'openrgb\\[|dell_smm|alienware_wmi|nvidia-persistenced|(nvidia|amdgpu).*(Xid|GPU has fallen|ring .* timeout)' "
@@ -150,10 +150,10 @@ def collect_debug_report(items=None, wrap: bool = False) -> str:
     the complete picture (dmesg, RAPL, privileged checks). `wrap=True` returns
     it inside a GitHub `<details>` + fenced block, ready to paste."""
     hdr = [
-        "TuxThrottle — debug report",
+        "TuxThrottle - debug report",
         f"generated {time.strftime('%Y-%m-%d %H:%M:%S %Z')}   toolkit {toolkit_version()}   "
         f"euid={os.geteuid()}",
-        "REVIEW BEFORE PASTING — this contains your username, hostname and hardware IDs.",
+        "REVIEW BEFORE PASTING - this contains your username, hostname and hardware IDs.",
         "=" * 92, "",
     ]
     body = []
@@ -199,7 +199,7 @@ def collect_debug_report(items=None, wrap: bool = False) -> str:
 
 def wrap_issue_block(report: str) -> str:
     """Wrap a raw report in a GitHub-ready collapsible fenced block."""
-    return ("<details><summary>debug report — TuxThrottle</summary>\n\n"
+    return ("<details><summary>debug report - TuxThrottle</summary>\n\n"
             "```\n" + report.replace("```", "``​`").rstrip() + "\n```\n\n</details>\n")
 
 
@@ -220,10 +220,10 @@ GITHUB_ISSUE_TEMPLATE = """\
 
 ### Is your hardware the Dell G15 5515 Ryzen Edition on Nobara?
 <!-- This tool is written for exactly that one machine. On anything else most
-     checks/tweaks won't apply — say what you're on. -->
+     checks/tweaks won't apply - say what you're on. -->
 - [ ] yes, G15 5515 Ryzen + Nobara
-- [ ] close (other G15 / other Dell hybrid) — details:
-- [ ] no — details:
+- [ ] close (other G15 / other Dell hybrid) - details:
+- [ ] no - details:
 
 ### Debug report
 <!-- Toolkit → Report a Bug page → "Generate report" → "Copy report",
@@ -244,7 +244,7 @@ PASTE THE DEBUG REPORT HERE
 
 # ── new-hardware onboarding: a raw dump bundle to attach to a support issue ──
 
-# linux/input-event-codes.h — the codes that matter for a laptop's function /
+# linux/input-event-codes.h - the codes that matter for a laptop's function /
 # media / hardware keys. Unknowns print as KEY_<n>.
 _KEY_CODE_NAMES = {
     59: "F1", 60: "F2", 61: "F3", 62: "F4", 63: "F5", 64: "F6", 65: "F7",
@@ -271,7 +271,7 @@ for _i in range(183, 195):                       # 183-194 -> F13..F24
 
 def _model_scaffold_json() -> str:
     """Run the model-profile scaffold generator (probes DMI / hwmon / PCI /
-    OpenRGB / battery method — no writes) and return its JSON. This is the
+    OpenRGB / battery method - no writes) and return its JSON. This is the
     starting point for a new `models/<slug>.json`; the maintainer fills the
     `_todo` fields from the other bundle files."""
     try:
@@ -283,7 +283,7 @@ def _model_scaffold_json() -> str:
 
 def _decode_key_caps() -> str:
     """For each evdev device in /proc/bus/input/devices, decode its `B: KEY=`
-    capability bitmap into KEY_ names — the fastest way to see what a new
+    capability bitmap into KEY_ names - the fastest way to see what a new
     laptop's Fn / media / vendor keys can emit, without live evtest."""
     ok, _rc, blob = run_cmd3("cat /proc/bus/input/devices", timeout=8)
     if not ok:
@@ -316,7 +316,7 @@ def _decode_key_caps() -> str:
 
 
 def _collect_display_txt() -> str:
-    """kscreen-doctor needs the real user's Wayland/D-Bus session — run bare
+    """kscreen-doctor needs the real user's Wayland/D-Bus session - run bare
     as root (which every other bundle command here does, via plain shell) it
     SIGABRTs instead of erring cleanly, leaving a coredump behind every single
     time the bundle is collected. sensors._session_cmd() hops back to the
@@ -404,9 +404,9 @@ _HW_BUNDLE_FILES = [
      "--no-authenticate-modules 2>/dev/null || timeout 6 fwupdmgr get-devices 2>/dev/null "
      "|| echo '(fwupd not installed / timed out reaching the daemon)'"),
     ("acpi.txt", "ls -l /sys/firmware/acpi/tables/ 2>/dev/null; echo; "
-     "command -v acpidump >/dev/null && echo 'acpidump present — run: sudo acpidump -b (attach the DSDT.dat)'; "
-     "command -v acpi_listen >/dev/null && echo 'acpi_listen present — run it and press Fn/media keys to capture ACPI events'"),
-    ("dsdt.b64", "echo '# base64 of the ACPI DSDT + SSDTs — decode with:  base64 -d dsdt.b64 > acpi.bin ; "
+     "command -v acpidump >/dev/null && echo 'acpidump present - run: sudo acpidump -b (attach the DSDT.dat)'; "
+     "command -v acpi_listen >/dev/null && echo 'acpi_listen present - run it and press Fn/media keys to capture ACPI events'"),
+    ("dsdt.b64", "echo '# base64 of the ACPI DSDT + SSDTs - decode with:  base64 -d dsdt.b64 > acpi.bin ; "
      "iasl -d acpi.bin'; for t in /sys/firmware/acpi/tables/DSDT /sys/firmware/acpi/tables/SSDT*; do "
      "[ -r \"$t\" ] || continue; echo \"=== $(basename $t) ===\"; base64 \"$t\" 2>/dev/null; echo; done "
      "|| echo '(ACPI tables need root to read)'"),
@@ -423,7 +423,7 @@ _HW_BUNDLE_FILES = [
      "openrgb --noautoconnect -l --verbose 2>/dev/null | grep -vE 'i2c|SMBus|help.openrgb' "
      "|| openrgb --noautoconnect -l 2>/dev/null"),
     ("smbios-tokens.txt", "timeout 6 smbios-token-ctl 2>/dev/null | head -400 "
-     "|| echo '(libsmbios / smbios-token-ctl not installed — needed for Dell battery / USB / thermal tokens)'"),
+     "|| echo '(libsmbios / smbios-token-ctl not installed - needed for Dell battery / USB / thermal tokens)'"),
     ("dmesg-full.txt", "dmesg 2>/dev/null || echo '(dmesg needs root / kernel.dmesg_restrict=1)'"),
     ("journal-boot-tail.txt", "journalctl -b --no-pager 2>/dev/null | tail -3000 || echo '(journalctl unavailable)'"),
 ]
@@ -432,7 +432,7 @@ _HW_BUNDLE_FILES = [
 def collect_hw_bundle(dest_dir: str | None = None) -> str:
     """Write a folder of raw hardware dumps (+ the human report + a README) and
     tar it. Return the .tar.gz path. Everything needed to add a new laptop
-    model to config/*.json and the sysfs paths — attach it to a
+    model to config/*.json and the sysfs paths - attach it to a
     'new hardware support' issue."""
     prod = run_cmd3("cat /sys/class/dmi/id/product_name 2>/dev/null")[2].strip() or "unknown"
     slug = re.sub(r"[^A-Za-z0-9]+", "-", prod).strip("-").lower() or "laptop"
@@ -460,11 +460,11 @@ def collect_hw_bundle(dest_dir: str | None = None) -> str:
         fh.write(collect_debug_report())
     with open(os.path.join(work, "README-attach-this.txt"), "w") as fh:
         fh.write(
-            "TuxThrottle — hardware dump bundle\n"
+            "TuxThrottle - hardware dump bundle\n"
             f"machine: {prod}   collected: {stamp}   euid={os.geteuid()}\n\n"
             "WHAT THIS IS\n"
             "  Raw sysfs / DMI / evdev / hwmon / PCI / OpenRGB / ACPI dumps + the\n"
-            "  readable debug report, plus model-scaffold.json — an auto-generated\n"
+            "  readable debug report, plus model-scaffold.json - an auto-generated\n"
             "  starting point for models/<slug>.json (probed fields filled, the\n"
             "  rest left under \"_todo\"). Together these are enough to add support\n"
             "  for this laptop: DMI strings to gate on, hwmon fan/pwm paths, the\n"
@@ -477,7 +477,7 @@ def collect_hw_bundle(dest_dir: str | None = None) -> str:
             "     lsusb.txt / nvidia-smi). Redact if you care.\n"
             "  2. Open a 'new hardware support' issue and ATTACH this whole .tar.gz\n"
             "     (drag it onto the GitHub comment box).\n"
-            "  3. Run this collector as root (sudo) if you can — dmidecode, the DSDT\n"
+            "  3. Run this collector as root (sudo) if you can - dmidecode, the DSDT\n"
             "     and smbios-token-ctl need it. Re-run and re-attach if the first was\n"
             "     unprivileged.\n"
             "  4. If a Fn/media key doesn't work: run  sudo evtest  , pick the\n"

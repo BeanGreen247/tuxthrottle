@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""TuxThrottle TUI — a headless/SSH-friendly dashboard, built alongside the
+"""TuxThrottle TUI - a headless/SSH-friendly dashboard, built alongside the
 Tkinter GUI rather than instead of it. The GUI stays the primary interface
 for anything visually interactive (RGB colour picking, the drag-to-edit fan
-curve, the MangoHud position picker, file browsers) — none of that maps
+curve, the MangoHud position picker, file browsers) - none of that maps
 cleanly onto a terminal. This is the "I'm SSHed into the laptop and just
 want to see temps / flip Game Mode / check what TuxThrottle quietly fixed"
 tool, the same job the tray icon does on the desktop.
 
-Reads sensors directly (unprivileged, same as tray_monitor.py — reading
+Reads sensors directly (unprivileged, same as tray_monitor.py - reading
 hwmon/sysfs needs no root). Writes (Game Mode, fan boost) route through
-`tuxthrottlectl` with pkexec/sudo, exactly like the tray's `_ctl()` — this
+`tuxthrottlectl` with pkexec/sudo, exactly like the tray's `_ctl()` - this
 process never needs to run elevated itself.
 
     tuxthrottle_tui.py
@@ -38,7 +38,7 @@ except ImportError:
 
 
 def _ctl(*args: str) -> tuple[bool, str]:
-    """Run `tuxthrottlectl <args>` with privilege — mirrors tray_monitor.py's
+    """Run `tuxthrottlectl <args>` with privilege - mirrors tray_monitor.py's
     _ctl() exactly, so Game Mode / fan-boost behave identically from the TUI,
     the tray, and the GUI."""
     ctl = shutil.which("tuxthrottlectl") or "/usr/local/bin/tuxthrottlectl"
@@ -58,7 +58,7 @@ def _ctl(*args: str) -> tuple[bool, str]:
 
 
 class ValueStatic(Static):
-    """A Static that tracks its own last-set text in `.value` — Static's
+    """A Static that tracks its own last-set text in `.value` - Static's
     internal renderable storage isn't a stable attribute across Textual
     versions (confirmed: differs between the pip "textual" on PyPI and the
     one Fedora/Nobara packages), so tests/CI check `.value`, not internals."""
@@ -84,11 +84,11 @@ class StatBox(ValueStatic):
 
 
 class TuxThrottleTUI(App):
-    """Dark background, one accent colour (cyan) — the "gamer" look without
+    """Dark background, one accent colour (cyan) - the "gamer" look without
     fighting the terminal for anything fancier than that."""
 
     TITLE = "TuxThrottle"
-    SUB_TITLE = "Dell G15 — live dashboard"
+    SUB_TITLE = "Dell G15 - live dashboard"
     CSS = """
     Screen { background: #0b0e11; }
     #stats { height: auto; padding: 1; }
@@ -178,7 +178,7 @@ class TuxThrottleTUI(App):
             for f in findings:
                 fixlog.log_event("crashwatch", f["label"],
                                  level="info" if f.get("benign") else "warn")
-        except Exception:  # noqa: BLE001 — never take the TUI down over this
+        except Exception:  # noqa: BLE001 - never take the TUI down over this
             pass
         self.refresh_fixes()
 

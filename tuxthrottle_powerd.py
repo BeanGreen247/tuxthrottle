@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-"""TuxThrottle power daemon — stdlib only, no GUI deps.
+"""TuxThrottle power daemon - stdlib only, no GUI deps.
 
 Two jobs, one poll loop:
 
-  * Closed-loop **fan curve** — map CPU / GPU temperature through a
+  * Closed-loop **fan curve** - map CPU / GPU temperature through a
     piecewise-linear curve to an *additive* alienware_wmi fan boost
-    (`fanN_boost`, the safe lever — it can only add airflow on top of the
+    (`fanN_boost`, the safe lever - it can only add airflow on top of the
     firmware curve, never slow a fan). Hysteresis stops it hunting at a
     breakpoint. On exit it restores the automatic fan control.
 
-  * **AC / battery auto-switch** — when the charger is plugged or pulled,
+  * **AC / battery auto-switch** - when the charger is plugged or pulled,
     apply a saved profile bundle (platform_profile + a ryzenadj TDP preset).
 
-  * **per-game auto-profiles** — apply a named profile while a matched game
+  * **per-game auto-profiles** - apply a named profile while a matched game
     runs, restore afterwards (`GameProfileController`).
 
-  * **thermal-event notifications** — sustained Tjmax, a stalled fan while
+  * **thermal-event notifications** - sustained Tjmax, a stalled fan while
     hot, Performance-on-low-battery -> `notify-send` + a structured log line
     (`ThermalWatcher`, config block `thermal_notify`).
 
-  * **control socket** — a stdlib newline-JSON RPC at
+  * **control socket** - a stdlib newline-JSON RPC at
     `/run/tuxthrottle/control.sock` (`tuxthrottle_control.ControlServer`) so
     the GUI / `tuxthrottlectl` route writes through the one process that owns
     the hardware; they fall back to direct writes when it isn't up.
@@ -112,7 +112,7 @@ DEFAULTS: dict[str, Any] = {
     },
 }
 
-# (STAPM, fast, slow) Watts — mirrors tuxthrottle.py's _TDP_PRESETS (STAPM >= slow
+# (STAPM, fast, slow) Watts - mirrors tuxthrottle.py's _TDP_PRESETS (STAPM >= slow
 # so the SMU doesn't clamp it). Kept here so the daemon has no GUI dependency.
 TDP_PRESETS = {
     "Quiet": (25, 35, 25),
@@ -394,7 +394,7 @@ class GameProfileController:
     def _apply_profile(self, name: str) -> None:
         st = profiles.load_profile(name, self._user)
         if not st:
-            log(f"  (no such profile '{name}' — skipped)")
+            log(f"  (no such profile '{name}' - skipped)")
             return
         for r in profiles.apply_state(st, self._user):
             if not r["ok"]:
@@ -419,7 +419,7 @@ def _apply_bundle_or_profile(name: str, user) -> None:
         return
     st = profiles.load_profile(name, user)
     if not st:
-        log(f"  (no such profile '{name}' — skipped)")
+        log(f"  (no such profile '{name}' - skipped)")
         return
     for r in profiles.apply_state(st, user):
         if not r["ok"]:
@@ -530,7 +530,7 @@ class ThermalWatcher:
         if now - self._last_fired.get(kind, -1e9) < cd:
             return
         self._last_fired[kind] = now
-        log(f"THERMAL-EVENT {kind}: {summary} — {body}")
+        log(f"THERMAL-EVENT {kind}: {summary} - {body}")
         try:
             sensors.notify(summary, body)
         except Exception as exc:  # noqa: BLE001
@@ -551,7 +551,7 @@ class ThermalWatcher:
                 self._hot_since = time.monotonic()
             if time.monotonic() - self._hot_since >= float(tn.get("tjmax_sustain_s", 20)):
                 self._fire("tjmax", cd, "CPU at thermal limit",
-                           f"Tctl {tctl:.0f} °C ≥ {tjmax:.0f} °C sustained — "
+                           f"Tctl {tctl:.0f} °C ≥ {tjmax:.0f} °C sustained - "
                            f"clocks are being throttled.")
         else:
             self._hot_since = None
@@ -578,13 +578,13 @@ class ThermalWatcher:
             floor = float(tn.get("battery_perf_min_pct", 20))
             if prof in ("performance", "custom") and cap is not None and cap < floor:
                 self._fire("battery_perf", cd, "Performance profile on low battery",
-                           f"{prof} profile active on battery at {cap}% — "
+                           f"{prof} profile active on battery at {cap}% - "
                            f"consider Balanced/Quiet.")
 
     def _kick_fan_recover(self, names: str, hold_s: float) -> None:
         """G15 firmware fan-stall workaround: force the performance
-        platform_profile (G-Mode) — the only thing that reliably restarts a
-        stalled fan — and hold it for at least `hold_s`."""
+        platform_profile (G-Mode) - the only thing that reliably restarts a
+        stalled fan - and hold it for at least `hold_s`."""
         now = time.monotonic()
         if self._recover_prev is None:
             prev = (sensors.get_platform_profile() or "balanced").lower()
@@ -596,7 +596,7 @@ class ThermalWatcher:
                     + ("" if ok else f" FAILED {err}"))
             else:
                 log(f"THERMAL-EVENT stalled_fan_recover: {names} stalled, "
-                    f"already in performance — holding")
+                    f"already in performance - holding")
         self._recover_until = now + max(10.0, hold_s)
 
     def _end_fan_recover(self) -> None:
@@ -777,13 +777,13 @@ def run(cfg_path: Path, user=None, once: bool = False) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="TuxThrottle daemon — fan curve + AC-switch + per-game profiles")
+        description="TuxThrottle daemon - fan curve + AC-switch + per-game profiles")
     ap.add_argument("mode", choices=["run", "once"], nargs="?", default="run")
     ap.add_argument("--user", help="resolve the config path / profiles in this user's home")
     ap.add_argument("--config", type=Path, help="explicit config file path")
     args = ap.parse_args()
     if os.geteuid() != 0:
-        log("warning: not root — fan/profile writes will fail")
+        log("warning: not root - fan/profile writes will fail")
     user = args.user or os.environ.get("SUDO_USER")
     sensors.set_session_user(user)   # systemd gives us no SUDO_*/PKEXEC_* env
     cfg_path = args.config or _config_path(user)

@@ -15,12 +15,12 @@ never leaves an *unverified* offset armed for boot:
   confirm       mark co.json confirmed:true (now the boot service will re-apply
                 it) and disarm the watchdog.
   revert        set CO to 0, delete co.json + the watchdog.
-  reapply       boot/resume hook — re-apply co.json ONLY if confirmed:true.
+  reapply       boot/resume hook - re-apply co.json ONLY if confirmed:true.
   status        print co.json / whether an offset is armed.
 
 Boot safety: the RyzenCurveOptimizer tweak's boot service + sleep hook run
 `tuxthrottle_co_stress.py reapply`, which applies co.json only when
-confirmed:true — so an offset that hung the machine before you confirmed it is
+confirmed:true - so an offset that hung the machine before you confirmed it is
 simply not reapplied on the next boot.
 """
 from __future__ import annotations
@@ -259,7 +259,7 @@ def main() -> int:
 
     sub.add_parser("confirm", help="keep the current offset across reboots")
     sub.add_parser("revert", help="set CO back to 0 and forget it")
-    sub.add_parser("reapply", help="boot/resume hook — re-apply a CONFIRMED offset")
+    sub.add_parser("reapply", help="boot/resume hook - re-apply a CONFIRMED offset")
     sub.add_parser("status", help="show co.json / watchdog state")
 
     args = ap.parse_args()

@@ -1,9 +1,9 @@
 # Panel / status-bar clients
 
 Thin read-mostly front-ends over `tuxthrottlectl status --json`. They ship as
-**optional extras** — nothing in the app depends on them.
+**optional extras** - nothing in the app depends on them.
 
-## waybar / eww — `waybar/tuxthrottle-waybar`
+## waybar / eww - `waybar/tuxthrottle-waybar`
 
 A `return-type: "json"` custom module: CPU/dGPU temp + a one-letter profile
 badge, a `class` of cool/warm/hot/critical for CSS, and `--toggle` on
@@ -23,7 +23,7 @@ directly, then `pkexec tuxthrottlectl` (passwordless with the
 Glyphs in the default output assume a Nerd Font; swap them in the script if you
 don't use one.
 
-## KDE plasmoid — `plasmoid/package/`
+## KDE plasmoid - `plasmoid/package/`
 
 A Plasma 6 applet: compact view = icon + CPU temp; expanded = profile + CPU/dGPU
 temps + Balanced/Performance buttons. It polls `tuxthrottlectl` every 5 s via the
@@ -45,7 +45,7 @@ for an active local user; otherwise `pkexec` shows a normal auth dialog (or the
 `tuxthrottled` control socket handles it if the FanCurveDaemon tweak is on). The
 temps update regardless.
 
-## MangoHud — `mangohud/tuxthrottle-mangohud`
+## MangoHud - `mangohud/tuxthrottle-mangohud`
 
 A one-line in-game overlay via MangoHud's `exec=` directive: current profile
 (abbreviated), CPU package power + temp, and dGPU temp when it's awake.
@@ -56,5 +56,5 @@ exec=/opt/tuxthrottle/clients/mangohud/tuxthrottle-mangohud
 exec_name=TuxThrottle
 ```
 
-Read-only — it never changes anything. MangoHud calls it ~1×/s; the script uses
+Read-only - it never changes anything. MangoHud calls it ~1×/s; the script uses
 short timeouts and prints `TT n/a` if `tuxthrottlectl` can't be reached.

@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """Keyboard-backlight control for the Dell G15 5515 (Alienware AW-ELC, USB
-187c:0550) — a thin wrapper around the `openrgb` CLI.
+187c:0550) - a thin wrapper around the `openrgb` CLI.
 
 Background: this BIOS has no SMBIOS keyboard tokens, `dell-laptop` makes no
 LED, and hand-rolled HID writes are ACK'd but never light up. What *does* work
-is **OpenRGB** driving the controller — verified on the real 5515.
+is **OpenRGB** driving the controller - verified on the real 5515.
 
 The 5515's AW-ELC is a **single controllable zone**: OpenRGB advertises 4/16
 zones, but every per-zone write path (CLI `-z`, the SDK per-LED buffer, a raw
-HID user-animation with per-zone SELECT) lands on the whole keyboard — camera-
+HID user-animation with per-zone SELECT) lands on the whole keyboard - camera-
 verified. So there is no per-zone colour and no gradient; the keyboard does one
 solid colour, plus the firmware Spectrum Cycle. (Breathing / Flashing hold a
-steady colour on fw 1.1.12; Rainbow Wave is washed-out — none are offered.)
+steady colour on fw 1.1.12; Rainbow Wave is washed-out - none are offered.)
 
 Prerequisites:
   * OpenRGB installed (the `OpenRGB` app in the Toolkit's Software tab).
@@ -48,7 +48,7 @@ import time
 try:
     import sensors as _sensors
     _KBD_PROFILE = _sensors.model_profile().get("keyboard") or {}
-except Exception:  # noqa: BLE001  — sensors import must never break the driver
+except Exception:  # noqa: BLE001  - sensors import must never break the driver
     _KBD_PROFILE = {}
 
 DEVICE = _KBD_PROFILE.get("openrgb_device") or "Dell G Series LED Controller"
@@ -56,7 +56,7 @@ _USB = (_KBD_PROFILE.get("usb") or "187c:0550").lower()
 _USB_VID = _USB.split(":")[0]
 _USB_PIDS = tuple(p for p in ({_USB.split(":", 1)[1] if ":" in _USB else "0550",
                                "0550", "0551"}))
-ZONE_COUNT = 4                            # physical zones (label/schema only — the
+ZONE_COUNT = 4                            # physical zones (label/schema only - the
                                          # 5515 firmware ignores zone-scoped writes)
 GKEY_ZONE = 0                             # the G-key sits in the leftmost zone
 ZONE_NAMES = ["Left", "Middle", "Right", "Numpad"]
@@ -125,14 +125,14 @@ class Keyboard:
 def _openrgb() -> str:
     exe = shutil.which("openrgb")
     if not exe:
-        raise ElcError("openrgb not found — install the 'OpenRGB' app (Software tab). "
+        raise ElcError("openrgb not found - install the 'OpenRGB' app (Software tab). "
                        "The G15 5515 keyboard backlight is only reachable through OpenRGB.")
     return exe
 
 
 def _run_once(args: list[str], server: bool = True) -> str:
     # server=True: talk to a running `openrgb --server` (tuxthrottle-openrgb.service)
-    # — ~1s, devices stay initialised. server=False: standalone scan (~4s), the
+    # - ~1s, devices stay initialised. server=False: standalone scan (~4s), the
     # fallback when no server is up.
     cmd = [_openrgb()] + ([] if server else ["--noautoconnect"]) + ["-d", DEVICE, *args]
     out = subprocess.run(cmd, capture_output=True, text=True, timeout=40)
@@ -149,11 +149,11 @@ def _run_once(args: list[str], server: bool = True) -> str:
 # colour" bug: three unrelated writers (`apply-saved` from the boot service,
 # the systemd-sleep hook and the tray, plus the GUI's own apply thread) can
 # all be pushing openrgb at the same time, so the last-write-wins race plays
-# out visibly for several seconds. Two flocks fix it — a fixed /tmp path so a
+# out visibly for several seconds. Two flocks fix it - a fixed /tmp path so a
 # root boot service and the unprivileged tray share the same lock:
-#   * WRITE_LOCK  — held for the duration of each openrgb call in `_run`, so
+#   * WRITE_LOCK  - held for the duration of each openrgb call in `_run`, so
 #     no two writes interleave.
-#   * REASSERT_LOCK — `apply-saved` takes this non-blocking and bails if held,
+#   * REASSERT_LOCK - `apply-saved` takes this non-blocking and bails if held,
 #     so boot vs resume vs tray don't stack three re-assert storms, and a live
 #     GUI change isn't stomped by a stale re-assert.
 _WRITE_LOCK_PATH = "/tmp/tuxthrottle-kbd.write.lock"
@@ -164,7 +164,7 @@ def _take_lock(path: str, *, blocking: bool):
     fd = None
     for mode in ("a", "r"):
         try:
-            fd = open(path, mode)  # noqa: SIM115 — held for the caller's lifetime
+            fd = open(path, mode)  # noqa: SIM115 - held for the caller's lifetime
             break
         except OSError:
             continue
@@ -188,7 +188,7 @@ def _run(args: list[str]) -> str:
 
     Tries the running OpenRGB SDK server (~1s); falls back to a standalone
     scan (~4s) if there's no server. Then writes the same command a second
-    time immediately — on this AW-ELC controller a lone write often doesn't
+    time immediately - on this AW-ELC controller a lone write often doesn't
     'take' (keys flash the colour then go dark a beat later); the repeat
     locks it in, with no artificial delay so the GUI stays snappy.
 
@@ -214,14 +214,14 @@ def _run(args: list[str]) -> str:
 
 
 _RESTART_STAMP = "/tmp/tuxthrottle-openrgb-restart.stamp"  # noqa: S108
-_RESTART_MIN_GAP = 20.0   # seconds — never bounce the SDK server faster than this
+_RESTART_MIN_GAP = 20.0   # seconds - never bounce the SDK server faster than this
 
 
 def _restart_too_recent() -> bool:
     """True if the OpenRGB SDK server was restarted < _RESTART_MIN_GAP ago.
     Every restart triggers a full OpenRGB device rescan (SMBus + HID
-    enumeration of *every* device); doing that in a tight loop — which a
-    spectrum-effect re-assert storm used to — collides with other HID
+    enumeration of *every* device); doing that in a tight loop - which a
+    spectrum-effect re-assert storm used to - collides with other HID
     consumers (Steam's controller enumeration) hard enough to SIGSEGV them."""
     try:
         return (time.time() - os.path.getmtime(_RESTART_STAMP)) < _RESTART_MIN_GAP
@@ -231,7 +231,7 @@ def _restart_too_recent() -> bool:
 
 def restart_server(force: bool = False) -> bool:
     """Kick the OpenRGB SDK server. After a lot of mode changes this AW-ELC
-    controller wedges — the CLI still exits 0 but the keyboard stops
+    controller wedges - the CLI still exits 0 but the keyboard stops
     responding ('frozen'). Restarting the server (which re-opens the HID
     device) clears it. Tries the systemd unit first, then a plain pkill so it
     respawns / a later call falls back to the standalone --noautoconnect path.
@@ -261,7 +261,7 @@ def restart_server(force: bool = False) -> bool:
 
 def reset() -> None:
     """Unfreeze the backlight: restart the server, then re-assert saved state
-    (or a plain white static fallback). `force` — this is the explicit
+    (or a plain white static fallback). `force` - this is the explicit
     user 'unfreeze' action, it should always bounce the server."""
     restart_server(force=True)
     st = load_state()
@@ -287,11 +287,11 @@ def _hexval(s: str) -> str:
 
 def _leave_effect_kick(target_mode: str | None = None) -> None:
     """The AW-ELC will NOT switch out of a firmware effect (Spectrum Cycle,
-    etc.) on a plain `-m Static` write — the keys flash the new colour for an
+    etc.) on a plain `-m Static` write - the keys flash the new colour for an
     instant, then the MCU effect just carries on. Verified live: the only
     thing that reliably clears it is restarting the OpenRGB SDK server (its
     HID connection state is what's stuck). So kick the server ONLY when we are
-    actually leaving an effect for a *different* mode — re-asserting the same
+    actually leaving an effect for a *different* mode - re-asserting the same
     effect (the tray / boot / resume re-assert, saved mode = spectrum) must
     NOT restart the server, or overlapping re-asserts turn into a restart
     storm that crashes other HID consumers (Steam)."""
@@ -310,8 +310,8 @@ def set_all(color, brightness: int = 100) -> None:
 
 def set_zone(zone: int, color, brightness: int = 100) -> None:
     # The 5515's AW-ELC is a SINGLE controllable zone. OpenRGB advertises 4/16
-    # zones, but every write path — CLI `-z`, the SDK per-LED buffer (4/8/16
-    # entries), and a raw HID user-animation with per-zone SELECT — lands on
+    # zones, but every write path - CLI `-z`, the SDK per-LED buffer (4/8/16
+    # entries), and a raw HID user-animation with per-zone SELECT - lands on
     # the whole keyboard (camera-verified on hardware). So "per zone" == whole
     # keyboard; the last colour wins.
     set_all(color, brightness)
@@ -327,7 +327,7 @@ def off() -> None:
 
 
 # Hardware effect modes exposed through OpenRGB. Only Spectrum Cycle actually
-# animates on this AW-ELC (fw 1.1.12) — camera-verified: Breathing and Flashing
+# animates on this AW-ELC (fw 1.1.12) - camera-verified: Breathing and Flashing
 # just hold a steady colour, and Rainbow Wave is washed-out with dark gaps, so
 # none of those are offered.
 EFFECT_MODES = {
@@ -338,12 +338,12 @@ ALL_EFFECTS = set(EFFECT_MODES)
 
 
 def set_effect(name: str, speed: int | None = None, brightness: int = 100) -> None:
-    """Apply a firmware lighting effect (`spectrum` — the only one this AW-ELC
+    """Apply a firmware lighting effect (`spectrum` - the only one this AW-ELC
     animates). `speed` is 0-100 where 100 = fastest. Every mode on this
     controller reports a degenerate brightness range (min=100/max=0) and
     empirically `-b 100` is what lights it, so the caller's brightness is
     passed straight through (`-b 0` leaves it dark)."""
-    _leave_effect_kick(name)  # clear a stuck *prior different* effect — but not
+    _leave_effect_kick(name)  # clear a stuck *prior different* effect - but not
                               # when we're just re-asserting the same one
     mode = EFFECT_MODES.get(name, name)
     args = ["-m", mode, "-b", str(max(0, min(100, brightness)))]
@@ -368,7 +368,7 @@ def info() -> dict:
 
 def _invoking_pw():
     """The real desktop user's pwd entry when running elevated. pkexec sets
-    PKEXEC_UID (no PKEXEC_USER!), sudo sets SUDO_USER/SUDO_UID — check them
+    PKEXEC_UID (no PKEXEC_USER!), sudo sets SUDO_USER/SUDO_UID - check them
     all, or the state file lands in /root and the boot service never sees it."""
     import pwd as _pwd
     for var in ("SUDO_USER", "PKEXEC_USER"):
@@ -475,7 +475,7 @@ def load_state() -> tuple[dict[int, tuple[int, int, int]], int] | None:
 
 
 def load_meta() -> dict:
-    """{'mode', 'speed'} from the saved state — separate from load_state() so
+    """{'mode', 'speed'} from the saved state - separate from load_state() so
     its 2-tuple callers don't change."""
     try:
         d = json.load(open(_state_path()))
@@ -550,15 +550,15 @@ def main(argv: list[str] | None = None) -> int:
             zones, br = st
 
             # If another re-assert (boot vs resume vs tray) or a live GUI apply
-            # is already running, don't pile a second colour storm on top — the
+            # is already running, don't pile a second colour storm on top - the
             # newer writer wins, this stale one yields. (WRITE_LOCK in _run only
             # stops mid-write interleave; this stops the overlap entirely.)
             _guard = _take_lock(_REASSERT_LOCK_PATH, blocking=False)
             if _guard is None:
-                print("another keyboard write is in progress — skipping re-assert")
+                print("another keyboard write is in progress - skipping re-assert")
                 return 0
 
-            # Resolve the accent ONCE up front — re-reading kdeglobals on every
+            # Resolve the accent ONCE up front - re-reading kdeglobals on every
             # loop pass could catch Plasma mid-accent-change and assert two
             # different colours in the same run.
             _accent_target = None
@@ -575,7 +575,7 @@ def main(argv: list[str] | None = None) -> int:
                     set_zones(zones, br)
 
             # Cold boot / resume: the USB HID device *and* the OpenRGB SDK
-            # server can take a while to be ready — the single fixed sleep the
+            # server can take a while to be ready - the single fixed sleep the
             # systemd unit used before wasn't enough, so the colour "didn't
             # persist". Wait for the controller to actually appear, then assert
             # it several times spaced out (this controller sometimes takes the
@@ -594,7 +594,7 @@ def main(argv: list[str] | None = None) -> int:
                     pass
                 time.sleep(2)
             if not seen:
-                print("warning: keyboard controller not detected yet — trying anyway",
+                print("warning: keyboard controller not detected yet - trying anyway",
                       file=sys.stderr)
 
             # Two passes (was six): _run already double-writes each command, so

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Shared append-only event log for fixes TuxThrottle applies on your behalf
 (a relinked shader-cache symlink, a relocated Proton prefix, a mounted drive,
-a crash signature it recognised) — so the Diagnostics page can show what
+a crash signature it recognised) - so the Diagnostics page can show what
 quietly happened instead of it scrolling out of a terminal you never had
 open. Stdlib only, one JSON object per line, capped at the last MAX_ENTRIES.
 
@@ -27,7 +27,7 @@ def log_path(user: str | None = None) -> Path:
 
 def _chown_to(path: Path, user: str) -> None:
     """When called as root writing into another user's home (the GUI is
-    self-elevated), hand ownership back — otherwise that user's own
+    self-elevated), hand ownership back - otherwise that user's own
     unprivileged processes (the tray's crash watcher) can never append again."""
     if os.geteuid() != 0:
         return
@@ -42,7 +42,7 @@ def _chown_to(path: Path, user: str) -> None:
 def log_event(source: str, message: str, level: str = "info",
              user: str | None = None) -> None:
     """Append one event and trim the file to the last MAX_ENTRIES lines.
-    Best-effort — a logging failure must never break the caller's real work."""
+    Best-effort - a logging failure must never break the caller's real work."""
     try:
         path = log_path(user)
         path.parent.mkdir(parents=True, exist_ok=True)

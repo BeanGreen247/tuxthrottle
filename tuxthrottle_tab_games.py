@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Setup Games + Game Tools — per-game step cards with ProtonDB badges, and
+"""Setup Games + Game Tools - per-game step cards with ProtonDB badges, and
 the shadercache / steamperf / launch-options / MangoHud / save-vault /
 prefix-relocate / Fixes boxes. The single biggest slice. Extracted from
 tuxthrottle.py (module-split pass, tenth slice)."""
@@ -92,29 +92,29 @@ class GamesTabMixin:
         return base
 
     def _build_steamperf_box(self, parent):
-        lf = Card(parent, "Steam client — low-resource mode")
+        lf = Card(parent, "Steam client - low-resource mode")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
-            "Runs the Steam client (not games) as light as it goes — most of "
+            "Runs the Steam client (not games) as light as it goes - most of "
             "Steam's idle CPU/RAM/VRAM is its embedded Chromium UI. Adds launch "
             "flags via a user-level launcher override "
             "(~/.local/share/applications/steam.desktop, shadows the system "
             "one; autostart entry patched too):  -silent (start to tray),  "
             "-cef-disable-gpu + -cef-disable-gpu-compositing (no GPU accel in "
-            "the store/library/friends web views — the big one on this hybrid "
+            "the store/library/friends web views - the big one on this hybrid "
             "GPU),  -cef-disable-breakpad / -cef-disable-extra-info-spew (no "
             "crash reporter, quieter logs),  and -noverifyfiles / "
             "-nobootstrapupdate / -norepairfiles (skip the file-scan + "
-            "self-update + repair passes each launch — Steam still re-verifies "
+            "self-update + repair passes each launch - Steam still re-verifies "
             "on demand). It runs Steam in a systemd scope "
-            "with a SOFT memory limit (MemoryHigh=1200M — the kernel just "
+            "with a SOFT memory limit (MemoryHigh=1200M - the kernel just "
             "reclaims cache above that, it never kills anything), and flips "
             "every low-resource setting Steam keeps in a file (needs Steam "
             "closed): no auto Friends & Chat sign-in (that renderer never "
             "spawns), no friends animations, and background Vulkan-shader "
             "processing off (the Steam Overlay + screenshots are kept). A few "
             "more toggles live "
-            "in Steam's own store and can't be scripted — Enable prints them "
+            "in Steam's own store and can't be scripted - Enable prints them "
             "in the log for you to tick (Library → Low Bandwidth / Low "
             "Performance Mode, Interface → smooth scrolling off, Downloads → "
             "Shader Pre-Caching off). No hard MemoryMax (that OOM-kills "
@@ -124,7 +124,7 @@ class GamesTabMixin:
             "autostart entry; Disable reverts everything.")).pack(anchor="w")
         row = tb.Frame(lf); row.pack(anchor="w", fill="x", pady=(6, 0))
         tb.Label(row, text="Low-resource mode:", bootstyle=SECONDARY).pack(side="left")
-        self._sp_lbl = tb.Label(row, bootstyle=SECONDARY, text="—")
+        self._sp_lbl = tb.Label(row, bootstyle=SECONDARY, text="-")
         self._sp_lbl.pack(side="left", padx=(4, 8))
         self._tip(tb.Button(row, text="Enable", bootstyle=SUCCESS,
                   command=lambda: self._sp_set(True)),
@@ -132,7 +132,7 @@ class GamesTabMixin:
                   "after.").pack(side="left")
         self._tip(tb.Button(row, text="Disable", bootstyle=(SECONDARY, "outline"),
                   command=lambda: self._sp_set(False)),
-                  "Remove the override — Steam goes back to the stock launcher."
+                  "Remove the override - Steam goes back to the stock launcher."
                   ).pack(side="left", padx=6)
         orow = tb.Frame(lf); orow.pack(anchor="w", fill="x", pady=(4, 0))
         self._sp_autostart = tk.BooleanVar(value=True)
@@ -151,11 +151,12 @@ class GamesTabMixin:
     # ---------- "Steam won't start" checks, and a log of what auto-fixed itself) ---
 
     def _build_fixes_box(self, parent):
-        lf = Card(parent, "Fixes — quick diagnosis & one-click repairs")
+        lf = Card(parent, "Fixes - quick diagnosis & one-click repairs")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
             "Checks for the causes behind Steam problems already tracked down on this "
-            "laptop — the client forced onto the discrete GPU, stale removed CEF flags, "
+            "laptop - Steam started twice at login, the client forced onto the discrete GPU, "
+            "stale removed CEF flags, "
             "an unmounted Steam library drive, an NTFS volume Windows left 'dirty'. "
             "Read-only until you press a fix button below.")).pack(anchor="w")
 
@@ -164,10 +165,21 @@ class GamesTabMixin:
                   bootstyle=(INFO, "outline"), command=self._fx_diagnose),
                   "Run the checks above and list what's wrong, if anything. "
                   "Read-only.").pack(side="left")
+        self._tip(tb.Button(row, text="Fix Steam starting twice at login",
+                  bootstyle=(WARNING, "outline"),
+                  command=lambda: self._run_stream(
+                      "Steam - move stray autostart backups out",
+                      self._sp_helper("sweep-autostart"), tag="Steam")),
+                  "A backup copy of the Steam autostart entry left in "
+                  "~/.config/autostart is run as a second Steam at login; the two "
+                  "race and one crashes a few seconds after the desktop comes up. "
+                  "This moves any such backup to ~/.local/share/tuxthrottle. Safe "
+                  "to press any time; takes effect at the next login."
+                  ).pack(side="left", padx=6)
         self._tip(tb.Button(row, text="Check for unmounted library drives",
                   bootstyle=(INFO, "outline"), command=self._fx_check_mounts),
                   "Look for a 'nofail' drive in /etc/fstab that isn't currently "
-                  "mounted — the race that makes Steam briefly report a library's "
+                  "mounted - the race that makes Steam briefly report a library's "
                   "games as missing right after login. Read-only; offers a Mount "
                   "button per drive found.").pack(side="left", padx=6)
 
@@ -204,7 +216,7 @@ class GamesTabMixin:
             _ok, _rc, out = run_cmd3(self._sp_helper("diagnose --json"), timeout=20)
             results = json.loads(out[out.index("["):out.rindex("]") + 1])
         except (ValueError, OSError):
-            results = [["bad", "could not run the diagnostic — see the log console"]]
+            results = [["bad", "could not run the diagnostic - see the log console"]]
         lines = [f"{'✓' if s == 'ok' else '✗'}  {m}" for s, m in results]
         for s, m in results:
             if s != "ok":
@@ -321,12 +333,12 @@ class GamesTabMixin:
         lf = Card(parent, "Shader / pipeline cache storage")
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
-            "One folder for every generated shader cache — Mesa (AMD), DXVK "
-            "(D3D→Vulkan), the NVIDIA driver, and optionally Steam's own — so "
+            "One folder for every generated shader cache - Mesa (AMD), DXVK "
+            "(D3D→Vulkan), the NVIDIA driver, and optionally Steam's own - so "
             "they can sit on the drive you choose and survive a Proton prefix "
             "wipe. The launch-options builder below and the “NVIDIA shader-cache” "
             "tweak both read this location. Changing it does NOT rewrite launch "
-            "options you've already pasted into a game — regenerate + re-paste "
+            "options you've already pasted into a game - regenerate + re-paste "
             "those if you move it.")).pack(anchor="w")
         drow = tb.Frame(lf); drow.pack(anchor="w", fill="x", pady=(6, 2))
         tb.Label(drow, text="Cache folder:").pack(side="left")
@@ -353,7 +365,7 @@ class GamesTabMixin:
                   "(they self-prune to it); DXVK's and Steam's own cache have "
                   "no size setting.").pack(side="left")
         tb.Label(srow, bootstyle=SECONDARY, text=(
-            "  — caps the Mesa & NVIDIA caches (self-prune); DXVK / Steam have no cap"
+            "  - caps the Mesa & NVIDIA caches (self-prune); DXVK / Steam have no cap"
         )).pack(side="left")
 
         brow = tb.Frame(lf); brow.pack(anchor="w", fill="x", pady=(4, 0))
@@ -365,19 +377,19 @@ class GamesTabMixin:
                   "alongside the rest. Close Steam first.").pack(side="left")
         self._tip(tb.Button(brow, text="Undo Steam link", bootstyle=(SECONDARY, "outline"),
                   command=lambda: self._sc_link_steam(True)),
-                  "Reverse the above — copy Steam's cache back out to a normal "
+                  "Reverse the above - copy Steam's cache back out to a normal "
                   "folder in each Steam library. Close Steam first."
                   ).pack(side="left", padx=6)
         self._tip(tb.Button(brow, text="Check links", bootstyle=(SECONDARY, "outline"),
                   command=self._sc_link_check),
                   "Verify each Steam library's steamapps/shadercache symlink "
-                  "still points at this folder. A link left dangling — e.g. "
-                  "after moving the cache folder — makes Steam fail every shader "
+                  "still points at this folder. A link left dangling - e.g. "
+                  "after moving the cache folder - makes Steam fail every shader "
                   "write with “disk write error”. If it reports broken, press "
                   "“Link Steam's shader cache here” to repair it."
                   ).pack(side="left")
         lkrow = tb.Frame(lf); lkrow.pack(anchor="w", fill="x", pady=(3, 0))
-        self._sc_link_lbl = tb.Label(lkrow, bootstyle=SECONDARY, text="link status: —")
+        self._sc_link_lbl = tb.Label(lkrow, bootstyle=SECONDARY, text="link status: -")
         self._sc_link_lbl.pack(side="left")
 
         szrow = tb.Frame(lf); szrow.pack(anchor="w", fill="x", pady=(8, 0))
@@ -390,7 +402,7 @@ class GamesTabMixin:
                   "background).").pack(side="left", padx=(10, 0))
         self._tip(tb.Button(szrow, text="Clean cache", bootstyle=(WARNING, "outline"),
                   command=self._sc_clean),
-                  "Empty every shader cache under this folder. Optional — the "
+                  "Empty every shader cache under this folder. Optional - the "
                   "caches rebuild on next launch (first run of each game will "
                   "stutter). Close Steam first.").pack(side="left", padx=6)
 
@@ -405,12 +417,12 @@ class GamesTabMixin:
         bgrow = tb.Frame(lf); bgrow.pack(anchor="w", fill="x", pady=(4, 0))
         tb.Label(bgrow, text="Steam background Vulkan shader processing:",
                  bootstyle=SECONDARY).pack(side="left")
-        self._sc_bg_lbl = tb.Label(bgrow, bootstyle=SECONDARY, text="—")
+        self._sc_bg_lbl = tb.Label(bgrow, bootstyle=SECONDARY, text="-")
         self._sc_bg_lbl.pack(side="left", padx=(4, 8))
         self._tip(tb.Button(bgrow, text="Turn OFF", bootstyle=(DANGER, "outline"),
                   command=lambda: self._sc_bg_shaders(False)),
                   "Untick Steam → Settings → Downloads → “Allow background "
-                  "processing of Vulkan shaders” — stops the fossilize_replay "
+                  "processing of Vulkan shaders” - stops the fossilize_replay "
                   "background compiles that peg the CPU after every download. "
                   "Close Steam first; restart Steam after.").pack(side="left")
         self._tip(tb.Button(bgrow, text="Turn ON", bootstyle=(SECONDARY, "outline"),
@@ -454,7 +466,7 @@ class GamesTabMixin:
         except tk.TclError:
             return
         if not healthy:
-            self._log(f"[Cache] ⚠ {r.get('summary')} — press "
+            self._log(f"[Cache] ⚠ {r.get('summary')} - press "
                       f"“Link Steam's shader cache here” to repair")
 
     def _sc_helper(self, args: str) -> str:
@@ -499,7 +511,7 @@ class GamesTabMixin:
             self._log(f"[Cache] save failed: {exc}")
             return
         self._log(f"[Cache] shader cache {what} saved → {d}  (max {gb} GB)")
-        self._lo_refresh()                     # cheap now — string build only
+        self._lo_refresh()                     # cheap now - string build only
         self._sc_refresh_sizes()              # creates the subdirs + du, off-thread
         # keep the system-wide NVIDIA environment.d file in step, if that tweak
         # is already installed (else it picks this up on its next apply)
@@ -529,10 +541,10 @@ class GamesTabMixin:
         res = getattr(self, "_sc_size_result", None)
         if res is None:
             self._sc_size_tries += 1
-            if self._sc_size_tries > 350:        # ~140 s — worker never returned
+            if self._sc_size_tries > 350:        # ~140 s - worker never returned
                 self._sc_size_busy = False
                 try:
-                    self._sc_size_lbl.configure(text="sizes: (timed out — ↻ Refresh)")
+                    self._sc_size_lbl.configure(text="sizes: (timed out - ↻ Refresh)")
                 except tk.TclError:
                     pass
                 return
@@ -545,7 +557,7 @@ class GamesTabMixin:
             pass
 
     def _sc_size_worker(self):
-        # off the Tk thread — safe to touch a slow filesystem here
+        # off the Tk thread - safe to touch a slow filesystem here
         base = self._shadercache_ensure_dirs()
 
         def du_b(sub):
@@ -563,7 +575,7 @@ class GamesTabMixin:
         other = sum(du_b(s) for s in ("mesa-shader-cache", "dxvk-state-cache",
                                       "nv-shader-cache"))
         # hand the string back to the Tk thread via a plain attribute (GIL-safe);
-        # _sc_size_poll picks it up — no cross-thread Tk calls.
+        # _sc_size_poll picks it up - no cross-thread Tk calls.
         self._sc_size_result = (
             f"sizes:  total {_human_bytes(steam + other)}   ·   "
             f"Steam cache {_human_bytes(steam)}   ·   "
@@ -584,7 +596,7 @@ class GamesTabMixin:
         if not messagebox.askyesno(
                 "Clean shader caches",
                 "Empty every shader/pipeline cache under your cache folder?\n\n"
-                "This is optional — the caches rebuild themselves on next launch "
+                "This is optional - the caches rebuild themselves on next launch "
                 "(first run of each game will stutter while they refill). Close "
                 "Steam first."):
             return
@@ -610,7 +622,7 @@ class GamesTabMixin:
         if not messagebox.askyesno(
                 "Steam background shader processing",
                 f"{verb} Steam's “Allow background processing of Vulkan "
-                f"shaders”?\n\nClose Steam first — it rewrites config.vdf on "
+                f"shaders”?\n\nClose Steam first - it rewrites config.vdf on "
                 f"exit. Restart Steam afterwards for it to take effect."):
             return
         self._run_stream(
@@ -653,7 +665,13 @@ class GamesTabMixin:
                       "write into the folder set in “Shader / pipeline cache "
                       "storage” above.").pack(anchor="w")
         self._lo = {
-            "mangohud": tk.BooleanVar(value=True),
+            # OFF by default - the overlay is opt-in per game now
+            "mangohud": tk.BooleanVar(value=False),
+            # MangoHud can also be on session-wide (MANGOHUD=1 in
+            # environment.d → the implicit Vulkan layer loads without the
+            # wrapper); MANGOHUD=0 is the only thing that keeps it out of a
+            # game then
+            "mh_off": tk.BooleanVar(value=False),
             # MangoHud's normal LD_PRELOAD hook misses some OpenGL loaders
             # (older Wine/Proton D3D9→OpenGL titles); MANGOHUD_DLSYM=1 makes
             # it hook via dlsym instead, which those games need to show the
@@ -661,13 +679,13 @@ class GamesTabMixin:
             "mh_dlsym": tk.BooleanVar(value=False),
             # anti-cheat-safe strips implicit Vulkan layers + sets MANGOHUD=0;
             # this keeps the explicit `mangohud` wrapper anyway (off by
-            # default — some anti-cheats still flag the LD_PRELOAD)
+            # default - some anti-cheats still flag the LD_PRELOAD)
             "ac_keep_mh": tk.BooleanVar(value=False),
             "gamemode": tk.BooleanVar(value=True),
             "gamescope": tk.BooleanVar(value=False),
             "prime": tk.BooleanVar(value=self.has_nvidia),
             "nvcache": tk.BooleanVar(value=self.has_nvidia),
-            # OFF by default — __GL_THREADED_OPTIMIZATIONS breaks a fair number of
+            # OFF by default - __GL_THREADED_OPTIMIZATIONS breaks a fair number of
             # Wine/Proton and legacy-OpenGL games at startup (e.g. Mount & Blade)
             "nv_threaded": tk.BooleanVar(value=False),
             "radv_gpl": tk.BooleanVar(value=self.has_amd and not self.has_nvidia),
@@ -677,7 +695,7 @@ class GamesTabMixin:
             "dxvk_cache": tk.BooleanVar(value=True),
             "dxvk_async": tk.BooleanVar(value=False),
             "proton_nolog": tk.BooleanVar(value=True),
-            # kernel ntsync (6.10+) — Proton 9+ uses it in place of e/fsync;
+            # kernel ntsync (6.10+) - Proton 9+ uses it in place of e/fsync;
             # lower overhead for CPU-bound games. Ignored where unsupported.
             "ntsync": tk.BooleanVar(value=True),
             "anticheat": tk.BooleanVar(value=False),
@@ -687,19 +705,22 @@ class GamesTabMixin:
         self._lo_fps = tk.StringVar(value="")
         row = tb.Frame(lf); row.pack(anchor="w", pady=(8, 2))
         for key, label in (("mangohud", "MangoHud overlay"),
+                           ("mh_off", "Force MangoHud off for this game "
+                                      "(MANGOHUD=0 - only matters if something "
+                                      "else enables the overlay session-wide)"),
                            ("mh_dlsym", "MangoHud OpenGL support "
-                                        "(MANGOHUD_DLSYM=1 — needed if the "
+                                        "(MANGOHUD_DLSYM=1 - needed if the "
                                         "overlay doesn't show on an OpenGL game)"),
                            ("ac_keep_mh", "Still show MangoHud when "
                                           "“Anti-cheat safe” is on (⚠ can still "
-                                          "get the LD_PRELOAD flagged — off "
+                                          "get the LD_PRELOAD flagged - off "
                                           "by default)"),
                            ("gamemode", "Feral GameMode"),
                            ("prime", "Render on the NVIDIA dGPU (PRIME offload)"),
                            ("nvcache", "Keep NVIDIA shader cache"),
                            ("nv_threaded", "NVIDIA threaded optimizations "
                                            "(⚠ crashes some Wine/Proton & older "
-                                           "OpenGL games — leave off unless it helps)"),
+                                           "OpenGL games - leave off unless it helps)"),
                            ("radv_gpl", "RADV_PERFTEST=gpl (AMD)"),
                            ("mesa_cache", "Persistent Mesa shader cache (AMD iGPU)"),
                            ("no_vsync", "Disable Mesa vsync + threaded GL (AMD)"),
@@ -707,11 +728,11 @@ class GamesTabMixin:
                            ("dxvk_async", "DXVK async shader compile (less stutter, "
                                           "can cause brief visual glitches)"),
                            ("proton_nolog", "Proton log off"),
-                           ("ntsync", "Proton ntsync (PROTON_USE_NTSYNC=1 — "
+                           ("ntsync", "Proton ntsync (PROTON_USE_NTSYNC=1 - "
                                       "lighter sync than esync/fsync for "
                                       "CPU-bound games; needs Proton 9+ & "
                                       "kernel 6.10+, ignored otherwise)"),
-                           ("anticheat", "Anti-cheat safe — no injected Vulkan "
+                           ("anticheat", "Anti-cheat safe - no injected Vulkan "
                                          "layers (MangoHud / vkBasalt / all "
                                          "implicit layers off) + Proton "
                                          "BattlEye Runtime (GTA Online)")):
@@ -730,7 +751,7 @@ class GamesTabMixin:
             e.bind("<KeyRelease>", lambda _e: self._lo_refresh())
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
             "If a game won't launch or crashes on start, clear these options and "
-            "add them back a few at a time — the usual offenders are NVIDIA "
+            "add them back a few at a time - the usual offenders are NVIDIA "
             "threaded optimizations, then DXVK async, then gamescope."
         )).pack(anchor="w", pady=(4, 2))
         orow = tb.Frame(lf); orow.pack(fill="x", pady=(8, 2))
@@ -748,7 +769,7 @@ class GamesTabMixin:
         self._tip(tb.Button(arow, text="Apply to every game", bootstyle=(WARNING, "outline"),
                   command=self._lo_apply_all),
                   "Write this string into the Launch Options of every installed "
-                  "Steam game (localconfig.vdf). Steam must be CLOSED first — it "
+                  "Steam game (localconfig.vdf). Steam must be CLOSED first - it "
                   "rewrites its config on exit. Each file is backed up "
                   "(*.tuxthrottle-bak-*). Restart Steam afterwards."
                   ).pack(side="left")
@@ -757,19 +778,36 @@ class GamesTabMixin:
                   "On: skip any game that already has custom Launch Options. "
                   "Off: overwrite every game's Launch Options with this string."
                   ).pack(side="left", padx=(10, 0))
+        self._lo_keep_custom = tk.BooleanVar(value=True)
+        self._tip(tb.Checkbutton(arow, text="keep per-game custom options",
+                  variable=self._lo_keep_custom, bootstyle="round-toggle"),
+                  "On: only games that are empty or still on the default string "
+                  "(the one most games share) are rewritten - a game you tuned "
+                  "by hand (gamescope, anti-cheat, MANGOHUD=0 …) keeps its own."
+                  ).pack(side="left", padx=(10, 0))
+        self._tip(tb.Button(arow, text="Show custom", bootstyle=(INFO, "outline"),
+                  command=self._lo_show_custom),
+                  "List the default launch-options string and every game whose "
+                  "options differ from it (with what each adds / drops)."
+                  ).pack(side="left", padx=(10, 0))
         self._tip(tb.Button(arow, text="Remove from every game", bootstyle=(SECONDARY, "outline"),
                   command=self._lo_remove_all),
                   "Changed your mind about a flag you bulk-applied earlier? This "
                   "strips just that token out of whichever game's Launch Options "
-                  "contains it, leaving the rest of each string intact — it does "
+                  "contains it, leaving the rest of each string intact - it does "
                   "NOT replace the whole string like 'Apply to every game' does."
                   ).pack(side="left", padx=(10, 0))
         self._lo_refresh()
 
+    def _lo_show_custom(self):
+        cmd = (f"su - {self.user} -c 'python3 {BASE_DIR}/tuxthrottle_launchopts.py "
+               f"list --custom'")
+        self._run_stream("launch options → per-game custom options", cmd, tag="Game Tools")
+
     def _lo_remove_all(self):
         opts = self._lo_out.get().strip()
         if not opts:
-            self._log("[Game Tools] launch-options string is empty — nothing to remove")
+            self._log("[Game Tools] launch-options string is empty - nothing to remove")
             return
         if not messagebox.askyesno(
                 "Remove from every game",
@@ -777,7 +815,7 @@ class GamesTabMixin:
                 "Options that contains it (the rest of each game's string is "
                 "left as-is):"
                 f"\n\n{opts}\n\n"
-                "Steam must be closed first — it rewrites its config on exit. "
+                "Steam must be closed first - it rewrites its config on exit. "
                 "Every localconfig.vdf is backed up."):
             return
         blob = base64.b64encode(opts.encode()).decode()
@@ -788,21 +826,25 @@ class GamesTabMixin:
     def _lo_apply_all(self):
         opts = self._lo_out.get().strip()
         if not opts:
-            self._log("[Game Tools] launch-options string is empty — nothing to apply")
+            self._log("[Game Tools] launch-options string is empty - nothing to apply")
             return
         only = self._lo_only_empty.get()
+        keep = self._lo_keep_custom.get() and not only
         if not messagebox.askyesno(
                 "Apply to every game",
                 ("Write this launch-options string into EVERY installed Steam "
                  "game that has none yet:" if only else
                  "Write this launch-options string into EVERY installed Steam "
+                 "game still on the default string (games with their own "
+                 "options are left alone):" if keep else
+                 "Write this launch-options string into EVERY installed Steam "
                  "game, REPLACING whatever each one has now:")
                 + f"\n\n{opts}\n\n"
-                "Steam must be closed first — it rewrites its config on exit. "
+                "Steam must be closed first - it rewrites its config on exit. "
                 "Every localconfig.vdf is backed up. Restart Steam afterwards."):
             return
         blob = base64.b64encode(opts.encode()).decode()
-        flag = " --only-empty" if only else ""
+        flag = " --only-empty" if only else (" --keep-custom" if keep else "")
         cmd = (f"su - {self.user} -c 'python3 {BASE_DIR}/tuxthrottle_launchopts.py "
                f"set-all --b64 {blob}{flag}'")
         self._run_stream("launch options → every installed game", cmd, tag="Game Tools")
@@ -811,7 +853,7 @@ class GamesTabMixin:
         env, wrap = [], []
         # the shader caches all live under the user-chosen folder (Shader /
         # pipeline cache storage box above); `$HOME` keeps the string portable.
-        # NOTE: this runs on every keystroke/toggle and at startup — it must not
+        # NOTE: this runs on every keystroke/toggle and at startup - it must not
         # touch the filesystem. Directory creation is done off-thread by
         # `_sc_refresh_sizes` / `_sc_persist`.
         base = self._shadercache_dir()
@@ -848,16 +890,19 @@ class GamesTabMixin:
         keep_mh = anticheat and self._lo["ac_keep_mh"].get()
         if anticheat:
             # GE-Proton only loads BattlEye when pointed at the Steam tool
-            # (app 1161040) — absolute + quoted: the path has spaces and a
+            # (app 1161040) - absolute + quoted: the path has spaces and a
             # quoted `~` doesn't expand
             env.append(f'PROTON_BATTLEYE_RUNTIME="/home/{self.user}/.local/share/'
                        'Steam/steamapps/common/Proton BattlEye Runtime"')
             env += ["DISABLE_VKBASALT=1", "VK_LOADER_LAYERS_DISABLE=~implicit~"]
             if not keep_mh:
                 env.append("MANGOHUD=0")
+        mh_off = self._lo["mh_off"].get() and not keep_mh
+        if mh_off and "MANGOHUD=0" not in env:
+            env.insert(0, "MANGOHUD=0")
         if self._lo["gamemode"].get():
             wrap.append("gamemoderun")
-        if self._lo["mangohud"].get() and (not anticheat or keep_mh):
+        if self._lo["mangohud"].get() and not mh_off and (not anticheat or keep_mh):
             if self._lo["mh_dlsym"].get():
                 env.append("MANGOHUD_DLSYM=1")
             wrap.append("mangohud")
@@ -871,7 +916,7 @@ class GamesTabMixin:
                 gs += ["-r", self._lo_fps.get().strip()]
             gs += ["-f", "--"]
             # the PRIME/DXVK/etc env vars must be scoped to AFTER gamescope's
-            # `--` (i.e. onto the wrapped game, not onto gamescope itself) —
+            # `--` (i.e. onto the wrapped game, not onto gamescope itself) -
             # gamescope is a nested Wayland compositor; forcing it onto the
             # NVIDIA-only vendor library via __GLX_VENDOR_LIBRARY_NAME/PRIME
             # offload breaks its own backend/glamor GPU selection and can
@@ -879,7 +924,7 @@ class GamesTabMixin:
             # xwl_glamor_init abort, "headless backend" fallback) instead of
             # just affecting the game as intended.
             # gamescope execs its child directly (no shell), so a bare
-            # `VAR=value` after its `--` isn't parsed as an assignment — it's
+            # `VAR=value` after its `--` isn't parsed as an assignment - it's
             # tried as the program to run and fails with "No such file or
             # directory". `env` is what actually applies the assignments here.
             out = gs + (["env"] + env if env else []) + wrap + ["%command%"]
@@ -893,14 +938,51 @@ class GamesTabMixin:
         except (KeyError, Exception):  # noqa: BLE001
             home = Path.home()
         base = home / ".config" / "MangoHud"
+        # a Steam game's own profile (picked on the MangoHud tab) wins over
+        # both the exe-name field and the global file
+        aid = getattr(self, "_mh_profile_appid", "")
+        if aid:
+            return base / f"tuxthrottle-{aid}.conf"
         g = getattr(self, "_mh_game_var", None)
         g = (g.get().strip() if g is not None else "")
         # MangoHud reads ~/.config/MangoHud/<exe-basename>.conf per game
         g = re.sub(r"\.exe$", "", g, flags=re.I).strip()
         return base / (f"{g}.conf" if g else "MangoHud.conf")
 
+    def _mh_read_path(self) -> "Path":
+        """File the editor loads from: the selected config, or - for a game
+        profile that doesn't exist yet - its parked copy, else the global
+        config, so a new profile starts from what you already have."""
+        p = self._mh_conf_path()
+        if p.is_file() or not getattr(self, "_mh_profile_appid", ""):
+            return p
+        off = p.with_name(p.name + ".off")
+        return off if off.is_file() else p.with_name("MangoHud.conf")
+
+    def _mh_select_profile(self, appid: str = "", name: str = ""):
+        """Point the overlay editor at one game's profile ('' = global)."""
+        self._mh_profile_appid = appid
+        txt = (f"{name}  ·  AppID {appid}  -  this game's own profile; when it is "
+               f"enabled it overrides the global one" if appid else
+               "Global - every game without its own profile")
+        try:
+            self._mh_profile_lbl.configure(text=txt, bootstyle=INFO if appid else SECONDARY)
+            if appid:
+                self._mh_profile_back.pack(side="left", padx=(10, 0))
+            else:
+                self._mh_profile_back.pack_forget()
+            self._mh_reload_from_conf()
+            canvas = self._mh_card.master.master
+            if appid and hasattr(canvas, "yview_moveto"):
+                canvas.update_idletasks()
+                canvas.yview_moveto(1.0)            # the editor is the last card
+        except (tk.TclError, AttributeError):
+            pass
+
     def _build_mangohud_box(self, parent):
         lf = Card(parent, "MangoHud overlay")
+        self._mh_card = lf
+        self._mh_profile_appid = ""
         lf.pack(fill="x", pady=6)
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
             "The overlay's CPU / GPU names, position and detail level. Names load "
@@ -945,12 +1027,19 @@ class GamesTabMixin:
                   "Open a full-screen picker: drag the overlay box to where you "
                   "want it (snaps to a 16×16 grid). Saved as a MangoHud anchor "
                   "+ pixel offset.").pack(side="left")
+        pf = tb.Frame(lf); pf.pack(anchor="w", fill="x", pady=(2, 2))
+        tb.Label(pf, text="Editing:", width=11, anchor="w").pack(side="left")
+        self._mh_profile_lbl = tb.Label(pf, bootstyle=SECONDARY,
+                                        text="Global - every game without its own profile")
+        self._mh_profile_lbl.pack(side="left", padx=(2, 0))
+        self._mh_profile_back = tb.Button(pf, text="Back to global", bootstyle=(SECONDARY, "outline"),
+                                          command=lambda: self._mh_select_profile())
         gm = tb.Frame(lf); gm.pack(anchor="w", fill="x", pady=(2, 2))
-        tb.Label(gm, text="Per-game:", width=11, anchor="w").pack(side="left")
+        tb.Label(gm, text="By exe name:", width=11, anchor="w").pack(side="left")
         ge = tb.Entry(gm, textvariable=self._mh_game_var, width=24)
         ge.pack(side="left", padx=(2, 0))
         ge.bind("<KeyRelease>", lambda _e: self._mh_reload_from_conf())
-        tb.Label(gm, text="  optional — the game's .exe / binary name; blank = "
+        tb.Label(gm, text="  optional - the game's .exe / binary name; blank = "
                           "the global MangoHud.conf", bootstyle=SECONDARY).pack(side="left")
 
         # per-group detail toggle: off = minimal (load % only), on = full
@@ -971,7 +1060,7 @@ class GamesTabMixin:
                       f"toggles below; everything else is stripped on Write."
                       ).pack(side="left", padx=(0, 12))
 
-        # explicit extras — a hard on/off for the frametime graph (not tied to
+        # explicit extras - a hard on/off for the frametime graph (not tied to
         # the group toggles) plus GPU-clock lines that help identify the card
         dl2 = tb.Frame(lf); dl2.pack(anchor="w", fill="x", pady=(2, 2))
         tb.Label(dl2, text="Also show:", width=11, anchor="w").pack(side="left")
@@ -980,14 +1069,14 @@ class GamesTabMixin:
         self._tip(tb.Checkbutton(dl2, text="Frametime graph", variable=self._mh_graph,
                                  bootstyle="round-toggle"),
                   "The frametime number and its graph. Independent of the group "
-                  "toggles — off writes `frame_timing=0` / `frametime=0` so it "
+                  "toggles - off writes `frame_timing=0` / `frametime=0` so it "
                   "never shows (MangoHud defaults it ON, so removing the line "
                   "isn't enough), on writes them =1."
                   ).pack(side="left", padx=(0, 12))
         self._mh_gpuname = tk.BooleanVar(value=("gpu_name" not in conf["off"]))
         self._tip(tb.Checkbutton(dl2, text="GPU in use (name)", variable=self._mh_gpuname,
                                  bootstyle="round-toggle"),
-                  "MangoHud's `gpu_name` line — the name of the card actually "
+                  "MangoHud's `gpu_name` line - the name of the card actually "
                   "rendering, so on a PRIME / hybrid setup it confirms which GPU "
                   "the game landed on. Off writes `gpu_name=0`."
                   ).pack(side="left", padx=(0, 12))
@@ -998,13 +1087,13 @@ class GamesTabMixin:
             self._mh_gpu_extra[key] = gv
             self._tip(tb.Checkbutton(dl2, text=lbl, variable=gv,
                                      bootstyle="round-toggle"),
-                      f"Add the {lbl.lower()} to the GPU block — a quick way to "
+                      f"Add the {lbl.lower()} to the GPU block - a quick way to "
                       f"confirm which card is doing the work.").pack(side="left", padx=(0, 12))
         self._mh_gamemode = tk.BooleanVar(value=("gamemode" in conf["elements"]))
         self._tip(tb.Checkbutton(dl2, text="Feral GameMode status",
                                  variable=self._mh_gamemode,
                                  bootstyle="round-toggle"),
-                  "Add MangoHud's `gamemode` line — shows GAMEMODE ON/OFF in the "
+                  "Add MangoHud's `gamemode` line - shows GAMEMODE ON/OFF in the "
                   "overlay so you can see at a glance whether Feral GameMode "
                   "(gamemoderun) actually engaged for the running game."
                   ).pack(side="left", padx=(0, 12))
@@ -1013,7 +1102,7 @@ class GamesTabMixin:
                                  variable=self._mh_status_line, bootstyle="round-toggle",
                                  command=self._mh_toggle_status_line),
                   "Show Game Mode / fan boost / CPU+dGPU temps as a line in the "
-                  "overlay, kept live by the tray monitor (~2s refresh) — see "
+                  "overlay, kept live by the tray monitor (~2s refresh) - see "
                   "throttle-relevant state without alt-tabbing out. Needs the "
                   "tray running (Diagnostics → “Launch tray now”, or its "
                   "autostart entry).").pack(side="left", padx=(0, 12))
@@ -1041,10 +1130,10 @@ class GamesTabMixin:
         tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
             "Every write rewrites the file so each key appears once (latest value "
             "wins), leading comments are kept and blank lines / junk are dropped. "
-            "“Reset config” goes further — a clean minimal baseline, old file "
+            "“Reset config” goes further - a clean minimal baseline, old file "
             "kept as .bak.\n"
             "The overlay `width` is recalculated from the longest name (× the "
-            "config's font_size) on each “Write”, not live as you type — change "
+            "config's font_size) on each “Write”, not live as you type - change "
             "a name and press Write again. Names of 8 characters or fewer get no "
             "width line (MangoHud sizes those itself). “Place on screen…” only "
             "writes the position, not the width."
@@ -1094,14 +1183,14 @@ class GamesTabMixin:
                           bootstyle=(SECONDARY, "outline"),
                           command=lambda i=i: self._mh_swap_gpu_rows(i)),
                           "Swap this GPU's name (and its slot in `gpu_list`) with "
-                          "the next row — reorder if MangoHud has them backwards. "
+                          "the next row - reorder if MangoHud has them backwards. "
                           "Press Write after.").pack(side="left", padx=(6, 0))
             addr = f"[{pci[i]}] " if i < len(pci) and pci[i] else ""
             tb.Label(row, text=f"  {addr}name label + gpu_list slot for this card",
                      bootstyle=SECONDARY).pack(side="left")
 
     def _mh_swap_gpu_rows(self, i: int):
-        """Swap GPU row i with the next row — both the typed name and its PCI
+        """Swap GPU row i with the next row - both the typed name and its PCI
         address (so `gpu_text` and the remapped `gpu_list` slot move together).
         Wraps last→first. User still has to press Write."""
         n = len(self._mh_gpu_vars)
@@ -1117,7 +1206,7 @@ class GamesTabMixin:
         for v, nv in zip(self._mh_gpu_vars, vals):
             v.set(nv)
         self._mh_build_gpu_fields()          # redraw so the [pci] hints follow
-        self._log(f"[MangoHud] swapped GPU rows {i} ↔ {j} — press "
+        self._log(f"[MangoHud] swapped GPU rows {i} ↔ {j} - press "
                   f"“Write to MangoHud config” to save")
 
     def _mh_reload_from_conf(self):
@@ -1155,7 +1244,7 @@ class GamesTabMixin:
         out = {"cpu": "", "gpu": "", "gpus": [], "position": "", "offset_x": 0,
                "offset_y": 0, "font_size": 0, "elements": set(), "off": set()}
         try:
-            lines = self._mh_conf_path().read_text().splitlines()
+            lines = self._mh_read_path().read_text().splitlines()
         except OSError:
             return out
         for ln in lines:
@@ -1198,9 +1287,9 @@ class GamesTabMixin:
     }
     # always kept: framerate + the graphics-API / engine line
     _MH_ALWAYS = ["fps", "engine_version"]
-    # the frametime number + its graph — gated by the "Frametime graph" toggle
+    # the frametime number + its graph - gated by the "Frametime graph" toggle
     _MH_FRAMEGRAPH = ["frametime", "frame_timing"]
-    # MangoHud's gpu_name — the card actually rendering (PRIME/hybrid tell) —
+    # MangoHud's gpu_name - the card actually rendering (PRIME/hybrid tell) -
     # gated by the "GPU in use (name)" toggle
     _MH_GPUNAME = "gpu_name"
     # keys MangoHud defaults to ON, so "disabled" must be written as `key=0`,
@@ -1386,7 +1475,7 @@ class GamesTabMixin:
         self._tip(tb.Button(btns, text="Restore default (top-left)",
                   bootstyle=(SECONDARY, "outline"),
                   command=lambda: set_to("top-left", 0, 0)),
-                  "Move the box to MangoHud's default — top-left, no offset."
+                  "Move the box to MangoHud's default - top-left, no offset."
                   ).pack(side="left", padx=3)
         self._tip(tb.Button(btns, text="Cancel", bootstyle=(DANGER, "outline"),
                   command=win.destroy),
@@ -1430,7 +1519,7 @@ class GamesTabMixin:
         res = getattr(self, "_mh_detect_result", None)
         if res is None:
             self._mh_detect_tries += 1
-            if self._mh_detect_tries > 60:       # ~18 s — give up
+            if self._mh_detect_tries > 60:       # ~18 s - give up
                 res = ("", [])
             else:
                 self.root.after(300, self._mh_detect_poll)
@@ -1450,7 +1539,7 @@ class GamesTabMixin:
 
     def _mh_global_preload_confs(self) -> list:
         """environment.d files that force libMangoHud.so into EVERY process via
-        LD_PRELOAD — which drags the overlay layer into kwin_wayland /
+        LD_PRELOAD - which drags the overlay layer into kwin_wayland /
         plasmashell. Rewriting the live MangoHud.conf then crashes the desktop
         (KWin SIGABRT → Plasma session reset → tray loses the power/battery
         applets). This is the 'MangoHud Write relaunches my session' bug."""
@@ -1472,8 +1561,8 @@ class GamesTabMixin:
 
     def _mh_guard_global_preload(self) -> bool:
         """True = ok to write the config; False = abort. If a global
-        LD_PRELOAD is present, offer to strip just that line (MANGOHUD=1 stays,
-        so games still show the overlay) before touching the live conf."""
+        LD_PRELOAD is present, offer to strip just that line before touching
+        the live conf."""
         confs = self._mh_global_preload_confs()
         if not confs:
             return True
@@ -1487,11 +1576,11 @@ class GamesTabMixin:
                 "These files force MangoHud into every process with LD_PRELOAD, "
                 "including KWin and Plasma:\n\n" + flist +
                 "\n\nRewriting the overlay config while that is active can crash "
-                "the desktop — it comes back with no power/battery tray.\n\n"
-                "Remove the global LD_PRELOAD line now (MANGOHUD=1 stays, so games "
-                "keep the overlay), then log out and back in?\n\n"
+                "the desktop - it comes back with no power/battery tray.\n\n"
+                "Remove the global LD_PRELOAD line now (games you enabled on this "
+                "tab keep the overlay), then log out and back in?\n\n"
                 "Yes = fix it and continue   ·   No = cancel this write"):
-            self._log("[MangoHud] write cancelled — global LD_PRELOAD still active")
+            self._log("[MangoHud] write cancelled - global LD_PRELOAD still active")
             return False
         for c in confs:
             try:
@@ -1525,8 +1614,9 @@ class GamesTabMixin:
         dropped. `managed` values: None or '' remove the key, True writes a bare
         toggle (`key`), anything else writes `key=value`. Returns True on success."""
         p = self._mh_conf_path()
+        src = self._mh_read_path()          # a new game profile starts from global
         try:
-            raw = p.read_text().splitlines() if p.is_file() else []
+            raw = src.read_text().splitlines() if src.is_file() else []
         except OSError:
             raw = []
         header, order, vals = [], [], {}
@@ -1544,7 +1634,7 @@ class GamesTabMixin:
             elif re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", s):
                 key, val = s, None              # bare toggle, e.g. `fps`
             else:
-                continue                        # unparseable junk — drop it
+                continue                        # unparseable junk - drop it
             if key not in vals:
                 order.append(key)
             vals[key] = val
@@ -1567,7 +1657,7 @@ class GamesTabMixin:
             p.parent.mkdir(parents=True, exist_ok=True)
             # Atomic replace, not an in-place truncate+write: MangoHud's live
             # config watcher (inotify) must never see a half-written / empty
-            # file — a truncated read is one way the in-session layer chokes.
+            # file - a truncated read is one way the in-session layer chokes.
             tmp = p.with_name(p.name + ".tuxthrottle-tmp")
             tmp.write_text("\n".join(out).rstrip() + "\n")
             if os.geteuid() == 0:
@@ -1578,6 +1668,9 @@ class GamesTabMixin:
                     except OSError:
                         pass
             os.replace(tmp, p)
+            if getattr(self, "_mh_profile_appid", ""):
+                # saving a game's profile puts it in force: drop the parked copy
+                p.with_name(p.name + ".off").unlink(missing_ok=True)
         except (OSError, KeyError) as exc:
             self._log(f"[MangoHud] write failed: {exc}")
             return False
@@ -1585,7 +1678,7 @@ class GamesTabMixin:
 
     def _mh_hud_width(self, labels: list, full: bool) -> "str | None":
         """MangoHud's auto-width doesn't grow for a long custom cpu_text /
-        gpu_text — the label collides with its value column — so pin `width`
+        gpu_text - the label collides with its value column - so pin `width`
         wide enough. None when there's no long custom label (let MangoHud size
         itself). Calibrated against vkcube: an 18-char label at font_size 20
         needs ~560 px with a full value column ("65.5 W", "0.8 GiB"), less when
@@ -1596,7 +1689,7 @@ class GamesTabMixin:
             return None
         fs = self._mh_load_conf().get("font_size") or 24
         # label glyphs ~0.85*fs wide in MangoHud's font; the +term is the value
-        # column + gaps — wider with full stats ("65.5 W" / "0.8 GiB") than a
+        # column + gaps - wider with full stats ("65.5 W" / "0.8 GiB") than a
         # minimal HUD where every value is just "42 %"
         pad = 12 if full else 8
         w = int(longest * fs * 0.85) + int(fs * pad)
@@ -1626,7 +1719,7 @@ class GamesTabMixin:
         mangohud_status.set_enabled(enabled, user=self.user)
         self._log(f"[MangoHud] live status line {'enabled' if enabled else 'disabled'}"
                   + ("" if enabled else " (line removed from MangoHud.conf)")
-                  + " — shown by the tray monitor, refreshed every ~2s")
+                  + " - shown by the tray monitor, refreshed every ~2s")
         fixlog.log_event("mangohud-status-line",
                          f"status line {'enabled' if enabled else 'disabled'}", user=self.user)
 
@@ -1646,7 +1739,7 @@ class GamesTabMixin:
             # card's own name/stats (that's how you tell two same GPUs apart).
             # MangoHud numbers GPUs by ascending /sys/class/drm/renderD* (iGPU
             # usually renderD128), which on hybrid laptops is neither cardN nor
-            # our row order — so emit the real MangoHud indices in *our* row
+            # our row order - so emit the real MangoHud indices in *our* row
             # order (each row's PCI is name-matched to a card), else gpu_list=
             # 0,1 pins the dGPU label on the iGPU's stats line (the "GPU ids
             # are swapped" bug).
@@ -1670,7 +1763,7 @@ class GamesTabMixin:
             elements.append("gamemode")
         for e in elements:
             managed[e] = True                   # bare toggle
-        # MangoHud defaults these ON — a removed line ≠ off, so pin 0/1 explicitly
+        # MangoHud defaults these ON - a removed line ≠ off, so pin 0/1 explicitly
         for k in self._MH_EXPLICIT:
             managed[k] = "1" if k in elements else "0"
         if getattr(self, "_mh_pos_set", False):
@@ -1683,8 +1776,8 @@ class GamesTabMixin:
                         for g, v in self._mh_lvl.items())
         posn = (f", pos={self._mh_pos}" if getattr(self, "_mh_pos_set", False) else "")
         graph = "on" if getattr(self, "_mh_graph", None) and self._mh_graph.get() else "off"
-        self._log(f"[MangoHud] {self._mh_conf_path()}  (cpu={cpu or '—'}, "
-                  f"gpu={', '.join(gpus) or '—'}, {lvls}, graph={graph}{posn}; "
+        self._log(f"[MangoHud] {self._mh_conf_path()}  (cpu={cpu or '-'}, "
+                  f"gpu={', '.join(gpus) or '-'}, {lvls}, graph={graph}{posn}; "
                   f"deduped, width={width or 'auto'})")
 
     def _mh_reset_conf(self):
@@ -1693,10 +1786,10 @@ class GamesTabMixin:
         p = self._mh_conf_path()
         if not messagebox.askyesno(
                 "Reset MangoHud config",
-                f"Replace {p} with a clean config — FPS, the graphics-API line, "
+                f"Replace {p} with a clean config - FPS, the graphics-API line, "
                 f"each GPU's name, the CPU/GPU/Memory groups + extras at the "
                 f"levels set by the toggles above, your names + position, "
-                f"toggle on Shift_R+F12 — and nothing else?\n\nThe current file "
+                f"toggle on Shift_R+F12 - and nothing else?\n\nThe current file "
                 f"is backed up to {p.name}.bak first."):
             return
         try:
@@ -1706,7 +1799,7 @@ class GamesTabMixin:
         except OSError as exc:
             self._log(f"[MangoHud] reset failed: {exc}")
             return
-        # styling baseline only — _mh_apply layers on the stat toggles + labels
+        # styling baseline only - _mh_apply layers on the stat toggles + labels
         base = ["# MangoHud config (managed by TuxThrottle)", "position=top-left",
                 "font_size=20", "background_alpha=0.4", "round_corners=6",
                 "toggle_hud=Shift_R+F12"]
@@ -1777,10 +1870,10 @@ class GamesTabMixin:
             cells = [
                 (when, 14), (str(s.get("game", "?"))[:21], 22),
                 (str(round(s.get("duration_s", 0) / 60)), 6),
-                (str(s.get("cpu_temp_max_c", "—")), 7),
-                (str(s.get("gpu_temp_max_c", "—")), 7),
-                (str(s.get("cpu_clock_avg_ghz", "—")), 8),
-                (str(s.get("gpu_clock_avg_mhz", "—")), 8),
+                (str(s.get("cpu_temp_max_c", "-")), 7),
+                (str(s.get("gpu_temp_max_c", "-")), 7),
+                (str(s.get("cpu_clock_avg_ghz", "-")), 8),
+                (str(s.get("gpu_clock_avg_mhz", "-")), 8),
                 (f"{s.get('throttle_pct', 0)}%", 10),
             ]
             for txt, w in cells:
@@ -1800,7 +1893,7 @@ class GamesTabMixin:
         mins = round(s.get("duration_s", 0) / 60)
         when = datetime.datetime.fromtimestamp(
             s.get("ended", 0)).strftime("%b %d %H:%M") if s.get("ended") else "?"
-        parts = [f"{s.get('game', '?')} — {mins} min  ({when})",
+        parts = [f"{s.get('game', '?')} - {mins} min  ({when})",
                  f"CPU max {s.get('cpu_temp_max_c', '?')} °C",
                  f"GPU max {s.get('gpu_temp_max_c', '?')} °C"]
         if s.get("cpu_clock_avg_ghz"):
@@ -1821,7 +1914,7 @@ class GamesTabMixin:
                  text="Pick a game from the tabs below, then work down the steps. Steps "
                       "with a Run button do the work (output streams to the log console "
                       "at the bottom of the window); manual steps are quick clicks inside "
-                      "the game launcher that can't be scripted — tick “Mark done” once "
+                      "the game launcher that can't be scripted - tick “Mark done” once "
                       "you've done them.  Proton-prefix, save-file, shader-cache and "
                       "launch-option tools are on the “Game Tools” tab.").pack(anchor="w", pady=(2, 0))
 
@@ -1832,7 +1925,7 @@ class GamesTabMixin:
     def _build_gametools_tab(self, outer):
         frame = self._scroll_body(outer, pad=16)
         tb.Label(frame, wraplength=1100, justify="left", bootstyle=SECONDARY, text=(
-            "Steam / Proton helpers that work for any game — not just the ones "
+            "Steam / Proton helpers that work for any game - not just the ones "
             "with a walkthrough on “Setup Games”: relocate a Proton prefix off "
             "a drive that can't host it, pull stray save files back, keep a "
             "save-game vault, choose one home for every shader cache, and build "
@@ -1845,7 +1938,7 @@ class GamesTabMixin:
                       "prefix there (those filesystems reject ':' in a filename, so the "
                       "'dosdevices/c:' … links fail and the game won't start). "
                       "Relocation moves just the prefix onto your Linux drive and "
-                      "symlinks it back — game files stay put. The save-file scan finds "
+                      "symlinks it back - game files stay put. The save-file scan finds "
                       "prefixes whose Documents / Saved Games / AppData folder is a "
                       "symlink onto another drive and pulls it back in. Close Steam "
                       "first.").pack(anchor="w")
@@ -1853,7 +1946,7 @@ class GamesTabMixin:
         self._tip(tb.Button(row, text="Scan Steam prefixes", bootstyle=(INFO, "outline"),
                   command=self._prefix_scan),
                   "List every game's Proton prefix and flag any sitting on an "
-                  "NTFS/exFAT drive (those can't host a prefix — the game won't "
+                  "NTFS/exFAT drive (those can't host a prefix - the game won't "
                   "start). Read-only.").pack(side="left")
         self._tip(tb.Button(row, text="Migrate all at-risk prefixes",
                   bootstyle=(WARNING, "outline"),
@@ -1861,7 +1954,7 @@ class GamesTabMixin:
                   "Move every prefix that's on an NTFS/exFAT drive onto your "
                   "Linux drive and symlink it back. Game files aren't touched. "
                   "Close Steam first.").pack(side="left", padx=6)
-        tb.Label(row, text="   or one — AppID:").pack(side="left")
+        tb.Label(row, text="   or one - AppID:").pack(side="left")
         self._prefix_appid_var = tk.StringVar()
         tb.Entry(row, textvariable=self._prefix_appid_var, width=12).pack(side="left", padx=(2, 6))
         self._tip(tb.Button(row, text="Relocate this prefix", bootstyle=(WARNING, "outline"),
@@ -1886,7 +1979,7 @@ class GamesTabMixin:
 
         tb.Separator(pf).pack(fill="x", pady=(10, 6))
         tb.Label(pf, bootstyle=SECONDARY, wraplength=1100, justify="left",
-                 text="Save-game vault — a folder on a SEPARATE drive (not the OS/Steam "
+                 text="Save-game vault - a folder on a SEPARATE drive (not the OS/Steam "
                       "drive) holding a copy of every game's saves as <vault>/<appid>/… . "
                       "Export copies saves out of the prefix(es) into it; Import copies "
                       "them back. Leave the AppID field blank to do every prefix at once. "
@@ -1916,7 +2009,8 @@ class GamesTabMixin:
         self._build_steamperf_box(frame)
         self._build_fixes_box(frame)
         self._build_launch_opts_box(frame)
-        self._build_mangohud_box(frame)
+        self._build_dgpu_box(frame)
+        # the MangoHud overlay editor + per-game enable live on the “MangoHud” tab
         self._build_last_session_card(frame)
 
     def _games_notebook_body(self, gnb):
@@ -1960,7 +2054,7 @@ class GamesTabMixin:
 
     def _pdb_start(self, appid: str, widget):
         """ProtonDB lookup off-thread (network + disk cache); the worker only
-        writes a plain dict, never touches Tk — a root.after poller (started
+        writes a plain dict, never touches Tk - a root.after poller (started
         here, on the main thread) is what applies the result. Mirrors
         _sc_link_check_worker/_sc_link_check_poll: calling root.after() from
         the worker thread itself can crash with 'main thread is not in main
@@ -1970,7 +2064,7 @@ class GamesTabMixin:
         def work():
             try:
                 result["text"] = protondb.label(protondb.lookup(appid))
-            except Exception:  # noqa: BLE001 — a badge is never worth a crash
+            except Exception:  # noqa: BLE001 - a badge is never worth a crash
                 result["text"] = ""
 
         threading.Thread(target=work, daemon=True).start()
@@ -2126,7 +2220,7 @@ class GamesTabMixin:
             rec["status"].configure(text=txt, bootstyle=style)
         except tk.TclError:
             pass
-        # grey out a "Run step" button whose check already passes — e.g. the
+        # grey out a "Run step" button whose check already passes - e.g. the
         # move-the-Proton-prefix step once this game's compatdata/<appid> prefix
         # is on a Linux drive (already relocated, or never on NTFS/exFAT).
         btn = rec.get("run_btn")
@@ -2141,11 +2235,11 @@ class GamesTabMixin:
     def _run_stream(self, desc: str, cmd: str, *, tag: str = "Setup Games") -> None:
         """Run one shell command under the busy overlay, streaming stdout to the
         log; a non-zero exit pops the output dialog (via _upd_last). MAIN THREAD
-        entry — spawns its own worker."""
+        entry - spawns its own worker."""
         if self._busy:
-            messagebox.showinfo("Busy", "An operation is already running — check the log.")
+            messagebox.showinfo("Busy", "An operation is already running - check the log.")
             return
-        self._begin_busy(f"{tag} — {desc}", steps=0)
+        self._begin_busy(f"{tag} - {desc}", steps=0)
         self._progress(step=desc)
         self._log(f"[{tag}] {desc} …")
 
@@ -2170,10 +2264,10 @@ class GamesTabMixin:
                 tail.append(f"[{tag} FAILED] {exc}")
             finally:
                 result = "done ✓" if rc == 0 else f"exit {rc}"
-                self._log(f"[{tag}] {desc} — {result}")
+                self._log(f"[{tag}] {desc} - {result}")
                 self._upd_last = {"ok": rc == 0, "rc": rc, "desc": desc,
                                   "reboot": False, "tail": tail}
-                self._busy_queue.put(f"{tag}: {desc} — {result}")
+                self._busy_queue.put(f"{tag}: {desc} - {result}")
                 self._games_q.put("refresh")
 
         threading.Thread(target=work, daemon=True).start()
@@ -2185,7 +2279,7 @@ class GamesTabMixin:
     # ---- Proton prefix relocation (general, any Steam appid) ----
 
     def _user_py(self, script: str, args: str) -> str:
-        """`su - <user> -c 'python3 <BASE_DIR>/<script> <args>'` — run a helper
+        """`su - <user> -c 'python3 <BASE_DIR>/<script> <args>'` - run a helper
         as the real user (the GUI itself is elevated)."""
         return (f"su - {shlex.quote(self.user)} -c "
                 f"{shlex.quote(f'python3 {BASE_DIR}/{script} {args}')}")
@@ -2237,7 +2331,7 @@ class GamesTabMixin:
             "For every game whose Documents / Saved Games / AppData folder is a "
             "symlink onto another drive, copy that folder into the game's Proton "
             "prefix and replace the symlink.\n\n"
-            "The original off-drive copy is left in place — nothing is deleted. "
+            "The original off-drive copy is left in place - nothing is deleted. "
             "Close Steam and all games first. Run the scan first to see the list.",
         ):
             return
@@ -2313,7 +2407,7 @@ class GamesTabMixin:
             messagebox.showinfo(
                 "Pick a vault folder",
                 "Choose the save-vault folder first (Browse…). It has to be on a "
-                "separate drive — not the OS / Steam drive.")
+                "separate drive - not the OS / Steam drive.")
             return
         self._save_saves_vault(vault)
         appid = (self._prefix_appid_var.get() or "").strip()
@@ -2340,7 +2434,7 @@ class GamesTabMixin:
         skipping ones whose `check` already passes. Manual steps are listed
         at the end as a reminder."""
         if self._busy:
-            messagebox.showinfo("Busy", "An operation is already running — check the log.")
+            messagebox.showinfo("Busy", "An operation is already running - check the log.")
             return
         game = self.games.get(gid, {})
         steps = game.get("steps", [])
@@ -2357,7 +2451,7 @@ class GamesTabMixin:
             f"step. {len(manual)} manual step(s) will still need doing by hand afterwards.",
         ):
             return
-        self._begin_busy(f"Setup Games — {name}: all automatic steps", steps=len(auto))
+        self._begin_busy(f"Setup Games - {name}: all automatic steps", steps=len(auto))
         threading.Thread(target=self._game_all_worker, args=(gid, auto, manual),
                          daemon=True).start()
 
@@ -2370,7 +2464,7 @@ class GamesTabMixin:
             if chk:
                 ok, _rc, _out = run_cmd3(self._game_subst(gid, chk), timeout=30)
                 if ok:
-                    self._log(f"[Setup Games] {desc} — already done, skipping")
+                    self._log(f"[Setup Games] {desc} - already done, skipping")
                     done += 1
                     self._progress(overall=done, step=desc)
                     continue
@@ -2378,18 +2472,18 @@ class GamesTabMixin:
             self._log(f"[Setup Games] {desc} …")
             cmd = self._game_subst(gid, step["run"])
             if self._stream_apply_cmd(cmd):
-                self._log(f"[Setup Games] {desc} — done ✓")
+                self._log(f"[Setup Games] {desc} - done ✓")
                 done += 1
                 self._progress(overall=done, step=desc)
             else:
-                self._log(f"[Setup Games] {desc} — FAILED, stopping the run")
+                self._log(f"[Setup Games] {desc} - FAILED, stopping the run")
                 failed = desc
                 break
         self._progress(overall=done)
         if failed:
             self._upd_last = {"ok": False, "rc": 1, "reboot": False,
                               "desc": f"{failed} (batch stopped here)",
-                              "tail": [f"'{failed}' failed — see the log above. "
+                              "tail": [f"'{failed}' failed - see the log above. "
                                        "Fix it, then use its own Run step button or "
                                        "re-run all."]}
             msg = f"Setup Games: stopped at “{failed}”"

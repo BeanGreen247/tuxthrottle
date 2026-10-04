@@ -8,7 +8,7 @@ gaming tools) summary endpoint:
     -> {"tier": "gold", "trendingTier": "platinum",
         "confidence": "strong", "score": 0.71, "total": 2034}
 
-Stdlib only (urllib) — no extra dependency for a feature that's cosmetic
+Stdlib only (urllib) - no extra dependency for a feature that's cosmetic
 (a badge next to a game's name), and results are cached to disk so the
 Setup Games tab doesn't hit the network on every open/redraw. Offline or
 rate-limited: returns None, callers just don't show a badge.
@@ -79,7 +79,7 @@ def lookup(appid: str, use_cache: bool = True) -> dict | None:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_S) as resp:
             data = json.loads(resp.read().decode("utf-8", errors="replace"))
     except (urllib.error.URLError, ValueError, OSError, TimeoutError):
-        # offline / rate-limited / no report for this appid — negative-cache
+        # offline / rate-limited / no report for this appid - negative-cache
         # briefly so a bad connection doesn't retry every single redraw
         _write_cache(appid, {"tier": None})
         return None

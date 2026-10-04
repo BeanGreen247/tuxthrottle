@@ -42,7 +42,7 @@ jobs:
       - name: RPM spec lint
         run: |
           sudo dnf -y install rpm-build rpmlint >/dev/null 2>&1 || sudo apt-get install -y rpm >/dev/null 2>&1 || true
-          rpmspec -P packaging/tuxthrottle.spec --define "_version 0.1.0" >/dev/null && echo "spec parses" || echo "rpmspec not available — skipped"
+          rpmspec -P packaging/tuxthrottle.spec --define "_version 0.1.0" >/dev/null && echo "spec parses" || echo "rpmspec not available - skipped"
 
       - name: Unit tests
         run: python -m pytest tests/ -q
@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install mypy
-      - name: mypy (core stdlib modules — gating)
+      - name: mypy (core stdlib modules - gating)
         run: |
           mypy --ignore-missing-imports --no-error-summary \
             --disable-error-code=annotation-unchecked \
@@ -105,7 +105,7 @@ jobs:
               r.update()
           for text, frame, _b in a.notebook._pages:
               assert len(frame.winfo_children()) > 0, f"{text!r} built empty"
-          print(f"GUI built OK — {len(pages)} nav pages, last = {pages[-1]!r}, all lazy-build clean")
+          print(f"GUI built OK - {len(pages)} nav pages, last = {pages[-1]!r}, all lazy-build clean")
           r.destroy()
           PY
 
@@ -118,7 +118,7 @@ jobs:
           python-version: "3.12"
       - name: Python deps
         run: pip install textual rich
-      - name: Build the TUI headless (Textual's own test harness — no tty needed)
+      - name: Build the TUI headless (Textual's own test harness - no tty needed)
         run: |
           python - <<'PY'
           import asyncio
@@ -132,7 +132,7 @@ jobs:
                       assert box.value, f"{box.id} never populated"
                   await pilot.click("#btn_fan_0")
                   await pilot.pause()
-              print("TUI built OK — stat boxes populated, a button click round-tripped")
+              print("TUI built OK - stat boxes populated, a button click round-tripped")
 
           asyncio.run(main())
           PY

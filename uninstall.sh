@@ -2,7 +2,7 @@
 #
 # Uninstall TuxThrottle (Nobara Linux).
 #
-# By default this removes **only the tool** — the /opt install, the launcher,
+# By default this removes **only the tool** - the /opt install, the launcher,
 # the icon, the menu entry and your per-user toolkit config. Everything the
 # tool's *tweaks* set up (the RGB-keyboard boot service, Game-Mode / MangoHud
 # helper scripts, the G-key listener, the passwordless-sudo rule, kernel
@@ -45,7 +45,7 @@ if [[ -n "$U" ]]; then
     UHOME="$(getent passwd "$U" | cut -d: -f6)"
     URUN="/run/user/$(id -u "$U" 2>/dev/null || echo 1000)"
 else
-    c_warn "couldn't determine the desktop user — per-user files won't be cleaned"
+    c_warn "couldn't determine the desktop user - per-user files won't be cleaned"
     UHOME="" URUN=""
 fi
 
@@ -85,7 +85,7 @@ fi
 
 if [[ $DO_PURGE -eq 0 ]]; then
     echo
-    c_ok "Tool removed. Tweaks, services and helper scripts were kept —"
+    c_ok "Tool removed. Tweaks, services and helper scripts were kept -"
     c_ok "  re-run with --purge to remove those too."
     exit 0
 fi
@@ -121,12 +121,28 @@ rm -f /usr/local/bin/tuxthrottle-kbd \
       /usr/local/bin/gaming-performance /usr/local/bin/gaming-balanced \
       /usr/local/bin/amdgpu-perf-high /usr/local/bin/amdgpu-perf-auto \
       /usr/local/bin/nvidia-max-perf \
-      /usr/local/bin/mangohud-global-on /usr/local/bin/mangohud-global-off
+      /usr/local/bin/mangohud-global-on /usr/local/bin/mangohud-global-off \
+      /usr/local/bin/tuxthrottle-wait-mounts \
+      /etc/cron.d/tuxthrottle-drivehealth
+# the per-game MangoHud gate shadows /usr/bin/mangohud - only remove OUR script
+if grep -q tuxthrottle-mangohud-gate /usr/local/bin/mangohud 2>/dev/null; then
+    rm -f /usr/local/bin/mangohud
+fi
+rm -rf /var/lib/tuxthrottle
 c_ok "removed systemd units, sleep hook, zram/fan drop-ins, sudoers rule, helper scripts"
 
 if [[ -n "$UHOME" ]]; then
     rm -f "$UHOME/.config/systemd/user/tuxthrottle-hotkey.service" \
           "$UHOME/.config/environment.d/mangohud.conf"
+    # Steam autostart: drop the mount-wait wrapper from the Exec lines again
+    AS="$UHOME/.config/autostart/steam.desktop"
+    [[ -f "$AS" ]] && sed -i 's|^Exec=/usr/local/bin/tuxthrottle-wait-mounts |Exec=|' "$AS"
+    # the shader-cache self-heal cron lines, per-game overlay profiles, state
+    if command -v crontab >/dev/null 2>&1 && crontab -u "$U" -l 2>/dev/null | grep -q tuxthrottle-shadercache-heal; then
+        crontab -u "$U" -l 2>/dev/null | grep -v tuxthrottle-shadercache-heal | crontab -u "$U" -
+    fi
+    rm -f "$UHOME"/.config/MangoHud/tuxthrottle-*.conf "$UHOME"/.config/MangoHud/tuxthrottle-*.conf.off
+    rm -rf "$UHOME/.local/share/tuxthrottle" "$UHOME/.cache/tuxthrottle"
     urun systemctl --user daemon-reload
     c_ok "removed per-user hotkey unit + mangohud env drop-in"
 fi
@@ -145,7 +161,7 @@ if [[ $DO_GRUB -eq 1 ]] && command -v grubby >/dev/null 2>&1; then
     done
     c_ok "stripped the toolkit's kernel-cmdline args (reboot to take effect)"
 elif [[ $DO_GRUB -eq 0 ]]; then
-    c_warn "kernel-cmdline tweaks left in place — add --grub to strip them"
+    c_warn "kernel-cmdline tweaks left in place - add --grub to strip them"
 fi
 
 # ---- optional: fstab btrfs-noatime ----------------------------
@@ -155,10 +171,10 @@ if [[ $DO_FSTAB -eq 1 ]]; then
         mount -o remount / 2>/dev/null || true
         c_ok "restored /etc/fstab from /etc/fstab.tuxthrottle-bak (BtrfsNoatime)"
     else
-        c_info "no /etc/fstab.tuxthrottle-bak — BtrfsNoatime wasn't applied"
+        c_info "no /etc/fstab.tuxthrottle-bak - BtrfsNoatime wasn't applied"
     fi
 elif [[ -f /etc/fstab.tuxthrottle-bak ]]; then
-    c_warn "BtrfsNoatime edited /etc/fstab — add --fstab to restore it"
+    c_warn "BtrfsNoatime edited /etc/fstab - add --fstab to restore it"
 fi
 
 # ---- optional: pip ttkbootstrap -----------------------------
@@ -166,7 +182,7 @@ if [[ $DO_PIP -eq 1 ]]; then
     run python3 -m pip uninstall -y --break-system-packages ttkbootstrap
     c_ok "pip-uninstalled ttkbootstrap"
 else
-    c_warn "ttkbootstrap (pip, system-wide) left installed — add --pip to remove it"
+    c_warn "ttkbootstrap (pip, system-wide) left installed - add --pip to remove it"
 fi
 
 update-desktop-database /usr/share/applications >/dev/null 2>&1 || true

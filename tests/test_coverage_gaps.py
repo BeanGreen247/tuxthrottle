@@ -1,6 +1,6 @@
 """Coverage for modules that had zero unit tests: automount, savevault,
 prefix_relocate, modelgen, kde_panel. Pure-logic / real-tmp_path-filesystem
-functions only — nothing that needs root, real hardware, or a live Steam
+functions only - nothing that needs root, real hardware, or a live Steam
 install.
 """
 import os
@@ -18,7 +18,7 @@ import tuxthrottle_savevault as sv
 def test_sanitize_strips_unsafe_chars():
     assert am._sanitize("My Game Drive!") == "My_Game_Drive"
     # str.strip() removes ALL leading/trailing chars in the given set, not a
-    # fixed prefix — "../../etc" -> "..\_.._etc" pre-strip, then every
+    # fixed prefix - "../../etc" -> "..\_.._etc" pre-strip, then every
     # leading '.'/'_' run is stripped down to "etc"
     assert am._sanitize("../../etc") == "etc"
     assert am._sanitize("") == ""
@@ -102,13 +102,13 @@ def test_check_vault_accepts_a_different_device(monkeypatch, tmp_path):
 # --------------------------------------------------------------------------- #
 def test_colon_ok_on_a_real_posix_tmpdir(tmp_path):
     # tmp_path is a real filesystem (whatever backs pytest's tmp dir, normally
-    # ext4/btrfs/tmpfs) — all of those accept ':' in a filename.
+    # ext4/btrfs/tmpfs) - all of those accept ':' in a filename.
     assert pr.colon_ok(tmp_path) is True
 
 
 def test_classify_absent_when_no_compatdata(tmp_path):
     # classify() falls back to probing the *parent* compatdata dir when the
-    # specific prefix is missing — "absent" only happens when that parent
+    # specific prefix is missing - "absent" only happens when that parent
     # doesn't exist either (steamapps/ itself, with no compatdata at all).
     lib = tmp_path / "SteamLibrary"
     (lib / "steamapps").mkdir(parents=True)
@@ -179,7 +179,7 @@ def test_csv_parses_and_strips_and_drops_empties():
 
 def test_restore_launcher_power_writes_both_keys(monkeypatch):
     """The classic Kicker menu reads favoriteSystemActions, Kickoff reads
-    systemFavorites — restoring the power row must set BOTH (and drop
+    systemFavorites - restoring the power row must set BOTH (and drop
     favoritesPortedToKAstats) or the classic menu still shows only Log Out."""
     monkeypatch.setattr(kp, "find_applets",
                         lambda plugin: [("2", "3")] if plugin == "org.kde.plasma.kicker" else [])

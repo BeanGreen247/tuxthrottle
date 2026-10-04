@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Sensor reads + Game Mode control — shared by tuxthrottle.py (GUI,
+"""Sensor reads + Game Mode control - shared by tuxthrottle.py (GUI,
 stdlib-only) and tray_monitor.py (PySide6). Deliberately has NO GUI
 dependency of its own so the checkbox Toolkit doesn't need PySide6 just to
 show live numbers.
 
 Reference platform: Dell G15 5515 Ryzen Edition (Ryzen 7 5800H, RTX 3050 Ti
-Mobile). Board specifics — CPU/fan hwmon names, the platform_profile path, the
+Mobile). Board specifics - CPU/fan hwmon names, the platform_profile path, the
 PWM floor, fan count, the per-fan boost attribute, the max RPM, and which
-platform_profile value equals Game Mode — come from the model profile
+platform_profile value equals Game Mode - come from the model profile
 (`models/<slug>.json` via `model_profile()`), defaulting to the 5515 values
 when no profile matches.
 GPU lookups auto-detect by PCI vendor ID (0x1002 AMD / nvidia-smi for NVIDIA).
@@ -44,9 +44,9 @@ def _dmi(name: str) -> str:
 
 def detect_model() -> dict:
     """Read this machine's DMI identity and say whether it's the platform the
-    Toolkit was written for (Dell G15 5515). Every model-specific path here —
+    Toolkit was written for (Dell G15 5515). Every model-specific path here -
     the alienware-wmi fan boost, the AW-ELC keyboard, the 5800H C-state fix,
-    k10temp, … — assumes that board."""
+    k10temp, … - assumes that board."""
     vendor = _dmi("sys_vendor")
     product = _dmi("product_name")
     board = _dmi("board_name")
@@ -68,7 +68,7 @@ _MODEL_CACHE: dict | None = None
 
 
 def _model_files() -> list[str]:
-    """All models/*.json except `_`-prefixed ones — those are work-in-progress
+    """All models/*.json except `_`-prefixed ones - those are work-in-progress
     scaffolds (`collect-model --out models/_foo.json`) and test fixtures, and
     must never be auto-matched against a real machine."""
     try:
@@ -81,10 +81,10 @@ def _model_files() -> list[str]:
 def model_profile() -> dict:
     """The per-board hardware profile for this machine (models/<slug>.json),
     matched on DMI. Falls back to g15-5515 (the reference board), or a minimal
-    stub if that file is missing. Cached — DMI doesn't change at runtime.
+    stub if that file is missing. Cached - DMI doesn't change at runtime.
 
     Set ``TUXTHROTTLE_MODEL=<slug>`` to force a specific profile regardless of
-    DMI — a dev/testing lever for bringing up a new board, printed loudly to
+    DMI - a dev/testing lever for bringing up a new board, printed loudly to
     stderr so it can't be left on by accident."""
     global _MODEL_CACHE
     if _MODEL_CACHE is not None:
@@ -103,7 +103,7 @@ def model_profile() -> dict:
         except (OSError, ValueError):
             continue
         if forced and prof.get("id") == forced:
-            print(f"sensors: TUXTHROTTLE_MODEL override active — using "
+            print(f"sensors: TUXTHROTTLE_MODEL override active - using "
                   f"'{forced}' profile, not this machine's DMI", file=sys.stderr)
             _MODEL_CACHE = prof
             return _MODEL_CACHE
@@ -117,7 +117,7 @@ def model_profile() -> dict:
             fallback = prof
     if forced:
         print(f"sensors: TUXTHROTTLE_MODEL='{forced}' set but no such "
-              f"models/*.json — falling back", file=sys.stderr)
+              f"models/*.json - falling back", file=sys.stderr)
     _MODEL_CACHE = chosen or fallback
     return _MODEL_CACHE
 
@@ -129,7 +129,7 @@ def model_id() -> str:
 # --------------------------------------------------------------------------- #
 #  Model-profile accessors. Every hardware specific that used to be a literal
 #  in this file now comes from models/<slug>.json via model_profile(), with
-#  the reference 5515 value as the fallback — so a machine with no matching
+#  the reference 5515 value as the fallback - so a machine with no matching
 #  profile (or an old profile missing a field) behaves exactly as before.
 # --------------------------------------------------------------------------- #
 
@@ -301,7 +301,7 @@ _GPU_TRIM = re.compile(
 
 
 def gpu_names() -> list:
-    """Ordered list of GPU marketing names for MangoHud labels — dGPU-ish
+    """Ordered list of GPU marketing names for MangoHud labels - dGPU-ish
     entries first. Uses nvidia-smi for the NVIDIA name, lspci for the rest;
     de-duplicated, best-effort. e.g. ['GeForce RTX 3050 Ti', 'Radeon Vega']."""
     names: list = []
@@ -361,14 +361,14 @@ def _norm_pci(addr: str) -> str:
 
 
 def gpu_devices() -> list:
-    """[{'name', 'pci'}] for every real GPU, dGPU-ish first — like gpu_names()
+    """[{'name', 'pci'}] for every real GPU, dGPU-ish first - like gpu_names()
     but each entry also carries its PCI address so two identical cards can be
     told apart. Best-effort; 'pci' may be '' if only nvidia-smi named it and it
     gave no bus id."""
     devs: list = []
     seen_names: set = set()
     nvidia_seen = False
-    # Only ask nvidia-smi when the dGPU is already powered — a bare query wakes
+    # Only ask nvidia-smi when the dGPU is already powered - a bare query wakes
     # a runtime-suspended card, and a burst of those at startup can wedge the
     # driver. lspci below names and locates every GPU without touching it.
     if which("nvidia-smi") and dgpu_is_awake():
@@ -424,7 +424,7 @@ def _gpu_lspci_blobs() -> dict:
     """{normalised PCI addr: lowercased 'vendor device subsystem' text} for
     every GPU lspci can see. Richer than gpu_devices()' cleaned name and, being
     pure lspci, it never wakes a runtime-suspended card. Names come straight
-    from the live pci.ids database — nothing GPU-specific is hard-coded here."""
+    from the live pci.ids database - nothing GPU-specific is hard-coded here."""
     out: dict = {}
     if not which("lspci"):
         return out
@@ -457,8 +457,8 @@ def _tok(text: str) -> set:
 def _gpu_name_candidates(devices=None) -> list:
     """[{'pci', 'tokens'}] for every GPU actually present, built live from the
     hardware: the card list is sysfs DRM (drm_gpus) ∪ lspci, and each card's
-    identifying tokens are whatever lspci's pci.ids lookup — plus any nvidia-smi
-    / caller-supplied marketing name — says for that exact PCI address. No
+    identifying tokens are whatever lspci's pci.ids lookup - plus any nvidia-smi
+    / caller-supplied marketing name - says for that exact PCI address. No
     static vendor tables or keyword lists; add a GPU nobody's heard of and it
     still resolves."""
     blobs = _gpu_lspci_blobs()
@@ -484,8 +484,8 @@ def _gpu_name_candidates(devices=None) -> list:
 def gpu_label_pci_map(labels: list, devices=None) -> list:
     """Best-effort PCI address for each MangoHud `gpu_text` label.
 
-    A label typed by the user — or read back from a MangoHud.conf whose
-    `gpu_text` order no longer matches detection order — must stay glued to the
+    A label typed by the user - or read back from a MangoHud.conf whose
+    `gpu_text` order no longer matches detection order - must stay glued to the
     card it actually names, or `gpu_list` pins the wrong stats line under it
     (the "GPU labels are swapped" bug on hybrid laptops).
 
@@ -579,7 +579,7 @@ def _nvidia_pci_dir():
 
 def dgpu_is_awake() -> bool:
     """True unless the NVIDIA dGPU is runtime-suspended. Lets callers skip
-    `nvidia-smi` while the GPU is parked — polling it would spin it back up
+    `nvidia-smi` while the GPU is parked - polling it would spin it back up
     (battery + heat) for nothing."""
     dev = _nvidia_pci_dir()
     if not dev:
@@ -592,7 +592,7 @@ def dgpu_is_awake() -> bool:
 
 
 def read_dgpu_values():
-    """Returns (clock_mhz, temp_c, util_pct, power_w) — any may be None."""
+    """Returns (clock_mhz, temp_c, util_pct, power_w) - any may be None."""
     if not which("nvidia-smi") or not dgpu_is_awake():
         return None, None, None, None
     try:
@@ -610,7 +610,7 @@ def read_dgpu_values():
 
 
 # --------------------------------------------------------------------------- #
-#  VRAM accounting — which GPU the desktop renders on, how full each GPU's
+#  VRAM accounting - which GPU the desktop renders on, how full each GPU's
 #  video memory is, and which processes are holding it. The G15 5515's Ryzen
 #  iGPU has a tiny (512 MiB) UMA carveout that the KDE/Wayland stack routinely
 #  fills, spilling to slower GTT; the RTX 3050 Ti has 4 GiB we want to keep
@@ -620,7 +620,7 @@ def read_dgpu_values():
 def mangohud_gpu_order() -> list:
     """PCI addresses in MangoHud's `gpu_list` index order. MangoHud (0.7+)
     enumerates GPUs by ascending DRM **render node** (`/sys/class/drm/renderD*`,
-    128, 129, …) — NOT `cardN`, and on hybrid laptops the two orders differ
+    128, 129, …) - NOT `cardN`, and on hybrid laptops the two orders differ
     (e.g. G15 5515: card0=NVIDIA/card1=AMD but renderD128=AMD/renderD129=NVIDIA).
     Index `i` of the returned list is the GPU that `gpu_list=i` selects. This is
     usually iGPU-first, the reverse of `gpu_devices()` (discrete-first). Returns
@@ -732,7 +732,7 @@ _FDINFO_DRV = re.compile(r"drm-driver:\s*(\S+)")
 
 
 def vram_consumers(limit: int = 12) -> list:
-    """Best-effort [{pid, comm, driver, vram_mb}] sorted desc — who is holding
+    """Best-effort [{pid, comm, driver, vram_mb}] sorted desc - who is holding
     video memory right now. AMD/Intel via /proc/<pid>/fdinfo drm-*-vram lines
     (one entry per pid, deduped); NVIDIA via nvidia-smi compute+graphics apps
     when the card is awake."""
@@ -803,7 +803,7 @@ def nvidia_runtime_pm() -> "dict | None":
 
 def set_nvidia_runtime_pm(auto: bool) -> "tuple[bool, str]":
     """Flip the dGPU PCI power/control to 'auto' (allow suspend) or 'on'
-    (pin awake). Live only — not persistent; the NvidiaRuntimePM tweak makes
+    (pin awake). Live only - not persistent; the NvidiaRuntimePM tweak makes
     it stick. Needs root for the sysfs write."""
     dev = _nvidia_pci_dir()
     if not dev:
@@ -818,7 +818,7 @@ def set_nvidia_runtime_pm(auto: bool) -> "tuple[bool, str]":
 
 
 def session_cmd(argv: list) -> list:
-    """Public wrapper of _session_cmd — run argv in the real user's graphical
+    """Public wrapper of _session_cmd - run argv in the real user's graphical
     session when we're root, unchanged otherwise. Used by tuxthrottle_vram."""
     return _session_cmd(argv)
 
@@ -826,7 +826,7 @@ def session_cmd(argv: list) -> list:
 def _powercap_energy_paths():
     """Cumulative-energy sysfs files for CPU package power (RAPL, both
     Intel's intel-rapl and the AMD equivalent share this powercap class).
-    Reading these needs no root — but the kernel's RAPL side-channel
+    Reading these needs no root - but the kernel's RAPL side-channel
     mitigation (post-2020) makes them root-only by default on stock
     permissions; see the RaplPowerPermissions tweak."""
     paths = []
@@ -846,7 +846,7 @@ def _powercap_energy_paths():
 def read_cpu_power_watts():
     """Delta-measures CPU package power over a short window via RAPL
     powercap energy counters. Returns None if unreadable (permissions) or
-    unsupported (no RAPL zone — some AMD kernels/BIOS combos)."""
+    unsupported (no RAPL zone - some AMD kernels/BIOS combos)."""
     paths = _powercap_energy_paths()
     if not paths:
         return None
@@ -873,7 +873,7 @@ def read_cpu_power_watts():
 
 def rapl_permissions_ok() -> bool:
     """Checks the world-readable bit on the RAPL energy file directly,
-    rather than 'can I open it' — the Toolkit GUI runs fully elevated
+    rather than 'can I open it' - the Toolkit GUI runs fully elevated
     (root), which can always read these regardless of the actual
     permission bits, so a naive open()-succeeds check would never catch
     the problem that unprivileged readers (tray icon, hotkey listener)
@@ -881,7 +881,7 @@ def rapl_permissions_ok() -> bool:
     import stat
     paths = _powercap_energy_paths()
     if not paths:
-        return True  # nothing to check — not a permissions problem
+        return True  # nothing to check - not a permissions problem
     try:
         mode = os.stat(paths[0]).st_mode
         return bool(mode & stat.S_IROTH)
@@ -917,7 +917,7 @@ def notify(summary: str, body: str = "") -> None:
 
 def _notify_game_mode(enable: bool) -> None:
     if enable:
-        notify("Game Mode: ON", "G-Mode / performance profile — fans + power limits up")
+        notify("Game Mode: ON", "G-Mode / performance profile - fans + power limits up")
     else:
         notify("Game Mode: OFF", "Back to balanced profile")
 
@@ -925,7 +925,7 @@ def _notify_game_mode(enable: bool) -> None:
 def _gmode_kbd_indicator(enable: bool) -> None:
     """Disabled. The plan was to tint the G-key zone red while G-Mode is
     active (as AWCC does on Windows), but this AW-ELC controller drops the
-    entire backlight whenever the four zones are given different colours —
+    entire backlight whenever the four zones are given different colours -
     the same reason the Keyboard tab is whole-keyboard only. Kept as a no-op
     so callers don't need to change."""
     return
@@ -936,7 +936,7 @@ def set_game_mode(enable: bool) -> tuple[bool, str]:
              else ("gaming-balanced", "amdgpu-perf-auto"))
     paths = [p for p in (which(n) for n in names) if p]
     if not paths:
-        return False, "None of the Game Mode helper scripts are installed — run the Toolkit's Presets first."
+        return False, "None of the Game Mode helper scripts are installed - run the Toolkit's Presets first."
 
     def _ok_now() -> bool:
         _notify_game_mode(enable)
@@ -944,7 +944,7 @@ def set_game_mode(enable: bool) -> tuple[bool, str]:
         return True
 
     try:
-        # Passwordless sudo, one script at a time — this is what the narrow
+        # Passwordless sudo, one script at a time - this is what the narrow
         # PasswordlessGameModeToggle sudoers rule whitelists (exact script
         # paths, not an `sh -c` wrapper). Needed for the hotkey path, which
         # has no way to answer a GUI prompt.
@@ -956,7 +956,7 @@ def set_game_mode(enable: bool) -> tuple[bool, str]:
                 any_fail = True
                 last_err = (r.stderr or r.stdout or f"{p} failed").strip()
         # A helper can exit non-zero on harmless noise (e.g. nvidia-settings
-        # over a headless display) while still doing the real work — trust
+        # over a headless display) while still doing the real work - trust
         # the end state.
         if not any_fail or get_game_mode_state() == enable:
             return _ok_now(), ""
@@ -987,7 +987,7 @@ def toggle_game_mode_external():
 #  are the fallback.
 #
 #  On the reference 5515 two hwmon devices carry the fans:
-#   * alienware_wmi : fanN_input (RPM, ro), fanN_boost (0-255, RW) — the
+#   * alienware_wmi : fanN_input (RPM, ro), fanN_boost (0-255, RW) - the
 #     AWCC-style additive boost. Boost only *adds* airflow on top of the
 #     firmware curve, so it can never stop a fan → the safe lever.
 #   * dell_smm      : pwmN + pwmN_enable (0=full, 1=manual, 2=auto). Real
@@ -1139,11 +1139,11 @@ def restore_fan_auto() -> tuple[bool, str]:
 
 
 # --------------------------------------------------------------------------- #
-#  CPU power limits — ryzenadj (Ryzen 7 5800H / Cezanne)
+#  CPU power limits - ryzenadj (Ryzen 7 5800H / Cezanne)
 #
 #  ryzenadj talks to the SMU over the ACPI mailbox; every call (reads too)
 #  needs root. The GUI runs elevated so this works directly; the tray/hotkey
-#  (unprivileged) will just get "n/a", which is fine — they only display.
+#  (unprivileged) will just get "n/a", which is fine - they only display.
 #  Limits are Watts. STAPM = sustained (long window), fast = short burst,
 #  slow = the medium PPT window.
 # --------------------------------------------------------------------------- #
@@ -1203,7 +1203,7 @@ def read_ryzenadj_info() -> dict | None:
 
 def set_ryzenadj_limits(fast_w=None, slow_w=None, stapm_w=None) -> tuple[bool, str]:
     """Apply any of the three PPT limits (Watts). Clamped to a sane
-    5800H envelope (10–90 W). At least one value must be given."""
+    5800H envelope (10-90 W). At least one value must be given."""
     exe = which("ryzenadj")
     if not exe:
         return False, "ryzenadj is not installed (Power & Limits tab tweak)"
@@ -1228,13 +1228,13 @@ def set_ryzenadj_limits(fast_w=None, slow_w=None, stapm_w=None) -> tuple[bool, s
 
 
 # --------------------------------------------------------------------------- #
-#  Ryzen Curve Optimizer (per-all-core undervolt) — Cezanne
+#  Ryzen Curve Optimizer (per-all-core undervolt) - Cezanne
 #
 #  `ryzenadj --set-coall=<n>` sets an all-core CO offset (negative = undervolt,
 #  0..-30 is the usual sane range). ryzenadj can't read the CO back, so the
 #  desired value is only ever tracked in a file (co.json). This is a genuinely
 #  risky knob: too aggressive an offset causes silent calculation errors, a
-#  segfault storm, or a hard hang — ALWAYS drive it through
+#  segfault storm, or a hard hang - ALWAYS drive it through
 #  tuxthrottle_co_stress.py, which stress-tests and auto-reverts.
 # --------------------------------------------------------------------------- #
 
@@ -1272,7 +1272,7 @@ def set_co_offset(all_core: int) -> tuple[bool, str]:
 
 
 # --------------------------------------------------------------------------- #
-#  Battery charge threshold — stop charging at N % to spare the cell on a
+#  Battery charge threshold - stop charging at N % to spare the cell on a
 #  laptop that lives on AC. Kernel exposes this on Dell via the
 #  `charge_control_end_threshold` sysfs attr when the platform supports it.
 # --------------------------------------------------------------------------- #
@@ -1397,7 +1397,7 @@ def battery_health_info() -> dict:
     """Static + slow-changing battery facts from
     /sys/class/power_supply/BAT*: design vs full-charge capacity (→ wear %),
     charge cycles, chemistry, plus the live charge / draw. `{}` if there's no
-    battery. Model-agnostic — this is generic ACPI/`power_supply` sysfs."""
+    battery. Model-agnostic - this is generic ACPI/`power_supply` sysfs."""
     bat = next(iter(sorted(glob.glob("/sys/class/power_supply/BAT*"))), None)
     if not bat:
         return {}
@@ -1461,7 +1461,7 @@ def battery_health_info() -> dict:
 
 
 # --------------------------------------------------------------------------- #
-#  NVIDIA board power limit — nvidia-smi -pl. The single most useful GPU
+#  NVIDIA board power limit - nvidia-smi -pl. The single most useful GPU
 #  lever on this chassis for heat / battery. Needs root to set.
 # --------------------------------------------------------------------------- #
 
@@ -1476,7 +1476,7 @@ def nvidia_power_limit_info() -> dict | None:
     """{'supported', 'min', 'max', 'default', 'current'} in Watts.
     None if the dGPU is asleep / nvidia-smi is missing (don't wake it to poll).
     supported=False when the query works but the GPU's power limit is
-    firmware-locked — the Dell G15 5515's RTX 3050 Ti Mobile is one of these
+    firmware-locked - the Dell G15 5515's RTX 3050 Ti Mobile is one of these
     (Dynamic Boost; `power.limit` reads [N/A], `-pl` is rejected)."""
     if not which("nvidia-smi") or not dgpu_is_awake():
         return None
@@ -1507,7 +1507,7 @@ def set_nvidia_power_limit(watts: int) -> tuple[bool, str]:
     info = nvidia_power_limit_info()
     if info and not info["supported"]:
         return False, ("this GPU's power limit is firmware-locked (laptop Dynamic "
-                       "Boost) — nvidia-smi -pl is not supported on it")
+                       "Boost) - nvidia-smi -pl is not supported on it")
     w = int(watts)
     if info:
         w = max(int(info["min"]), min(int(info["max"]), w))
@@ -1519,7 +1519,7 @@ def set_nvidia_power_limit(watts: int) -> tuple[bool, str]:
         # nvidia-smi exits 0 even when it prints "not supported in current scope"
         if "not supported" in blob.lower():
             return False, ("this GPU's power limit is firmware-locked (laptop "
-                           "Dynamic Boost) — nvidia-smi -pl is not supported on it")
+                           "Dynamic Boost) - nvidia-smi -pl is not supported on it")
         if r.returncode == 0:
             return True, ""
         return False, (r.stderr or r.stdout or "nvidia-smi -pl failed").strip()
@@ -1528,7 +1528,7 @@ def set_nvidia_power_limit(watts: int) -> tuple[bool, str]:
 
 
 # --------------------------------------------------------------------------- #
-#  Feral GameMode bridge status (informational — the GameModeBridge tweak
+#  Feral GameMode bridge status (informational - the GameModeBridge tweak
 #  wires gamemoded's start/end hooks to gaming-performance/-balanced).
 # --------------------------------------------------------------------------- #
 
@@ -1577,7 +1577,7 @@ def gpu_mode_set(mode: str) -> tuple[bool, str]:
 
 def nvidia_powerd_status() -> dict:
     """`nvidia-powerd` arbitrates the shared CPU/GPU power budget (Dynamic
-    Boost) on Ryzen+RTX laptops — if it isn't running the dGPU is stuck near
+    Boost) on Ryzen+RTX laptops - if it isn't running the dGPU is stuck near
     its base clock. {'installed', 'active'}."""
     st = {"installed": False, "active": False}
     try:
@@ -1593,7 +1593,7 @@ def nvidia_powerd_status() -> dict:
 
 
 def amd_pstate_mode() -> str | None:
-    """'active' | 'guided' | 'passive' — how the amd_pstate driver runs.
+    """'active' | 'guided' | 'passive' - how the amd_pstate driver runs.
     'active' (EPP) is what gives Cezanne its proper boost behaviour. None if
     the driver isn't amd_pstate (old acpi-cpufreq) or unreadable."""
     try:
@@ -1605,7 +1605,7 @@ def amd_pstate_mode() -> str | None:
 
 def vrr_status() -> dict:
     """Variable-refresh-rate capability of the connected panels.
-    {'capable': [conn...], 'panels': N}. Purely informational — reads
+    {'capable': [conn...], 'panels': N}. Purely informational - reads
     /sys/class/drm/*/vrr_capable."""
     capable = []
     for p in glob.glob("/sys/class/drm/card*-*/vrr_capable"):
@@ -1692,7 +1692,7 @@ def _real_user_uid() -> "tuple[str, int] | None":
 def _session_ready() -> bool:
     """True only when the target user's KWin/Wayland session is actually up.
     `kscreen-doctor` SIGABRTs (core-dumps, and DrKonqi then pops a crash
-    notification) if it's run before KWin — which is exactly what the boot /
+    notification) if it's run before KWin - which is exactly what the boot /
     resume `reassert` path was tripping every time. Callers that shell out to
     kscreen-doctor gate on this."""
     try:
@@ -1814,10 +1814,10 @@ def set_panel_refresh(hz: int) -> "tuple[bool, str]":
 
 
 # --------------------------------------------------------------------------- #
-#  Touchpad (KWin's own D-Bus InputDevice interface — Wayland-native, no
+#  Touchpad (KWin's own D-Bus InputDevice interface - Wayland-native, no
 #  xinput). Session-only by design: these are live KWin property writes, not
 #  a boot-persisted config, so "disable" only lasts until the next KWin
-#  session (logout/reboot) — a stuck-off touchpad can never survive a reboot
+#  session (logout/reboot) - a stuck-off touchpad can never survive a reboot
 #  on its own, which is the safety margin that matters most here.
 # --------------------------------------------------------------------------- #
 
@@ -1826,7 +1826,7 @@ _TOUCHPAD_PATH_RE = re.compile(r"(/org/kde/KWin/InputDevice/\S+)")
 
 def _touchpad_device_path() -> "str | None":
     """The KWin D-Bus object path for the touchpad, or None if KWin isn't
-    reachable or no device reports `touchpad=true`. Re-resolved every call —
+    reachable or no device reports `touchpad=true`. Re-resolved every call -
     the eventN path isn't guaranteed stable across reconnects."""
     if not which("busctl"):
         return None
@@ -1926,7 +1926,7 @@ def set_touchpad_disable_while_typing(on: bool) -> "tuple[bool, str]":
 
 # --------------------------------------------------------------------------- #
 #  NVIDIA graphics-clock lock. Unlike -pl (firmware-locked on the 3050 Ti),
-#  `nvidia-smi --lock-gpu-clocks` works in both directions — underclocking for
+#  `nvidia-smi --lock-gpu-clocks` works in both directions - underclocking for
 #  battery / heat is the useful one on this chassis.
 # --------------------------------------------------------------------------- #
 
@@ -2004,7 +2004,7 @@ def nvidia_clock_offset_info() -> dict:
     """Whether a core/mem *clock offset* (overclock) can be applied on this
     box, plus the current offset if readable. Offsets go through
     `nvidia-settings`, which needs Coolbits enabled AND a reachable X display
-    — usually absent on a Wayland-only session, so `available` is commonly
+    - usually absent on a Wayland-only session, so `available` is commonly
     False here. Never raises."""
     out = {"available": False, "reason": "", "core": None, "mem": None,
            "core_range": None}

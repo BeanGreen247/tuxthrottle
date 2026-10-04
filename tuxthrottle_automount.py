@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Give every fixed internal data partition a permanent, stable mount at
 /mnt/<label> via /etc/fstab (with `nofail`), so a second games/data NVMe is
-always in the same place — unlike /run/media/<user>/<uuid>, which is meant
+always in the same place - unlike /run/media/<user>/<uuid>, which is meant
 for transient removable media and moves things around.
 
 The OS disks (anything at /, /home, /boot*, swap, or already in fstab),
@@ -29,7 +29,10 @@ import sys
 
 FSTAB = "/etc/fstab"
 MNT = "/mnt"
-BEGIN = "# >>> tuxthrottle AutoMountDrives (managed) — edit above/below, not inside"
+BEGIN = "# >>> tuxthrottle AutoMountDrives (managed) - edit above/below, not inside"
+# matches the block header whatever follows the tag - earlier versions wrote a
+# different separator, and their blocks must still be found and removed
+BEGIN_RE = r"# >>> tuxthrottle AutoMountDrives \(managed\)[^\n]*"
 END = "# <<< tuxthrottle AutoMountDrives"
 SUPPORTED = {"ext4", "ext3", "ext2", "xfs", "btrfs", "f2fs", "ntfs", "exfat", "vfat"}
 COMMON = "rw,noatime,nofail,x-systemd.device-timeout=10,x-gvfs-show"
@@ -58,7 +61,7 @@ def _fstab_uuids() -> set[str]:
     except OSError:
         return uu
     # ignore our own managed block when checking "already in fstab"
-    text = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), "", text, flags=re.S)
+    text = re.sub(BEGIN_RE + r".*?" + re.escape(END), "", text, flags=re.S)
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -132,7 +135,7 @@ def _read_fstab() -> tuple[str, str]:
         text = open(FSTAB).read()
     except OSError:
         return "", ""
-    m = re.search(re.escape(BEGIN) + r".*?" + re.escape(END) + r"\n?", text, flags=re.S)
+    m = re.search(BEGIN_RE + r".*?" + re.escape(END) + r"\n?", text, flags=re.S)
     block = m.group(0) if m else ""
     return (text[:m.start()] + text[m.end():]) if m else text, block
 
@@ -177,7 +180,7 @@ def enable_all(user: str) -> int:
     rows = _lsblk()
     cands = candidates(rows)
     if not cands:
-        print("No unmounted internal data partitions found — nothing to do.")
+        print("No unmounted internal data partitions found - nothing to do.")
         return 0
     body, _old = _read_fstab()
     body = body.rstrip("\n") + "\n"
@@ -201,7 +204,7 @@ def disable_all(user: str) -> int:
     _cleanup_legacy(user)
     body, block = _read_fstab()
     if not block:
-        print("No managed fstab block — nothing to remove.")
+        print("No managed fstab block - nothing to remove.")
         open(FSTAB, "w").write(body)
         return 0
     for line in block.splitlines():

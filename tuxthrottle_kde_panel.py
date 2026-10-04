@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Panel-applet tweaks for KDE Plasma 6 that are too fiddly for a tweaks.json
-one-liner — finding digital-clock applet IDs in
+one-liner - finding digital-clock applet IDs in
 `plasma-org.kde.plasma.desktop-appletsrc` and swapping the launcher plugin.
 
 Stdlib only. Runs as the invoking user (the tweak wraps it with the right
@@ -73,7 +73,7 @@ def _csv(s: str) -> list[str]:
 
 
 def _stop_plasmashell() -> None:
-    """Fully stop plasmashell BEFORE editing the appletsrc — a running
+    """Fully stop plasmashell BEFORE editing the appletsrc - a running
     plasmashell flushes its in-memory copy on exit and would clobber the edit
     (the reason the first version of this 'did nothing'). main()'s trailing
     restart_plasmashell() then brings it back up fresh."""
@@ -89,8 +89,8 @@ def systray_show(plugin: str, enable: bool) -> int:
     (disable) by editing shownItems / hiddenItems on every
     org.kde.plasma.systemtray applet.
 
-    The keys live in `[Containments][C][Applets][A][General]` — the same group
-    as `knownItems` / `extraItems` — NOT `[Configuration][General]` (writing
+    The keys live in `[Containments][C][Applets][A][General]` - the same group
+    as `knownItems` / `extraItems` - NOT `[Configuration][General]` (writing
     there is what the first version got wrong). plasmashell is stopped first so
     it can't overwrite the file on the way down."""
     applets = find_applets("org.kde.plasma.systemtray")
@@ -124,7 +124,7 @@ _LAUNCHER_PLUGINS = ("org.kde.plasma.kickoff", "org.kde.plasma.kicker",
                      "org.kde.plasma.kickerdash")
 # the full session/power footer for the app launcher, in the usual order.
 # Kickoff reads `systemFavorites`; the classic Kicker menu reads a *different*
-# key, `favoriteSystemActions` — writing only the first is why the classic
+# key, `favoriteSystemActions` - writing only the first is why the classic
 # menu still showed just 'Log Out'. Write both.
 _SYSTEM_FAVORITES = ("suspend,hibernate,reboot,shutdown,lock-screen,"
                      "logout,save-session,switch-user")
@@ -143,7 +143,7 @@ def _restore_launcher_power(enable: bool) -> int:
         _kwrite(cid, aid, ["Configuration", "General"], "favoriteSystemActions",
                 _KICKER_SYSTEM_ACTIONS if enable else None)
         # Plasma sets this after migrating favorites and won't re-populate the
-        # row while it's true — drop it so our values are what Kicker loads.
+        # row while it's true - drop it so our values are what Kicker loads.
         if enable:
             _kwrite(cid, aid, ["Configuration", "General"],
                     "favoritesPortedToKAstats", None)
@@ -152,7 +152,7 @@ def _restore_launcher_power(enable: bool) -> int:
 
 def launcher_power(enable: bool) -> int:
     """Restore the full power/session button row (Sleep, Hibernate, Restart,
-    Shut Down, Lock, Log Out, …) in the KDE application launcher — Kickoff or
+    Shut Down, Lock, Log Out, …) in the KDE application launcher - Kickoff or
     the classic Kicker menu. plasmashell owns these keys, so stop it first or
     it writes the old values back on exit."""
     if not any(find_applets(p) for p in _LAUNCHER_PLUGINS):
@@ -196,7 +196,7 @@ def classic_menu(enable: bool) -> int:
     else:
         print("launcher plugin already as requested")
     # switching to the classic Kicker menu triggers a Plasma favorites
-    # migration that often trims the power row to just 'Log Out' — restore
+    # migration that often trims the power row to just 'Log Out' - restore
     # the full session/power buttons so this tweak doesn't cause that.
     if enable:
         _restore_launcher_power(True)
@@ -232,7 +232,7 @@ def _plasmashell_view_groups(cid: str) -> list[list[str]]:
     `plasmashellrc` under `[PlasmaViews][Panel <cid>]` (and sometimes a
     per-screen `[PlasmaViews][Panel <cid>][Screen N]` child), NOT in the
     appletsrc containment. Writing only the appletsrc key leaves the panel
-    visually floating — this was the "flush tweak does nothing" bug.
+    visually floating - this was the "flush tweak does nothing" bug.
     """
     base = ["PlasmaViews", f"Panel {cid}"]
     groups = [base]
