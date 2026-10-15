@@ -797,7 +797,38 @@ class GamesTabMixin:
                   "contains it, leaving the rest of each string intact - it does "
                   "NOT replace the whole string like 'Apply to every game' does."
                   ).pack(side="left", padx=(10, 0))
+
+        lrow = tb.Frame(lf); lrow.pack(fill="x", pady=(6, 0))
+        self._tip(tb.Button(lrow, text="Lutris: add shader-cache env to every game",
+                  bootstyle=(WARNING, "outline"), command=lambda: self._lutris_env("apply")),
+                  "Writes DXVK_HUD=compiler, STAGING_SHARED_MEMORY=1 and the DXVK + "
+                  "NVIDIA shader cache vars (path = that game's own Wine prefix) into "
+                  "every installed Lutris Wine game's Environment variables. Keys a "
+                  "game already sets are left alone. Each yml is backed up."
+                  ).pack(side="left")
+        self._tip(tb.Button(lrow, text="Lutris: remove them", bootstyle=(SECONDARY, "outline"),
+                  command=lambda: self._lutris_env("remove")),
+                  "Drops those vars again from every Lutris Wine game, only where the "
+                  "value is still the one added above."
+                  ).pack(side="left", padx=(10, 0))
+        self._tip(tb.Button(lrow, text="Lutris: show status", bootstyle=(INFO, "outline"),
+                  command=lambda: self._lutris_env("list")),
+                  "List every Lutris Wine game and how many of the vars it has."
+                  ).pack(side="left", padx=(10, 0))
         self._lo_refresh()
+
+    def _lutris_env(self, action: str):
+        if action != "list" and not messagebox.askyesno(
+                "Lutris environment variables",
+                ("Add the shader-cache environment variables to" if action == "apply"
+                 else "Remove the shader-cache environment variables from")
+                + " every installed Lutris Wine game?\n\n"
+                "Close any open Lutris Configure dialog first - saving it would "
+                "write the old values back. Every game yml is backed up."):
+            return
+        cmd = (f"su - {self.user} -c 'python3 {BASE_DIR}/tuxthrottle_lutris_env.py "
+               f"{action}'")
+        self._run_stream(f"Lutris env vars → {action}", cmd, tag="Game Tools")
 
     def _lo_show_custom(self):
         cmd = (f"su - {self.user} -c 'python3 {BASE_DIR}/tuxthrottle_launchopts.py "
