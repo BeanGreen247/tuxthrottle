@@ -29,8 +29,38 @@ def test_fstab_line_ntfs():
     c = {"fstype": "ntfs", "uuid": "ABCD-1234", "target": "/mnt/Games"}
     line = am.fstab_line(c, uid=1000, gid=1000)
     assert line.startswith("UUID=ABCD-1234  /mnt/Games  ntfs3  ")
-    assert "windows_names" in line
+    assert "windows_names" not in line  # breaks Wine/Proton dosdevices/c:
     assert "uid=1000,gid=1000" in line
+
+
+def test_drop_windows_names_only_touches_ntfs3():
+    line = "UUID=B6  /mnt/V  ntfs3  force,uid=1000,windows_names,rw  0 0"
+    assert am._drop_windows_names(line) == "UUID=B6  /mnt/V  ntfs3  force,uid=1000,rw  0 0"
+    ext = "UUID=X  /mnt/D  ext4  windows_names  0 0"
+    assert am._drop_windows_names(ext) == ext
+
+
+def test_enable_all_fixes_legacy_block_and_keeps_entries(tmp_path, monkeypatch):
+    fstab = tmp_path / "fstab"
+    fstab.write_text(
+        "UUID=root  /  btrfs  defaults  0 0\n"
+        "# >>> dellg15-toolkit AutoMountDrives (managed) - edit above/below, not inside\n"
+        "UUID=B6  /mnt/V  ntfs3  force,uid=1000,windows_names,rw  0 0\n"
+        "# <<< dellg15-toolkit AutoMountDrives\n")
+    calls = []
+    monkeypatch.setattr(am, "FSTAB", str(fstab))
+    monkeypatch.setattr(am, "_cleanup_legacy", lambda u: None)
+    monkeypatch.setattr(am, "_lsblk", lambda: [])
+    monkeypatch.setattr(am, "_run", lambda *c: calls.append(c) or
+                        type("R", (), {"returncode": 0, "stderr": ""})())
+    monkeypatch.setattr(am.os.path, "ismount", lambda p: True)
+    assert am.enable_all(__import__("pwd").getpwuid(os.getuid()).pw_name) == 0
+    text = fstab.read_text()
+    assert "windows_names" not in text
+    assert "dellg15-toolkit" not in text
+    assert text.count("UUID=B6") == 1
+    assert "UUID=root" in text
+    assert ("umount", "/mnt/V") in calls and ("mount", "/mnt/V") in calls
 
 
 def test_fstab_line_ext4_uses_common_opts_only():

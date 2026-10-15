@@ -432,6 +432,15 @@ are rewritten, so a hand-tuned game (gamescope, anti-cheat, `MANGOHUD=0`)
 keeps its own. **Show custom** (`tuxthrottle_launchopts.py list --custom`)
 prints the default and each deviating game with what it adds / drops.
 
+**Lutris: add shader-cache env to every game** writes these into each
+installed Lutris Wine game's Environment variables (`system: env:` in its
+yml), with the cache paths set to that game's own Wine prefix:
+`DXVK_HUD=compiler`, `DXVK_STATE_CACHE_PATH`, `STAGING_SHARED_MEMORY=1`,
+`__GL_SHADER_DISK_CACHE=1`, `__GL_SHADER_DISK_CACHE_PATH`,
+`__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1`. Keys a game already sets are left
+alone, each yml is backed up, and **remove them** drops only values that are
+still the ones it wrote (`tuxthrottle_lutris_env.py list|apply|remove`).
+
 Example output:
 
 ```
