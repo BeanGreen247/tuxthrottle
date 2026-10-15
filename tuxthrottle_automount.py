@@ -32,7 +32,9 @@ MNT = "/mnt"
 BEGIN = "# >>> tuxthrottle AutoMountDrives (managed) - edit above/below, not inside"
 # matches the block header whatever follows the tag - earlier versions wrote a
 # different separator, and their blocks must still be found and removed
-BEGIN_RE = r"# >>> tuxthrottle AutoMountDrives \(managed\)[^\n]*"
+# also match blocks written before the rename (dellg15-toolkit) so a rerun adopts them
+BEGIN_RE = r"# >>> (?:tuxthrottle|dellg15-toolkit) AutoMountDrives \(managed\)[^\n]*"
+END_RE = r"# <<< (?:tuxthrottle|dellg15-toolkit) AutoMountDrives"
 END = "# <<< tuxthrottle AutoMountDrives"
 SUPPORTED = {"ext4", "ext3", "ext2", "xfs", "btrfs", "f2fs", "ntfs", "exfat", "vfat"}
 COMMON = "rw,noatime,nofail,x-systemd.device-timeout=10,x-gvfs-show"
@@ -61,7 +63,7 @@ def _fstab_uuids() -> set[str]:
     except OSError:
         return uu
     # ignore our own managed block when checking "already in fstab"
-    text = re.sub(BEGIN_RE + r".*?" + re.escape(END), "", text, flags=re.S)
+    text = re.sub(BEGIN_RE + r".*?" + END_RE, "", text, flags=re.S)
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -119,7 +121,7 @@ def candidates(rows):
 def fstab_line(c, uid: int, gid: int) -> str:
     fs = c["fstype"]
     if fs == "ntfs":
-        typ, opts = "ntfs3", f"uid={uid},gid={gid},umask=022,windows_names,{COMMON}"
+        typ, opts = "ntfs3", f"uid={uid},gid={gid},umask=022,{COMMON}"
     elif fs == "exfat":
         typ, opts = "exfat", f"uid={uid},gid={gid},umask=022,{COMMON}"
     elif fs == "vfat":
@@ -135,7 +137,7 @@ def _read_fstab() -> tuple[str, str]:
         text = open(FSTAB).read()
     except OSError:
         return "", ""
-    m = re.search(BEGIN_RE + r".*?" + re.escape(END) + r"\n?", text, flags=re.S)
+    m = re.search(BEGIN_RE + r".*?" + END_RE + r"\n?", text, flags=re.S)
     block = m.group(0) if m else ""
     return (text[:m.start()] + text[m.end():]) if m else text, block
 
@@ -174,17 +176,51 @@ def _cleanup_legacy(user: str):
     print(f"  (migrated {len(uuids)} drive(s) off the old /run/media setup)")
 
 
+def _drop_windows_names(line: str) -> str:
+    """ntfs3 `windows_names` rejects ':' in names, which breaks every Wine/Proton
+    prefix (dosdevices/c:). Strip it from an fstab line, leave the rest as is."""
+    f = line.split()
+    if len(f) >= 4 and f[2] == "ntfs3":
+        opts = ",".join(o for o in f[3].split(",") if o != "windows_names") or "defaults"
+        head, _, tail = line.partition(f[3])
+        return head + opts + tail
+    return line
+
+
+def _remount(target: str):
+    """Fully unmount and mount again: a remount does not clear ntfs3 flags."""
+    r = _run("umount", target)
+    if r.returncode != 0:
+        print(f"    ! {target} is in use ({r.stderr.strip()}); the new options apply "
+              "after a reboot, or close what uses it and run this again", file=sys.stderr)
+        return
+    r = _run("mount", target)
+    if r.returncode != 0:
+        print(f"    ! mount {target} failed: {r.stderr.strip()}", file=sys.stderr)
+
+
 def enable_all(user: str) -> int:
     pw = pwd.getpwnam(user)
     _cleanup_legacy(user)
-    rows = _lsblk()
-    cands = candidates(rows)
-    if not cands:
+    body, old = _read_fstab()
+    # keep drives this tool already manages, fixing their options in place
+    kept, fixed, seen = [], [], set()
+    for line in old.splitlines():
+        line = line.strip()
+        if not line.upper().startswith("UUID="):
+            continue
+        new_line = _drop_windows_names(line)
+        if new_line != line:
+            fixed.append(new_line.split()[1])
+            print(f"  ~ {new_line.split()[1]}  removed windows_names (Wine/Proton prefixes need ':' in names)")
+        kept.append(new_line)
+        seen.add(line.split()[0].split("=", 1)[1])
+    cands = [c for c in candidates(_lsblk()) if c["uuid"] not in seen]
+    if not cands and not fixed:
         print("No unmounted internal data partitions found - nothing to do.")
         return 0
-    body, _old = _read_fstab()
     body = body.rstrip("\n") + "\n"
-    lines = [BEGIN]
+    lines = [BEGIN] + kept
     for c in cands:
         os.makedirs(c["target"], exist_ok=True)
         lines.append(fstab_line(c, pw.pw_uid, pw.pw_gid))
@@ -192,11 +228,16 @@ def enable_all(user: str) -> int:
     lines.append(END)
     open(FSTAB, "w").write(body + "\n".join(lines) + "\n")
     _run("systemctl", "daemon-reload")
+    for t in fixed:
+        if os.path.ismount(t):
+            _remount(t)
+        else:
+            _run("mount", t)
     for c in cands:
         r = _run("mount", c["target"])
         if r.returncode != 0:
             print(f"    ! mount {c['target']} failed: {r.stderr.strip()}", file=sys.stderr)
-    print(f"\nDone. {len(cands)} drive(s) mounted at /mnt and set to mount on every boot.")
+    print(f"\nDone. {len(cands)} drive(s) added, {len(fixed)} fixed; all mount at /mnt on every boot.")
     return 0
 
 
