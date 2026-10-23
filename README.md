@@ -639,13 +639,16 @@ why every game is written individually. Standalone:
   starts its own nested Xwayland, and that Xwayland aborts in
   `xwl_glamor_init` when `__NV_PRIME_RENDER_OFFLOAD=1` is in the environment
   (Rayman 2 and 3 under Heroic's FSR upscaling, three `Xwayland` SIGABRT core
-  dumps). `__GLX_VENDOR_LIBRARY_NAME=nvidia` and
-  `__VK_LAYER_NV_optimus=NVIDIA_only` are harmless, and the latter still
-  keeps Vulkan games on the dGPU. So for any Heroic or Lutris game with
-  gamescope enabled the tool never writes `__NV_PRIME_RENDER_OFFLOAD`, and the
-  **Fix gamescope crash (Heroic)** button (`tuxthrottle_heroicopts.py fix`)
-  strips it from games and global defaults that already have it. The Steam
-  builder avoids the problem by putting the env after gamescope's `--`.
+  dumps; `__GLX_VENDOR_LIBRARY_NAME` and `__VK_LAYER_NV_optimus` alone are
+  harmless). Since the dGPU is wanted on every game, the tool keeps PRIME
+  offload and switches **gamescope off** instead: any Heroic game that gets
+  `__NV_PRIME_RENDER_OFFLOAD` through *Apply* has its gamescope toggles turned
+  off (Lutris: `system.gamescope: false`), and the **dGPU on + gamescope off
+  (Heroic)** button (`tuxthrottle_heroicopts.py fix`) puts the three PRIME env
+  vars on every game and the global defaults and turns gamescope off
+  everywhere. Re-enable gamescope per game in Heroic if you want upscaling
+  and are willing to drop PRIME offload for that game. The Steam builder
+  avoids the problem by putting the env after gamescope's `--`.
 
 A **MangoHud overlay** box sets the overlay's names, detail and position. It
 shows **one CPU-name field and one GPU-name field per GPU in the machine**

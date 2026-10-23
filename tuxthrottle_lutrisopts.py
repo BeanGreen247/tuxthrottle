@@ -26,7 +26,7 @@ from pathlib import Path
 
 import yaml
 
-from tuxthrottle_heroicopts import GAMESCOPE_UNSAFE_ENV, parse
+from tuxthrottle_heroicopts import parse
 
 GAMES = Path.home() / ".local" / "share" / "lutris" / "games"
 GLOBAL = Path.home() / ".config" / "lutris" / "system.yml"
@@ -68,9 +68,8 @@ def set_all(opts: str, only_empty: bool, dry: bool) -> int:
             print(f"skip {label} (already has options)")
             continue
         s.setdefault("env", {}).update(env)
-        if s.get("gamescope"):  # gamescope's Xwayland aborts with PRIME offload set
-            for k in GAMESCOPE_UNSAFE_ENV:
-                s["env"].pop(k, None)
+        if s.get("gamescope") and "__NV_PRIME_RENDER_OFFLOAD" in s["env"]:
+            s["gamescope"] = False  # its Xwayland aborts with PRIME offload set
         if flags.get("useGameMode"):
             s["gamemode"] = True
         if flags.get("showMangohud"):

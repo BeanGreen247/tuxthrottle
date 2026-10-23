@@ -867,11 +867,11 @@ class GamesTabMixin:
                   "Strips this string's env values and wrappers out of every "
                   "Lutris game and the global config."
                   ).pack(side="left", padx=(10, 0))
-        self._tip(tb.Button(hrow, text="Fix gamescope crash (Heroic)", bootstyle=(INFO, "outline"),
+        self._tip(tb.Button(hrow, text="dGPU on + gamescope off (Heroic)", bootstyle=(INFO, "outline"),
                   command=self._heroic_gamescope_fix),
-                  "Heroic games that run under gamescope crash its Xwayland when "
-                  "__NV_PRIME_RENDER_OFFLOAD=1 is set. Removes just that var from "
-                  "every game / the global defaults where gamescope is enabled. "
+                  "gamescope's Xwayland crashes when __NV_PRIME_RENDER_OFFLOAD=1 "
+                  "is set, so: puts the three NVIDIA PRIME env vars on every Heroic "
+                  "game (and the global defaults) and switches gamescope off. "
                   "Heroic must be closed."
                   ).pack(side="left", padx=(10, 0))
         self._lo_refresh()
