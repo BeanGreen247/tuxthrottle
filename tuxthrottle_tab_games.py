@@ -699,6 +699,13 @@ class GamesTabMixin:
             # lower overhead for CPU-bound games. Ignored where unsupported.
             "ntsync": tk.BooleanVar(value=True),
             "anticheat": tk.BooleanVar(value=False),
+            # the extra env set the Heroic / Lutris games already carry
+            "staging_shm": tk.BooleanVar(value=True),
+            "gl_yield": tk.BooleanVar(value=True),
+            "gl_maxframes": tk.BooleanVar(value=True),
+            "gl_vrr": tk.BooleanVar(value=True),
+            "glthread": tk.BooleanVar(value=True),
+            "radv_full": tk.BooleanVar(value=self.has_amd),
         }
         self._lo_w = tk.StringVar(value="1920")
         self._lo_h = tk.StringVar(value="1080")
@@ -722,6 +729,16 @@ class GamesTabMixin:
                                            "(⚠ crashes some Wine/Proton & older "
                                            "OpenGL games - leave off unless it helps)"),
                            ("radv_gpl", "RADV_PERFTEST=gpl (AMD)"),
+                           ("radv_full", "RADV_PERFTEST=gpl,nggc,sam (AMD, "
+                                         "replaces the gpl-only toggle)"),
+                           ("staging_shm", "Wine shared memory "
+                                           "(STAGING_SHARED_MEMORY=1)"),
+                           ("gl_yield", "NVIDIA GL yield "
+                                        "(__GL_YIELD=USLEEP)"),
+                           ("gl_maxframes", "NVIDIA max queued frames "
+                                            "(__GL_MaxFramesAllowed=2)"),
+                           ("gl_vrr", "NVIDIA VRR allowed (__GL_VRR_ALLOWED=1)"),
+                           ("glthread", "Mesa threaded GL (mesa_glthread=true)"),
                            ("mesa_cache", "Persistent Mesa shader cache (AMD iGPU)"),
                            ("no_vsync", "Disable Mesa vsync + threaded GL (AMD)"),
                            ("dxvk_cache", "Persistent DXVK state cache (D3D→Vulkan)"),
@@ -815,7 +832,62 @@ class GamesTabMixin:
                   command=lambda: self._lutris_env("list")),
                   "List every Lutris Wine game and how many of the vars it has."
                   ).pack(side="left", padx=(10, 0))
+        hrow = tb.Frame(lf); hrow.pack(fill="x", pady=(6, 0))
+        self._heroic_nowayland = tk.BooleanVar(value=True)
+        self._tip(tb.Checkbutton(hrow, text="Disable Wine Wayland", variable=self._heroic_nowayland,
+                  bootstyle="round-toggle"),
+                  "Heroic only: also turns off 'Enable Wine Wayland' on every "
+                  "game (Remove turns it back on). The Wayland driver made "
+                  "Rayman 3 fail with a DirectX 8 error; it is a Heroic "
+                  "setting, not an env var."
+                  ).pack(side="left", padx=(0, 10))
+        self._tip(tb.Button(hrow, text="Apply to every Heroic game", bootstyle=(WARNING, "outline"),
+                  command=lambda: self._lo_heroic("set-all")),
+                  "Write this string into every Heroic game config: VAR=val -> "
+                  "environment options, gamemoderun / mangohud -> the game's "
+                  "toggles, other wrappers -> wrapper options. Existing env "
+                  "keys are merged, not wiped (the 'only games with no options "
+                  "yet' toggle applies here too). Heroic must be closed; each "
+                  "config is backed up (*.tuxthrottle-bak-*)."
+                  ).pack(side="left")
+        self._tip(tb.Button(hrow, text="Remove from every Heroic game", bootstyle=(SECONDARY, "outline"),
+                  command=lambda: self._lo_heroic("remove-token")),
+                  "Strips just this string's env values and wrappers out of "
+                  "every Heroic game config, leaving the rest alone."
+                  ).pack(side="left", padx=(10, 0))
+        self._tip(tb.Button(hrow, text="Apply to every Lutris game", bootstyle=(WARNING, "outline"),
+                  command=lambda: self._lo_heroic("set-all", "lutris")),
+                  "Same for Lutris: env -> system.env, gamemoderun / mangohud -> "
+                  "system toggles, other wrappers -> prefix_command, written "
+                  "into every game yml plus the global system.yml. Close Lutris "
+                  "first; each file is backed up."
+                  ).pack(side="left", padx=(10, 0))
+        self._tip(tb.Button(hrow, text="Remove from every Lutris game", bootstyle=(SECONDARY, "outline"),
+                  command=lambda: self._lo_heroic("remove-token", "lutris")),
+                  "Strips this string's env values and wrappers out of every "
+                  "Lutris game and the global config."
+                  ).pack(side="left", padx=(10, 0))
         self._lo_refresh()
+
+    def _lo_heroic(self, verb, which="heroic"):
+        opts = self._lo_out.get().strip()
+        if not opts:
+            self._log("[Game Tools] launch-options string is empty - nothing to do")
+            return
+        if not messagebox.askyesno(
+                f"{which.title()} games",
+                f"{'Write' if verb == 'set-all' else 'Strip'} this launch-options string "
+                f"{'into' if verb == 'set-all' else 'out of'} EVERY {which.title()} game "
+                f"config (and the global one):\n\n{opts}\n\nClose {which.title()} first. "
+                "Every config is backed up."):
+            return
+        blob = base64.b64encode(opts.encode()).decode()
+        flag = " --only-empty" if verb == "set-all" and self._lo_only_empty.get() else ""
+        if which == "heroic" and self._heroic_nowayland.get():
+            flag += " --no-wayland"
+        cmd = (f"su - {self.user} -c 'python3 {BASE_DIR}/tuxthrottle_{which}opts.py "
+               f"{verb} --b64 {blob}{flag}'")
+        self._run_stream(f"launch options -> every {which.title()} game", cmd, tag="Game Tools")
 
     def _lutris_env(self, action: str):
         if action != "list" and not messagebox.askyesno(
@@ -900,8 +972,20 @@ class GamesTabMixin:
                     "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1"]
         if self._lo["nv_threaded"].get():
             env.append("__GL_THREADED_OPTIMIZATIONS=1")
-        if self._lo["radv_gpl"].get():
+        if self._lo["radv_full"].get():
+            env.append("RADV_PERFTEST=gpl,nggc,sam")
+        elif self._lo["radv_gpl"].get():
             env.append("RADV_PERFTEST=gpl")
+        if self._lo["staging_shm"].get():
+            env.append("STAGING_SHARED_MEMORY=1")
+        if self._lo["gl_yield"].get():
+            env.append("__GL_YIELD=USLEEP")
+        if self._lo["gl_maxframes"].get():
+            env.append("__GL_MaxFramesAllowed=2")
+        if self._lo["gl_vrr"].get():
+            env.append("__GL_VRR_ALLOWED=1")
+        if self._lo["glthread"].get() and not self._lo["no_vsync"].get():
+            env.append("mesa_glthread=true")
         if self._lo["mesa_cache"].get():
             env += ["MESA_GLSL_CACHE_ENABLE=1",
                     f"MESA_SHADER_CACHE_DIR={base}/mesa-shader-cache",

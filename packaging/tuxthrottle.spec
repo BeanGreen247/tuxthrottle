@@ -2,7 +2,7 @@
 %global gittag   %{?_gittag}%{!?_gittag:main}
 
 Name:           tuxthrottle
-Version:        %{?_version}%{!?_version:26.10.04}
+Version:        %{?_version}%{!?_version:26.10.23}
 Release:        %{?_release}%{!?_release:1}%{?dist}
 Summary:        Gaming, power and thermal control panel for the Dell G15 5515 (Ryzen) on Nobara/KDE
 
