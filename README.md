@@ -602,7 +602,7 @@ PRIME offload, **persistent NVIDIA / Mesa / DXVK shader caches** (into the
 folder above, so they survive a prefix wipe/relocate), NVIDIA threaded
 optimizations (`__GL_THREADED_OPTIMIZATIONS` - **off by default; it crashes a
 fair number of Wine/Proton and legacy-OpenGL games at startup**),
-`RADV_PERFTEST=gpl` (AMD), an AMD vsync-off + threaded-GL toggle, `DXVK_ASYNC`
+`RADV_PERFTEST=gpl` or the full `gpl,nggc,sam` (AMD), `STAGING_SHARED_MEMORY`, `__GL_YIELD`, `__GL_MaxFramesAllowed`, `__GL_VRR_ALLOWED`, `mesa_glthread`, an AMD vsync-off + threaded-GL toggle, `DXVK_ASYNC`
 (off by default - trades a little visual stutter risk for smoother shader
 compiles), Proton log off, and an **Anti-cheat safe** toggle (`MANGOHUD=0
 DISABLE_VKBASALT=1 VK_LOADER_LAYERS_DISABLE=~implicit~` - a clean Vulkan layer
@@ -615,6 +615,37 @@ game won't launch, clear the options and add them back a few at a time. **Apply
 to every game** keeps per-game custom options by default (only games that are
 empty or still on the string most games share are rewritten); **Show custom**
 lists the games that deviate and how.
+
+**Heroic and Lutris.** The same string can be written into **every Heroic game**
+and **every Lutris game** (plus each launcher's global defaults) with the
+*Apply to every Heroic / Lutris game* buttons, and taken out again with the
+matching *Remove* buttons. Close the launcher first; every file is backed up as
+`*.tuxthrottle-bak-<epoch>`. `VAR=val` goes into the launcher's environment
+options (Lutris `system.env`), `gamemoderun` / `mangohud` into its GameMode /
+MangoHud toggles, any other wrapper into its wrapper field. Env keys are merged,
+not wiped. Games do **not** inherit the launcher's global environment, which is
+why every game is written individually. Standalone:
+`tuxthrottle_heroicopts.py` and `tuxthrottle_lutrisopts.py` (`set-all`,
+`remove-token`, `list`, `--dry-run`).
+
+- **Disable Wine Wayland (Heroic).** Heroic's *Enable Wine Wayland* is a
+  setting, not an env var; on this machine it made Rayman 3 fail with a
+  DirectX 8 error. The toggle next to the Heroic buttons (on by default) sets
+  `enableWineWayland: false` on every game; *Remove* turns it back on.
+- **gamescope crashes Xwayland with PRIME offload.** gamescope is Valve's
+  micro-compositor: it can render a game at a low resolution and upscale it
+  (FSR), cap the frame rate and fix odd cursor or fullscreen behaviour, which
+  is little use for old games that already run at native resolution. It
+  starts its own nested Xwayland, and that Xwayland aborts in
+  `xwl_glamor_init` when `__NV_PRIME_RENDER_OFFLOAD=1` is in the environment
+  (Rayman 2 and 3 under Heroic's FSR upscaling, three `Xwayland` SIGABRT core
+  dumps). `__GLX_VENDOR_LIBRARY_NAME=nvidia` and
+  `__VK_LAYER_NV_optimus=NVIDIA_only` are harmless, and the latter still
+  keeps Vulkan games on the dGPU. So for any Heroic or Lutris game with
+  gamescope enabled the tool never writes `__NV_PRIME_RENDER_OFFLOAD`, and the
+  **Fix gamescope crash (Heroic)** button (`tuxthrottle_heroicopts.py fix`)
+  strips it from games and global defaults that already have it. The Steam
+  builder avoids the problem by putting the env after gamescope's `--`.
 
 A **MangoHud overlay** box sets the overlay's names, detail and position. It
 shows **one CPU-name field and one GPU-name field per GPU in the machine**

@@ -867,7 +867,18 @@ class GamesTabMixin:
                   "Strips this string's env values and wrappers out of every "
                   "Lutris game and the global config."
                   ).pack(side="left", padx=(10, 0))
+        self._tip(tb.Button(hrow, text="Fix gamescope crash (Heroic)", bootstyle=(INFO, "outline"),
+                  command=self._heroic_gamescope_fix),
+                  "Heroic games that run under gamescope crash its Xwayland when "
+                  "__NV_PRIME_RENDER_OFFLOAD=1 is set. Removes just that var from "
+                  "every game / the global defaults where gamescope is enabled. "
+                  "Heroic must be closed."
+                  ).pack(side="left", padx=(10, 0))
         self._lo_refresh()
+
+    def _heroic_gamescope_fix(self):
+        cmd = (f"su - {self.user} -c 'python3 {BASE_DIR}/tuxthrottle_heroicopts.py fix'")
+        self._run_stream("Heroic gamescope + PRIME crash fix", cmd, tag="Game Tools")
 
     def _lo_heroic(self, verb, which="heroic"):
         opts = self._lo_out.get().strip()

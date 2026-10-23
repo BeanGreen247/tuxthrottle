@@ -15,6 +15,11 @@ Usage:
     python3 tuxthrottle_heroicopts.py set-all  --b64 <base64-of-string> [--only-empty] [--dry-run]
     python3 tuxthrottle_heroicopts.py remove-token '<string>' [--dry-run]
 
+Games with gamescope enabled never get `__NV_PRIME_RENDER_OFFLOAD` (it crashes
+gamescope's Xwayland); an existing one is removed on `set-all` and on `fix`.
+
+    python3 tuxthrottle_heroicopts.py fix [--dry-run]   # only strip it where gamescope is on
+
 `--no-wayland` (either command) also sets `enableWineWayland` false on every
 game (remove-token turns it back on): Heroic's Wine Wayland driver broke
 Rayman 3 on this machine, it is a setting rather than an env var.
@@ -87,6 +92,19 @@ def parse(opts: str) -> tuple[dict[str, str], dict[str, bool], list[str]]:
     return env, flags, wrap
 
 
+# gamescope starts its own nested Xwayland; with __NV_PRIME_RENDER_OFFLOAD=1 in the
+# environment that Xwayland aborts in xwl_glamor_init (seen on the G15, 2026-10-23),
+# so games that run under gamescope must not carry it (Vulkan still lands on the
+# dGPU through __VK_LAYER_NV_optimus=NVIDIA_only).
+GAMESCOPE_UNSAFE_ENV = {"__NV_PRIME_RENDER_OFFLOAD"}
+
+
+def gamescope_on(g: dict) -> bool:
+    gs = g.get("gamescope")
+    return isinstance(gs, dict) and any(
+        gs.get(k) for k in ("enableUpscaling", "enableLimiter", "enableForceGrabCursor"))
+
+
 def _load(path: Path) -> tuple[dict, str] | None:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -143,6 +161,10 @@ def set_all(opts: str, only_empty: bool, dry: bool, no_wayland: bool = False) ->
             continue
         cur = {e["key"]: e["value"] for e in g.get("enviromentOptions", []) if "key" in e}
         cur.update(env)
+        if gamescope_on(g):
+            for k in GAMESCOPE_UNSAFE_ENV:
+                if cur.pop(k, None) is not None:
+                    print(f"  {key}: gamescope is on, dropped {k}")
         g["enviromentOptions"] = [{"key": k, "value": v} for k, v in sorted(cur.items())]
         g.update(flags)
         if no_wayland:
@@ -180,9 +202,29 @@ def remove_token(opts: str, dry: bool, no_wayland: bool = False) -> int:
     return 0
 
 
+def fix_gamescope(dry: bool) -> int:
+    if heroic_running() and not dry:
+        print("Heroic is running - close it first (it would overwrite the change)")
+        return 1
+    n = 0
+    for key, p, data, g in targets():
+        if not gamescope_on(g):
+            continue
+        env = g.get("enviromentOptions", [])
+        keep = [e for e in env if e.get("key") not in GAMESCOPE_UNSAFE_ENV]
+        if len(keep) != len(env):
+            print(f"{'would fix' if dry else 'fixed'} {key}")
+            g["enviromentOptions"] = keep
+            if not dry:
+                _save(p, data)
+            n += 1
+    print(f"{n} target(s) {'would be ' if dry else ''}fixed")
+    return 0
+
+
 def main() -> int:
     a = sys.argv[1:]
-    if not a or a[0] not in ("list", "set-all", "remove-token"):
+    if not a or a[0] not in ("list", "set-all", "remove-token", "fix"):
         print(__doc__)
         return 2
     if not config_dirs():
@@ -190,6 +232,8 @@ def main() -> int:
         return 1
     if a[0] == "list":
         return do_list()
+    if a[0] == "fix":
+        return fix_gamescope("--dry-run" in a)
     dry = "--dry-run" in a
     rest = [x for x in a[1:] if x not in ("--dry-run", "--only-empty", "--no-wayland")]
     if rest[:1] == ["--b64"] and len(rest) > 1:
