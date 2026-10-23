@@ -24,15 +24,21 @@ import sys
 import time
 from pathlib import Path
 
-import yaml
-
 from tuxthrottle_heroicopts import parse
+
+try:
+    import yaml
+except ImportError:  # python3-pyyaml missing: Lutris targets are skipped
+    yaml = None
 
 GAMES = Path.home() / ".local" / "share" / "lutris" / "games"
 GLOBAL = Path.home() / ".config" / "lutris" / "system.yml"
 
 
 def targets() -> list[tuple[str, Path]]:
+    if yaml is None:
+        print("python3-pyyaml is not installed - Lutris is skipped", file=sys.stderr)
+        return []
     out = [("GLOBAL", GLOBAL)] if GLOBAL.parent.is_dir() else []
     out += [(p.stem, p) for p in sorted(GAMES.glob("*.yml"))] if GAMES.is_dir() else []
     return out

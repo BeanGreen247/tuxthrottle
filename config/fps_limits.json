@@ -1,0 +1,14 @@
+{
+  "default_fps": 60,
+  "_source": "PCGamingWiki, checked 2026-10-23. A game matches when every word of one 'match' entry appears in its name or Wine prefix folder name (case-insensitive).",
+  "games": [
+    {"match": ["rayman", "3"], "fps": 60, "note": "Runs at 72 FPS by default and drops to 36; above 60 FPS enemies, animations and platforms run too fast."},
+    {"match": ["rayman", "2"], "fps": 60, "note": "Engine caps at 63 FPS; character animations are 30 FPS. 60 is the safe cap."},
+    {"match": ["rayman", "forever"], "fps": 60, "note": "Rayman 1: above 60 FPS the game speeds up."},
+    {"match": ["rayman", "origins"], "fps": 60, "note": "Game speed is tied to the frame rate; the game caps itself at 60."},
+    {"match": ["raving", "rabbids"], "fps": 60, "note": "Capped at 60 by the game; may lock to 32 FPS on broken 3D audio."},
+    {"match": ["worms", "revolution"], "fps": 60, "note": "Animations and camera run at 30 FPS internally; 60 is fine."},
+    {"match": ["tower", "hunter"], "fps": 60, "note": "No known issue; 60 keeps the dGPU quiet."},
+    {"match": ["loria"], "fps": 60, "note": "No known issue; 60 keeps the dGPU quiet."}
+  ]
+}

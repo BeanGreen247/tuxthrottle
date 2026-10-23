@@ -10,6 +10,7 @@ import pwd
 import queue
 import re
 import shlex
+import shutil
 import subprocess
 import threading
 import time
@@ -879,6 +880,178 @@ class GamesTabMixin:
     def _heroic_gamescope_fix(self):
         cmd = (f"su - {self.user} -c 'python3 {BASE_DIR}/tuxthrottle_heroicopts.py fix'")
         self._run_stream("Heroic gamescope + PRIME crash fix", cmd, tag="Game Tools")
+
+    def _build_fpslimit_box(self, parent):
+        lf = Card(parent, "Frame-rate limit (libstrangle / DXVK) - Heroic, Lutris and Steam titles")
+        lf.pack(fill="x", pady=6)
+        tb.Label(lf, bootstyle=SECONDARY, wraplength=1100, justify="left", text=(
+            "Tick the titles that should get a cap and type the FPS next to each "
+            "(the recommendation is prefilled; see config/fps_limits.json for "
+            "why). Apply writes the variables into that title's own settings: "
+            "Heroic / Lutris environment, Steam launch options. A cap that "
+            "differs from the recommendation is remembered for that title. "
+            "libstrangle must be installed first (Gaming apps: 'libstrangle'); "
+            "DXVK's own limiter needs nothing. Close the launcher first.")).pack(anchor="w")
+        self._fps_method = tk.StringVar(value="strangle")
+        self._fps_copyval = tk.StringVar(value="60")
+        self._fps_env = tk.StringVar()
+        self._fps_rows = []
+        self._fps_games_q = queue.Queue()
+        row = tb.Frame(lf); row.pack(fill="x", pady=(6, 0))
+        tb.Radiobutton(row, text="libstrangle", value="strangle", variable=self._fps_method,
+                       bootstyle="round-toggle", command=self._fps_env_refresh).pack(side="left")
+        tb.Radiobutton(row, text="DXVK_FRAME_RATE", value="dxvk", variable=self._fps_method,
+                       bootstyle="round-toggle", command=self._fps_env_refresh).pack(side="left", padx=(10, 0))
+        self._fps_installed = tb.Label(row, text="")
+        self._fps_installed.pack(side="left", padx=(16, 0))
+        erow = tb.Frame(lf); erow.pack(fill="x", pady=(6, 0))
+        tb.Label(erow, text="Variables for").pack(side="left")
+        e = tb.Entry(erow, textvariable=self._fps_copyval, width=5)
+        e.pack(side="left", padx=4)
+        e.bind("<KeyRelease>", lambda _e: self._fps_env_refresh())
+        tb.Label(erow, text="FPS:").pack(side="left")
+        tb.Entry(erow, textvariable=self._fps_env, state="readonly").pack(
+            side="left", fill="x", expand=True, padx=(6, 0))
+        self._tip(tb.Button(erow, text="⧉ Copy", bootstyle=INFO,
+                  command=lambda: self._copy_text(self._fps_env.get(), "FPS limit env vars")),
+                  "Copy these variables to paste into any launcher's environment "
+                  "list by hand."
+                  ).pack(side="left", padx=(6, 0))
+        brow = tb.Frame(lf); brow.pack(fill="x", pady=(8, 0))
+        self._tip(tb.Button(brow, text="↻ Reload titles", bootstyle=INFO,
+                  command=self._fps_reload), "Re-read the Heroic, Lutris and Steam "
+                  "libraries and each title's current limit."
+                  ).pack(side="left")
+        for txt, val in (("Tick all", True), ("Tick none", False)):
+            tb.Button(brow, text=txt, bootstyle=(SECONDARY, "outline"),
+                      command=lambda v=val: self._fps_tick(v)).pack(side="left", padx=(10, 0))
+        self._fps_fillval = tk.StringVar(value="")
+        tb.Label(brow, text="Set ticked to:").pack(side="left", padx=(16, 4))
+        tb.Entry(brow, textvariable=self._fps_fillval, width=5).pack(side="left")
+        tb.Button(brow, text="Fill", bootstyle=(SECONDARY, "outline"),
+                  command=self._fps_fill).pack(side="left", padx=(4, 0))
+        self._tip(tb.Button(brow, text="Apply to ticked", bootstyle=(WARNING, "outline"),
+                  command=lambda: self._fps_apply("apply")),
+                  "Write each ticked title's cap into its own settings (merged, "
+                  "other variables are kept; files are backed up)."
+                  ).pack(side="left", padx=(16, 0))
+        self._tip(tb.Button(brow, text="Remove from ticked", bootstyle=(SECONDARY, "outline"),
+                  command=lambda: self._fps_apply("remove")),
+                  "Strip the STRANGLE_* / DXVK_FRAME_RATE variables from each "
+                  "ticked title."
+                  ).pack(side="left", padx=(10, 0))
+        self._fps_list = tb.Frame(lf); self._fps_list.pack(fill="x", pady=(8, 0))
+        self._fps_status = tb.Label(lf, text="", bootstyle=SECONDARY)
+        self._fps_status.pack(anchor="w")
+        self._fps_env_refresh()
+        self._fps_reload()
+
+    def _fps_env_refresh(self):
+        v = self._fps_copyval.get().strip()
+        fps = int(v) if v.isdigit() and int(v) > 0 else 60
+        if self._fps_method.get() == "strangle":
+            s = f"STRANGLE_FPS={fps} ENABLE_VK_LAYER_TORKEL104_libstrangle=1"
+        else:
+            s = f"DXVK_FRAME_RATE={fps}"
+        self._fps_env.set(s)
+        have = shutil.which("strangle") is not None
+        self._fps_installed.configure(
+            text="libstrangle: installed" if have else
+            "libstrangle: not installed (Gaming apps → libstrangle)",
+            bootstyle=SUCCESS if have else WARNING)
+
+    def _fps_cmd(self, args: str) -> str:
+        inner = f"python3 {BASE_DIR}/tuxthrottle_fpslimit.py {args}"
+        return f"su - {self.user} -c {shlex.quote(inner)}"
+
+    def _fps_reload(self):
+        self._fps_status.configure(text="Reading Heroic / Lutris / Steam libraries...")
+
+        def work():
+            try:
+                _ok, _rc, out = run_cmd3(self._fps_cmd("list --json"), timeout=60)
+                rows = json.loads((out or "").strip().splitlines()[-1])
+            except Exception as exc:  # noqa: BLE001
+                rows = str(exc)
+            self._fps_games_q.put(rows)
+        threading.Thread(target=work, daemon=True).start()
+        self.root.after(300, self._fps_poll)
+
+    def _fps_poll(self):
+        try:
+            rows = self._fps_games_q.get_nowait()
+        except queue.Empty:
+            self.root.after(300, self._fps_poll)
+            return
+        for w in self._fps_list.winfo_children():
+            w.destroy()
+        self._fps_rows = []
+        if isinstance(rows, str):
+            self._fps_status.configure(text=f"Could not list titles: {rows[:200]}")
+            return
+        order = {"heroic": 0, "lutris": 1, "steam": 2}
+        rows.sort(key=lambda g: (order.get(g["launcher"], 9),
+                                 0 if g.get("override") or g.get("recommended") else 1,
+                                 g["name"].lower()))
+        for g in rows:
+            sug = g.get("override") or g.get("recommended")
+            cur = g.get("current") or {}
+            now = cur.get("STRANGLE_FPS") or cur.get("DXVK_FRAME_RATE")
+            tick = tk.BooleanVar(value=bool(sug))
+            fps = tk.StringVar(value=str(sug or now or ""))
+            r = tb.Frame(self._fps_list); r.pack(fill="x", pady=1)
+            tb.Checkbutton(r, variable=tick, bootstyle="round-toggle").pack(side="left")
+            tb.Label(r, text=g["launcher"].title(), width=7,
+                     bootstyle=SECONDARY).pack(side="left")
+            tb.Label(r, text=g["name"], width=44, anchor="w").pack(side="left")
+            tb.Entry(r, textvariable=fps, width=6).pack(side="left", padx=(4, 8))
+            rec = g.get("recommended")
+            lbl = tb.Label(r, text=(f"recommended {rec}" if rec else "no recommendation"),
+                           bootstyle=INFO if rec else SECONDARY)
+            lbl.pack(side="left")
+            if g.get("note"):
+                self._tip(lbl, g["note"])
+            if now:
+                tb.Label(r, text=f"  now capped at {now}", bootstyle=WARNING).pack(side="left")
+            self._fps_rows.append({"game": g, "tick": tick, "fps": fps})
+        self._fps_status.configure(text=f"{len(rows)} titles; ticked ones are the ones with a recommendation.")
+
+    def _fps_tick(self, val: bool):
+        for r in self._fps_rows:
+            r["tick"].set(val)
+
+    def _fps_fill(self):
+        v = self._fps_fillval.get().strip()
+        if not v.isdigit():
+            return
+        for r in self._fps_rows:
+            if r["tick"].get():
+                r["fps"].set(v)
+
+    def _fps_apply(self, verb: str):
+        sel = []
+        for r in self._fps_rows:
+            if not r["tick"].get():
+                continue
+            v = r["fps"].get().strip()
+            if verb == "apply" and not (v.isdigit() and int(v) > 0):
+                self._log(f"[Game Tools] FPS limit: '{r['game']['name']}' needs a whole-number cap")
+                return
+            sel.append({"launcher": r["game"]["launcher"], "id": r["game"]["id"],
+                        "fps": int(v) if v.isdigit() else 0})
+        if not sel:
+            self._log("[Game Tools] FPS limit: no titles ticked")
+            return
+        if not messagebox.askyesno(
+                "Frame-rate limit",
+                f"{'Write FPS caps into' if verb == 'apply' else 'Remove FPS caps from'} "
+                f"{len(sel)} ticked title(s)?\n\nClose Heroic / Lutris / Steam first "
+                "(the ones involved). Every changed file is backed up."):
+            return
+        blob = base64.b64encode(json.dumps(sel).encode()).decode()
+        cmd = self._fps_cmd(f"{verb} --sel {blob} --method {self._fps_method.get()}")
+        self._run_stream(f"FPS limit -> {verb}", cmd, tag="Game Tools")
+        self.root.after(4000, self._fps_reload)
 
     def _lo_heroic(self, verb, which="heroic"):
         opts = self._lo_out.get().strip()
@@ -2135,6 +2308,7 @@ class GamesTabMixin:
         self._build_steamperf_box(frame)
         self._build_fixes_box(frame)
         self._build_launch_opts_box(frame)
+        self._build_fpslimit_box(frame)
         self._build_dgpu_box(frame)
         # the MangoHud overlay editor + per-game enable live on the “MangoHud” tab
         self._build_last_session_card(frame)

@@ -650,6 +650,25 @@ why every game is written individually. Standalone:
   and are willing to drop PRIME offload for that game. The Steam builder
   avoids the problem by putting the env after gamescope's `--`.
 
+A **Frame-rate limit** card lists every Heroic, Lutris and Steam title with a
+toggle, an FPS field and the **recommended cap** next to it (from
+`config/fps_limits.json`, PCGamingWiki, checked 2026-10-23: Rayman 3 runs at 72
+FPS by default and breaks above 60, Rayman 1 speeds up above 60, Rayman Origins
+ties game speed to FPS, Rayman 2 caps at 63, Raving Rabbids and Worms Revolution
+are fine at 60). Titles with a recommendation start ticked; *Tick all / none*,
+*Set ticked to* and *Apply to / Remove from ticked* do the rest. The cap goes
+into that title's own settings (Heroic / Lutris environment, Steam launch
+options; games do not inherit a launcher's global environment), using either
+**libstrangle** (`STRANGLE_FPS=<n>` plus `ENABLE_VK_LAYER_TORKEL104_libstrangle=1`,
+the implicit Vulkan layer DXVK games under Proton use) or DXVK's built-in
+`DXVK_FRAME_RATE=<n>` (nothing to install). A cap that differs from the
+recommendation is remembered per title (`~/.config/tuxthrottle/fpslimits.json`).
+A text field with a **Copy** button shows the exact variables for any value to
+paste by hand. libstrangle is not packaged for Fedora, so the **libstrangle**
+app in the Gaming category builds it from source (32-bit glibc headers, and
+`-include cstdio` to compile with GCC 16). Standalone:
+`tuxthrottle_fpslimit.py list | apply | remove | set | unset | env`.
+
 A **MangoHud overlay** box sets the overlay's names, detail and position. It
 shows **one CPU-name field and one GPU-name field per GPU in the machine**
 (detected via `nvidia-smi` / `lspci`), each labelled with that GPU's **PCI
