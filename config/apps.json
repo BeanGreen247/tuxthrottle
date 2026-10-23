@@ -772,5 +772,19 @@
     "package": "io.github.streetpea.Chiaki4deck",
     "check": "false",
     "flatpak_id": "io.github.streetpea.Chiaki4deck"
+  },
+  "Libstrangle": {
+    "Content": "libstrangle (frame-rate limiter)",
+    "Description": "Per-game FPS cap via an implicit Vulkan layer / LD_PRELOAD (STRANGLE_FPS). Not packaged for Fedora, so this builds it from source (git clone + make; needs the 32-bit glibc headers). The Game Tools FPS-limit card writes the env vars into Heroic / Lutris games.",
+    "category": "Gaming",
+    "manager": "shell",
+    "check": "command -v strangle >/dev/null",
+    "install": [
+      "dnf install -y gcc gcc-c++ make git glibc-devel.i686 libstdc++-devel.i686 libX11-devel mesa-libGL-devel",
+      "rm -rf /tmp/libstrangle-build && git clone --depth 1 https://gitlab.com/torkel104/libstrangle.git /tmp/libstrangle-build",
+      "make -C /tmp/libstrangle-build CXX='g++ -include cstdio'",
+      "make -C /tmp/libstrangle-build install CXX='g++ -include cstdio' && ldconfig",
+      "rm -rf /tmp/libstrangle-build"
+    ]
   }
 }
