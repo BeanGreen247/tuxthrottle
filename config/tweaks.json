@@ -20,12 +20,12 @@
     "category": "Stability",
     "risk": "safe",
     "check": "grep -q 'processor.max_cstate=1' /proc/cmdline",
-    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q 'processor.max_cstate=1'",
+    "check_pending": "{KARGS_CHECK:processor.max_cstate=1}",
     "apply": [
-      "grubby --update-kernel=ALL --args=\"processor.max_cstate=1\""
+      "{KARGS_ADD:processor.max_cstate=1}"
     ],
     "undo": [
-      "grubby --update-kernel=ALL --remove-args=\"processor.max_cstate=1\""
+      "{KARGS_DEL:processor.max_cstate=1}"
     ],
     "recommended": true
   },
@@ -35,12 +35,12 @@
     "category": "Stability",
     "risk": "advanced",
     "check": "grep -q 'idle=nomwait' /proc/cmdline",
-    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q 'idle=nomwait'",
+    "check_pending": "{KARGS_CHECK:idle=nomwait}",
     "apply": [
-      "grubby --update-kernel=ALL --args=\"idle=nomwait\""
+      "{KARGS_ADD:idle=nomwait}"
     ],
     "undo": [
-      "grubby --update-kernel=ALL --remove-args=\"idle=nomwait\""
+      "{KARGS_DEL:idle=nomwait}"
     ]
   },
   "ClocksourceTsc": {
@@ -49,12 +49,12 @@
     "category": "Stability",
     "risk": "advanced",
     "check": "grep -q 'clocksource=tsc' /proc/cmdline",
-    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q 'clocksource=tsc'",
+    "check_pending": "{KARGS_CHECK:clocksource=tsc}",
     "apply": [
-      "grubby --update-kernel=ALL --args=\"clocksource=tsc tsc=reliable\""
+      "{KARGS_ADD:clocksource=tsc tsc=reliable}"
     ],
     "undo": [
-      "grubby --update-kernel=ALL --remove-args=\"clocksource=tsc tsc=reliable\""
+      "{KARGS_DEL:clocksource=tsc tsc=reliable}"
     ]
   },
   "UsbAutosuspend": {
@@ -159,7 +159,7 @@
     "risk": "safe",
     "check": "systemctl is-enabled tlp 2>/dev/null | grep -q enabled",
     "apply": [
-      "dnf install -y tlp tlp-rdw",
+      "{PKG_INSTALL:tlp tlp-rdw}",
       "systemctl disable --now power-profiles-daemon || true",
       "systemctl enable --now tlp"
     ],
@@ -185,14 +185,14 @@
     ]
   },
   "NvidiaMaxPerf": {
-    "Content": "Install nvidia-max-perf Script",
-    "Description": "Enables NVIDIA persistence mode + prefers max PowerMizer performance, avoiding clock-transition stutter at the cost of power/heat. Run it before a session.",
+    "Content": "Install nvidia-max-perf Script (Game Mode GPU boost)",
+    "Description": "Game Mode's dGPU half. 'on' enables persistence mode and sets the NVIDIA power limit and graphics clock to the driver's maximum (the dGPU then stays awake and runs hot while Game Mode is on); 'off' puts back your saved power limit / clock lock from the Power & Limits page, or the driver defaults. Called by the Game Mode toggle through the passwordless-sudo rule.",
     "category": "GPU",
     "risk": "advanced",
     "requires_vendor": "nvidia",
-    "check": "test -x /usr/local/bin/nvidia-max-perf",
+    "check": "grep -q power.max_limit /usr/local/bin/nvidia-max-perf 2>/dev/null",
     "apply": [
-      "printf '#!/usr/bin/env bash\\nnvidia-smi -pm 1 >/dev/null 2>&1 || true\\nif [[ -n \"${DISPLAY:-}\" ]] && command -v nvidia-settings >/dev/null; then nvidia-settings -a \"[gpu:0]/GpuPowerMizerMode=1\" >/dev/null 2>&1 || true; fi\\nexit 0\\n' > /usr/local/bin/nvidia-max-perf",
+      "cat > /usr/local/bin/nvidia-max-perf <<'SCRIPT'\n#!/usr/bin/env bash\n# Game Mode, dGPU side.  on: persistence mode, power limit and graphics clock at the driver's maximum.\n#                        off: back to the limits saved in TuxThrottle, or the driver defaults.\ncommand -v nvidia-smi >/dev/null 2>&1 || exit 0\nq() { nvidia-smi --query-gpu=\"$1\" --format=csv,noheader,nounits 2>/dev/null | head -1 | cut -d. -f1 | tr -d ' '; }\nnvidia-smi -pm 1 >/dev/null 2>&1 || true\nCFG=/home/{USER}/.config/tuxthrottle\nif [ \"${1:-on}\" = off ]; then\n  if [ -r \"$CFG/nvpl.json\" ] && [ -x /usr/local/bin/tuxthrottle-nvpl ]; then /usr/local/bin/tuxthrottle-nvpl\n  else D=$(q power.default_limit); [ -n \"$D\" ] && nvidia-smi -pl \"$D\" >/dev/null 2>&1; fi\n  if [ -r \"$CFG/nvclk.json\" ] && [ -x /usr/local/bin/tuxthrottle-nvclk ]; then /usr/local/bin/tuxthrottle-nvclk\n  else nvidia-smi -rgc >/dev/null 2>&1; fi\n  exit 0\nfi\nM=$(q power.max_limit); [ -n \"$M\" ] && nvidia-smi -pl \"$M\" >/dev/null 2>&1\nG=$(q clocks.max.graphics); [ -n \"$G\" ] && nvidia-smi --lock-gpu-clocks=\"$G,$G\" >/dev/null 2>&1\nif [ -n \"${DISPLAY:-}\" ] && command -v nvidia-settings >/dev/null; then nvidia-settings -a \"[gpu:0]/GpuPowerMizerMode=1\" >/dev/null 2>&1; fi\nexit 0\nSCRIPT",
       "chmod +x /usr/local/bin/nvidia-max-perf"
     ],
     "undo": [
@@ -217,17 +217,14 @@
   },
   "HotkeyListener": {
     "Content": "Dedicated G-Key Game Mode Toggle",
-    "Description": "Installs a systemd user service that listens for the dedicated G-key (confirmed on the G15 5515 to send KEY_PERFORMANCE when Fn Lock is OFF) and toggles Game Mode on press - same effect as clicking the tray icon. Requires PowerProfileScripts/AmdgpuPerfScripts/NvidiaMaxPerf above to be installed first, and python3-evdev. Adds your user to the 'input' group so the service can read the keyboard device - log out and back in once after applying for that to take effect.",
+    "Description": "Installs a systemd user service that listens for the dedicated G-key (confirmed on the G15 5515 to send KEY_PERFORMANCE when Fn Lock is OFF) and toggles Game Mode on press - same effect as clicking the tray icon. Requires PowerProfileScripts/AmdgpuPerfScripts/NvidiaMaxPerf above to be installed first. Adds your user to the 'input' group so the service can read the keyboard device - log out and back in once after applying for that to take effect.",
     "category": "Gaming",
     "risk": "advanced",
     "check": "sudo -u {USER} XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) systemctl --user is-enabled tuxthrottle-hotkey.service 2>/dev/null | grep -q enabled && id -nG {USER} | grep -qw input",
     "apply": [
-      "dnf install -y python3-evdev",
       "usermod -aG input {USER}",
       "install -d -o {USER} -g {USER} /home/{USER}/.config/systemd/user",
-      "ln -sf {TOOLKIT_DIR}/hotkey_listener.py /usr/local/bin/tuxthrottle-hotkey-listener.py",
-      "chmod +x {TOOLKIT_DIR}/hotkey_listener.py",
-      "printf '[Unit]\\nDescription=Dell G15 G-key Game Mode toggle\\n\\n[Service]\\nExecStart=/usr/bin/python3 /usr/local/bin/tuxthrottle-hotkey-listener.py\\nRestart=on-failure\\nRestartSec=3\\n\\n[Install]\\nWantedBy=default.target\\n' > /home/{USER}/.config/systemd/user/tuxthrottle-hotkey.service",
+      "printf '[Unit]\\nDescription=Dell G15 G-key Game Mode toggle\\n\\n[Service]\\nExecStart={TT} hotkey\\nRestart=on-failure\\nRestartSec=3\\n\\n[Install]\\nWantedBy=default.target\\n' > /home/{USER}/.config/systemd/user/tuxthrottle-hotkey.service",
       "chown {USER}:{USER} /home/{USER}/.config/systemd/user/tuxthrottle-hotkey.service",
       "sudo -u {USER} XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) systemctl --user daemon-reload",
       "sudo -u {USER} XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) systemctl --user enable --now tuxthrottle-hotkey.service"
@@ -275,12 +272,12 @@
     "category": "Performance",
     "risk": "advanced",
     "check": "grep -q 'split_lock_detect=off' /proc/cmdline",
-    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q 'split_lock_detect=off'",
+    "check_pending": "{KARGS_CHECK:split_lock_detect=off}",
     "apply": [
-      "grubby --update-kernel=ALL --args=\"sysrq_always_enabled=1 split_lock_detect=off split_lock_mitigate=0 nowatchdog nosoftlockup timer_migration=0 preempt=full threadirqs ignore_rlimit_data audit=0\""
+      "{KARGS_ADD:sysrq_always_enabled=1 split_lock_detect=off split_lock_mitigate=0 nowatchdog nosoftlockup timer_migration=0 preempt=full threadirqs ignore_rlimit_data audit=0}"
     ],
     "undo": [
-      "grubby --update-kernel=ALL --remove-args=\"sysrq_always_enabled=1 split_lock_detect=off split_lock_mitigate=0 nowatchdog nosoftlockup timer_migration=0 preempt=full threadirqs ignore_rlimit_data audit=0\""
+      "{KARGS_DEL:sysrq_always_enabled=1 split_lock_detect=off split_lock_mitigate=0 nowatchdog nosoftlockup timer_migration=0 preempt=full threadirqs ignore_rlimit_data audit=0}"
     ],
     "recommended": true
   },
@@ -290,12 +287,12 @@
     "category": "Performance",
     "risk": "advanced",
     "check": "grep -q 'ipv6.disable=1' /proc/cmdline",
-    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q 'ipv6.disable=1'",
+    "check_pending": "{KARGS_CHECK:ipv6.disable=1}",
     "apply": [
-      "grubby --update-kernel=ALL --args=\"ipv6.disable=1\""
+      "{KARGS_ADD:ipv6.disable=1}"
     ],
     "undo": [
-      "grubby --update-kernel=ALL --remove-args=\"ipv6.disable=1\""
+      "{KARGS_DEL:ipv6.disable=1}"
     ]
   },
   "CpuMaxPerformance": {
@@ -419,29 +416,33 @@
   },
   "KbdBacklightFix": {
     "Content": "Keyboard Backlight: re-apply saved colour at boot/resume",
-    "Description": "On the G15 5515 the keyboard backlight is driven through OpenRGB (the AW-ELC has no kernel driver and ignores raw HID writes); the backlight must also be enabled in BIOS setup. This installs tuxthrottle_kbd.py (an openrgb wrapper) to /usr/local/bin, a headless 'openrgb --server' service so colour changes apply in ~1s instead of ~4s, plus a systemd service + a systemd-sleep hook that re-apply ~/.config/tuxthrottle/kbd.json (set in the Keyboard tab) at boot and after resume, since the colour does not persist a power cycle on its own. Requires the OpenRGB app. Reversible.",
+    "Description": "On the G15 5515 the keyboard backlight is driven through OpenRGB (the AW-ELC has no kernel driver and ignores raw HID writes); the backlight must also be enabled in BIOS setup. This installs tuxthrottle_kbd.py (an openrgb wrapper) to /usr/local/bin, a headless 'openrgb --server' service so colour changes apply in ~1s instead of ~4s, plus a systemd service + a systemd-sleep hook that re-apply ~/.config/tuxthrottle/kbd.json (set in the Keyboard tab) at boot and after resume, since the colour does not persist a power cycle on its own. Requires the OpenRGB app. Reversible. A guard service (tuxthrottle-kbd-guard) re-asserts the saved lighting after resume, USB re-enumeration, an OpenRGB server restart or a power-source change, restarts a stale OpenRGB server, and re-checks every 30 minutes. It stays idle-priority and holds off while a game is running (GameMode clients, Game Mode profile or a busy CPU), except for resume / USB re-enumeration.",
     "category": "Power",
     "risk": "advanced",
-    "check": "test -x /usr/local/bin/tuxthrottle-kbd && systemctl is-enabled tuxthrottle-kbd.service 2>/dev/null | grep -q enabled && systemctl is-enabled tuxthrottle-openrgb.service 2>/dev/null | grep -q enabled",
+    "check": "test -x /usr/local/bin/tuxthrottle-kbd && systemctl is-enabled tuxthrottle-kbd.service 2>/dev/null | grep -q enabled && systemctl is-enabled tuxthrottle-openrgb.service 2>/dev/null | grep -q enabled && systemctl is-enabled tuxthrottle-kbd-guard.service 2>/dev/null | grep -q enabled",
     "reinstall_if": [
+      "/etc/systemd/system/tuxthrottle-kbd-guard.service",
       "/etc/systemd/system/tuxthrottle-kbd.service",
       "/etc/systemd/system/tuxthrottle-openrgb.service"
     ],
     "apply": [
-      "install -m 0755 {TOOLKIT_DIR}/tuxthrottle_kbd.py /usr/local/bin/tuxthrottle-kbd",
-      "cat > /etc/systemd/system/tuxthrottle-openrgb.service <<'UNIT'\n[Unit]\nDescription=OpenRGB SDK server for the Dell G15 keyboard (TuxThrottle)\nAfter=multi-user.target systemd-udev-settle.service\n\n[Service]\nType=simple\nExecStart=/usr/bin/openrgb --server --noautoconnect\nExecStartPost=/bin/sh -c 'for i in $(seq 40); do ss -ltn 2>/dev/null | grep -q \":6742 \" && break; sleep 0.5; done; exit 0'\nRestart=on-failure\nRestartSec=3\nTimeoutStartSec=40\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
-      "cat > /etc/systemd/system/tuxthrottle-kbd.service <<'UNIT'\n[Unit]\nDescription=Re-apply Dell G15 keyboard backlight (TuxThrottle)\nAfter=multi-user.target systemd-udev-settle.service tuxthrottle-openrgb.service\nWants=tuxthrottle-openrgb.service\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nEnvironment=TUXTHROTTLE_KBD_STATE=/home/{USER}/.config/tuxthrottle/kbd.json\nExecStart=/usr/local/bin/tuxthrottle-kbd apply-saved\nTimeoutStartSec=150\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "printf '%s\\n' '#!/bin/sh' 'exec {TT} kbd \"$@\"' > /usr/local/bin/tuxthrottle-kbd && chmod 0755 /usr/local/bin/tuxthrottle-kbd",
+      "cat > /etc/systemd/system/tuxthrottle-openrgb.service <<'UNIT'\n[Unit]\nDescription=OpenRGB SDK server for the Dell G15 keyboard (TuxThrottle)\nAfter=basic.target systemd-udev-settle.service\nStartLimitIntervalSec=0\n\n[Service]\nType=simple\nExecStart=/usr/bin/openrgb --server --noautoconnect\nExecStartPost=/bin/sh -c 'for i in $(seq 40); do ss -ltn 2>/dev/null | grep -q \":6742 \" && break; sleep 0.5; done; exit 0'\nRestart=always\nRestartSec=2\nTimeoutStartSec=40\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "cat > /etc/systemd/system/tuxthrottle-kbd.service <<'UNIT'\n[Unit]\nDescription=Re-apply Dell G15 keyboard backlight (TuxThrottle)\nAfter=basic.target systemd-udev-settle.service tuxthrottle-openrgb.service\nWants=tuxthrottle-openrgb.service\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nEnvironment=TUXTHROTTLE_KBD_STATE=/home/{USER}/.config/tuxthrottle/kbd.json\nExecStart=/usr/local/bin/tuxthrottle-kbd apply-saved\nTimeoutStartSec=150\nRestart=on-failure\nRestartSec=10\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "cat > /etc/systemd/system/tuxthrottle-kbd-guard.service <<'UNIT'\n[Unit]\nDescription=Keep the Dell G15 keyboard backlight on (TuxThrottle guard)\nAfter=tuxthrottle-openrgb.service tuxthrottle-kbd.service\nWants=tuxthrottle-openrgb.service\nStartLimitIntervalSec=0\n\n[Service]\nType=simple\nEnvironment=TUXTHROTTLE_KBD_STATE=/home/{USER}/.config/tuxthrottle/kbd.json\nExecStart=/usr/local/bin/tuxthrottle-kbd guard\nRestart=always\nRestartSec=5\nNice=19\nCPUSchedulingPolicy=idle\nIOSchedulingClass=idle\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
       "mkdir -p /usr/lib/systemd/system-sleep",
-      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-kbd <<'HOOK'\n#!/usr/bin/env bash\nif [ \"$1\" = post ]; then\n  sleep 2\n  TUXTHROTTLE_KBD_STATE=/home/{USER}/.config/tuxthrottle/kbd.json /usr/local/bin/tuxthrottle-kbd apply-saved || true\nfi\nHOOK",
+      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-kbd <<'HOOK'\n#!/usr/bin/env bash\n# after resume the USB controller has re-enumerated and OpenRGB holds a stale handle: restart it and re-apply, without blocking the resume\nif [ \"$1\" = post ]; then\n  systemd-run --no-block --on-active=2 --collect --unit=tuxthrottle-kbd-resume-$(date +%s) \\\n    --setenv=TUXTHROTTLE_KBD_STATE=/home/{USER}/.config/tuxthrottle/kbd.json /usr/local/bin/tuxthrottle-kbd apply-saved --restart-server\nfi\nHOOK",
       "chmod +x /usr/lib/systemd/system-sleep/tuxthrottle-kbd",
       "systemctl daemon-reload",
       "systemctl enable --now tuxthrottle-openrgb.service || true",
-      "systemctl enable --now tuxthrottle-kbd.service || true"
+      "systemctl enable --now tuxthrottle-kbd.service || true",
+      "systemctl enable --now tuxthrottle-kbd-guard.service || true"
     ],
     "undo": [
+      "systemctl disable --now tuxthrottle-kbd-guard.service 2>/dev/null || true",
       "systemctl disable --now tuxthrottle-kbd.service 2>/dev/null || true",
       "systemctl disable --now tuxthrottle-openrgb.service 2>/dev/null || true",
-      "rm -f /etc/systemd/system/tuxthrottle-kbd.service /etc/systemd/system/tuxthrottle-openrgb.service /usr/lib/systemd/system-sleep/tuxthrottle-kbd /usr/local/bin/tuxthrottle-kbd",
+      "rm -f /etc/systemd/system/tuxthrottle-kbd.service /etc/systemd/system/tuxthrottle-kbd-guard.service /etc/systemd/system/tuxthrottle-openrgb.service /usr/lib/systemd/system-sleep/tuxthrottle-kbd /usr/local/bin/tuxthrottle-kbd",
       "systemctl daemon-reload"
     ],
     "recommended": true
@@ -551,10 +552,10 @@
     "risk": "safe",
     "check": "grep -q \"showSeconds=2\" /home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null",
     "apply": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py clock-seconds on"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel clock-seconds on"
     ],
     "undo": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py clock-seconds off"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel clock-seconds off"
     ],
     "recommended": true
   },
@@ -565,10 +566,10 @@
     "risk": "safe",
     "check": "grep -q \"plugin=org.kde.plasma.kicker$\" /home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null && ! grep -qE \"plugin=org.kde.plasma.(kickoff|kickerdash)$\" /home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null",
     "apply": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py classic-menu on"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel classic-menu on"
     ],
     "undo": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py classic-menu off"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel classic-menu off"
     ],
     "recommended": true
   },
@@ -579,10 +580,10 @@
     "risk": "safe",
     "check": "! grep -q \"^floating=1$\" /home/{USER}/.config/plasmashellrc 2>/dev/null && grep -q \"^floating=false$\" /home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null",
     "apply": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py panel-floating off"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel panel-floating off"
     ],
     "undo": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py panel-floating on"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel panel-floating on"
     ]
   },
   "KdeAutoShowBattery": {
@@ -592,10 +593,10 @@
     "risk": "safe",
     "check": "grep -qE \"^shownItems=.*org\\.kde\\.plasma\\.battery\" /home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null",
     "apply": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py battery-tray on"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel battery-tray on"
     ],
     "undo": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py battery-tray off"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel battery-tray off"
     ],
     "recommended": true
   },
@@ -606,10 +607,10 @@
     "risk": "safe",
     "check": "f=/home/{USER}/.config/plasma-org.kde.plasma.desktop-appletsrc; for k in systemFavorites favoriteSystemActions; do grep -qE \"^$k=\" \"$f\" 2>/dev/null && ! grep -qE \"^$k=.*(shutdown|reboot)\" \"$f\" 2>/dev/null && exit 1; done; exit 0",
     "apply": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py launcher-power on"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel launcher-power on"
     ],
     "undo": [
-      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus python3 {TOOLKIT_DIR}/tuxthrottle_kde_panel.py launcher-power off"
+      "sudo -u {USER} -H env XDG_RUNTIME_DIR=/run/user/$(id -u {USER}) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u {USER})/bus {TT} kde-panel launcher-power off"
     ],
     "recommended": true
   },
@@ -669,8 +670,8 @@
       "/etc/systemd/system/tuxthrottle-tdp.service"
     ],
     "apply": [
-      "command -v ryzenadj >/dev/null 2>&1 || dnf install -y ryzenadj || true",
-      "if ! command -v ryzenadj >/dev/null 2>&1; then dnf install -y cmake gcc gcc-c++ make git pciutils-devel && rm -rf /tmp/ryzenadj-build && git clone --depth 1 https://github.com/FlyGoat/RyzenAdj /tmp/ryzenadj-build && cmake -S /tmp/ryzenadj-build -B /tmp/ryzenadj-build/build -DCMAKE_BUILD_TYPE=Release && cmake --build /tmp/ryzenadj-build/build && install -m 0755 /tmp/ryzenadj-build/build/ryzenadj /usr/local/bin/ryzenadj; fi",
+      "command -v ryzenadj >/dev/null 2>&1 || {PKG_INSTALL:ryzenadj} || true",
+      "if ! command -v ryzenadj >/dev/null 2>&1; then {PKG_INSTALL:cmake gcc gcc-c++ make git pciutils-devel} && rm -rf /tmp/ryzenadj-build && git clone --depth 1 https://github.com/FlyGoat/RyzenAdj /tmp/ryzenadj-build && cmake -S /tmp/ryzenadj-build -B /tmp/ryzenadj-build/build -DCMAKE_BUILD_TYPE=Release && cmake --build /tmp/ryzenadj-build/build && install -m 0755 /tmp/ryzenadj-build/build/ryzenadj /usr/local/bin/ryzenadj; fi",
       "cat > /usr/local/bin/tuxthrottle-tdp <<'SCRIPT'\n#!/usr/bin/env bash\n# Apply STAPM/fast/slow limits from tdp.json (Watts). Usage: tuxthrottle-tdp [file]\nset -e\nRA=\"$(command -v ryzenadj || echo /usr/local/bin/ryzenadj)\"\nF=\"${1:-/home/{USER}/.config/tuxthrottle/tdp.json}\"\n[ -r \"$F\" ] || { echo \"no $F\"; exit 0; }\nread_key(){ grep -oE \"\\\"$1\\\"[ ]*:[ ]*[0-9]+\" \"$F\" | grep -oE '[0-9]+$'; }\nS=$(read_key stapm); FA=$(read_key fast); SL=$(read_key slow)\nARGS=()\n[ -n \"$S\" ]  && ARGS+=(--stapm-limit=$((S*1000)))\n[ -n \"$FA\" ] && ARGS+=(--fast-limit=$((FA*1000)))\n[ -n \"$SL\" ] && ARGS+=(--slow-limit=$((SL*1000)))\n[ ${#ARGS[@]} -gt 0 ] || { echo 'nothing to apply'; exit 0; }\nexec \"$RA\" \"${ARGS[@]}\"\nSCRIPT",
       "chmod +x /usr/local/bin/tuxthrottle-tdp",
       "cat > /etc/systemd/system/tuxthrottle-tdp.service <<'UNIT'\n[Unit]\nDescription=Re-apply saved CPU TDP limits (TuxThrottle)\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/local/bin/tuxthrottle-tdp\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
@@ -768,13 +769,13 @@
     ]
   },
   "GameModeBridge": {
-    "Content": "Feral GameMode \u2192 Game Mode bridge",
+    "Content": "Feral GameMode → Game Mode bridge",
     "Description": "Installs Feral gamemode and wires its start/end hooks to the gaming-performance / gaming-balanced scripts, so launching any game with 'gamemoderun %command%' (or a Lutris/Heroic/Steam that requests GameMode) automatically flips the performance platform_profile + fan slam, and drops back when you quit. Also sets a sensible renice/softrealtime. Requires the PowerProfileScripts tweak first. Reversible.",
     "category": "Power",
     "risk": "safe",
     "check": "command -v gamemoded >/dev/null 2>&1 && grep -q 'gaming-performance' /etc/gamemode.ini 2>/dev/null",
     "apply": [
-      "dnf install -y gamemode",
+      "{PKG_INSTALL:gamemode}",
       "test -x /usr/local/bin/gaming-performance || { echo 'Install the PowerProfileScripts tweak first'; exit 1; }",
       "cat > /etc/gamemode.ini <<'INI'\n[general]\nrenice=10\nsoftrealtime=auto\ninhibit_screensaver=1\n\n[custom]\nstart=/usr/local/bin/gaming-performance\nend=/usr/local/bin/gaming-balanced\nINI"
     ],
@@ -785,7 +786,7 @@
   },
   "FanCurveDaemon": {
     "Content": "Fan-curve + AC-switch + thermal-alert daemon (+ control socket)",
-    "Description": "Runs tuxthrottle_powerd.py as a systemd service: a closed-loop fan curve (temperature \u2192 additive alienware-wmi fan boost, on the curve you draw in the Fans tab, with cool-down hysteresis), optional AC/battery auto-switching (applies a platform_profile + ryzenadj TDP bundle when the charger is plugged/pulled), per-game auto-profiles, thermal-event notifications (sustained Tjmax / a stalled fan while hot / Performance on low battery \u2192 notify-send + a journal line, config block thermal_notify), and a root-only control socket at /run/tuxthrottle/control.sock so the GUI and tuxthrottlectl route hardware writes through this one process. The daemon only ever ADDS airflow over the firmware curve - it can't stop a fan - and restores fully automatic control when stopped. Reads ~/.config/tuxthrottle/powerd.json live (edit it from the Fans / Power & Limits tabs). Reversible.",
+    "Description": "Runs tuxthrottle_powerd.py as a systemd service: a closed-loop fan curve (temperature → additive alienware-wmi fan boost, on the curve you draw in the Fans tab, with cool-down hysteresis), optional AC/battery auto-switching (applies a platform_profile + ryzenadj TDP bundle when the charger is plugged/pulled), per-game auto-profiles, thermal-event notifications (sustained Tjmax / a stalled fan while hot / Performance on low battery → notify-send + a journal line, config block thermal_notify), and a root-only control socket at /run/tuxthrottle/control.sock so the GUI and tuxthrottlectl route hardware writes through this one process. The daemon only ever ADDS airflow over the firmware curve - it can't stop a fan - and restores fully automatic control when stopped. Reads ~/.config/tuxthrottle/powerd.json live (edit it from the Fans / Power & Limits tabs). Reversible.",
     "category": "Power",
     "risk": "advanced",
     "check": "systemctl is-enabled tuxthrottle-powerd.service 2>/dev/null | grep -q enabled",
@@ -793,8 +794,7 @@
       "/etc/systemd/system/tuxthrottle-powerd.service"
     ],
     "apply": [
-      "chmod +x {TOOLKIT_DIR}/tuxthrottle_powerd.py",
-      "cat > /etc/systemd/system/tuxthrottle-powerd.service <<'UNIT'\n[Unit]\nDescription=TuxThrottle fan-curve + AC-switch + thermal-alert daemon\nAfter=multi-user.target\n\n[Service]\nType=simple\nExecStart=/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_powerd.py run --user {USER}\nRuntimeDirectory=tuxthrottle\nRuntimeDirectoryMode=0755\nRestart=on-failure\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "cat > /etc/systemd/system/tuxthrottle-powerd.service <<'UNIT'\n[Unit]\nDescription=TuxThrottle fan-curve + AC-switch + thermal-alert daemon\nAfter=multi-user.target\n\n[Service]\nType=simple\nExecStart={TTD} run --user {USER}\nRuntimeDirectory=tuxthrottle\nRuntimeDirectoryMode=0755\nRestart=on-failure\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
       "systemctl daemon-reload",
       "systemctl enable --now tuxthrottle-powerd.service"
     ],
@@ -816,17 +816,16 @@
       "/etc/systemd/system/tuxthrottle-co.service"
     ],
     "apply": [
-      "command -v ryzenadj >/dev/null 2>&1 || dnf install -y ryzenadj || true",
-      "chmod +x {TOOLKIT_DIR}/tuxthrottle_co_stress.py",
+      "command -v ryzenadj >/dev/null 2>&1 || {PKG_INSTALL:ryzenadj} || true",
       "mkdir -p /usr/lib/systemd/system-sleep",
-      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-co <<'HOOK'\n#!/usr/bin/env bash\n[ \"$1\" = post ] && /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_co_stress.py reapply --user {USER} || true\nHOOK",
+      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-co <<'HOOK'\n#!/usr/bin/env bash\n[ \"$1\" = post ] && {TT} co reapply --user {USER} || true\nHOOK",
       "chmod +x /usr/lib/systemd/system-sleep/tuxthrottle-co",
-      "cat > /etc/systemd/system/tuxthrottle-co.service <<'UNIT'\n[Unit]\nDescription=Re-apply a confirmed Ryzen Curve Optimizer offset (TuxThrottle)\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_co_stress.py reapply --user {USER}\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "cat > /etc/systemd/system/tuxthrottle-co.service <<'UNIT'\n[Unit]\nDescription=Re-apply a confirmed Ryzen Curve Optimizer offset (TuxThrottle)\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart={TT} co reapply --user {USER}\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
       "systemctl daemon-reload",
       "systemctl enable --now tuxthrottle-co.service || true"
     ],
     "undo": [
-      "/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_co_stress.py revert --user {USER} 2>/dev/null || true",
+      "{TT} co revert --user {USER} 2>/dev/null || true",
       "systemctl disable --now tuxthrottle-co.service 2>/dev/null || true",
       "rm -f /etc/systemd/system/tuxthrottle-co.service /usr/lib/systemd/system-sleep/tuxthrottle-co",
       "systemctl daemon-reload"
@@ -842,11 +841,10 @@
       "/etc/systemd/system/tuxthrottle-reassert.service"
     ],
     "apply": [
-      "chmod +x {TOOLKIT_DIR}/tuxthrottle_profiles.py",
       "mkdir -p /usr/lib/systemd/system-sleep",
-      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-reassert <<'HOOK'\n#!/usr/bin/env bash\nif [ \"$1\" = post ]; then\n  sleep 3   # let KWin/kscreen come back first - kscreen-doctor SIGABRTs if it doesn't exist yet\n  /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_profiles.py --user {USER} reassert || true\nfi",
+      "cat > /usr/lib/systemd/system-sleep/tuxthrottle-reassert <<'HOOK'\n#!/usr/bin/env bash\nif [ \"$1\" = post ]; then\n  sleep 3   # let KWin/kscreen come back first - kscreen-doctor SIGABRTs if it doesn't exist yet\n  {TT} profile --user {USER} reassert || true\nfi",
       "chmod +x /usr/lib/systemd/system-sleep/tuxthrottle-reassert",
-      "cat > /etc/systemd/system/tuxthrottle-reassert.service <<'UNIT'\n[Unit]\nDescription=Re-apply last TuxThrottle power state at boot\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_profiles.py --user {USER} reassert\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
+      "cat > /etc/systemd/system/tuxthrottle-reassert.service <<'UNIT'\n[Unit]\nDescription=Re-apply last TuxThrottle power state at boot\nAfter=multi-user.target\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart={TT} profile --user {USER} reassert\n\n[Install]\nWantedBy=multi-user.target\nUNIT",
       "systemctl daemon-reload",
       "systemctl enable --now tuxthrottle-reassert.service || true"
     ],
@@ -937,7 +935,7 @@
       "/etc/systemd/system/tuxthrottle-scx.service"
     ],
     "apply": [
-      "command -v scx_lavd >/dev/null 2>&1 || dnf install -y scx-scheds",
+      "command -v scx_lavd >/dev/null 2>&1 || {PKG_INSTALL:scx-scheds}",
       "test -e /sys/kernel/sched_ext || { echo 'TuxThrottle: this kernel has no sched_ext (need 6.12+)'; exit 1; }",
       "printf '%s\\n' '[Unit]' 'Description=TuxThrottle: scx_lavd sched-ext scheduler' 'ConditionPathExists=/sys/kernel/sched_ext' 'After=multi-user.target' 'StartLimitIntervalSec=120' 'StartLimitBurst=3' '' '[Service]' 'Type=simple' 'ExecStart=/usr/bin/scx_lavd --performance' 'Restart=on-failure' 'RestartSec=5' 'Nice=-5' '' '[Install]' 'WantedBy=multi-user.target' > /etc/systemd/system/tuxthrottle-scx.service",
       "systemctl daemon-reload",
@@ -971,12 +969,12 @@
     "category": "Stability",
     "risk": "advanced",
     "check": "grep -q acpi_backlight=nvidia_wmi_ec /proc/cmdline",
-    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q acpi_backlight=nvidia_wmi_ec",
+    "check_pending": "{KARGS_CHECK:acpi_backlight=nvidia_wmi_ec}",
     "apply": [
-      "grubby --update-kernel=ALL --args=\"acpi_backlight=nvidia_wmi_ec\""
+      "{KARGS_ADD:acpi_backlight=nvidia_wmi_ec}"
     ],
     "undo": [
-      "grubby --update-kernel=ALL --remove-args=\"acpi_backlight=nvidia_wmi_ec\""
+      "{KARGS_DEL:acpi_backlight=nvidia_wmi_ec}"
     ]
   },
   "AmdPstateActive": {
@@ -986,12 +984,12 @@
     "risk": "advanced",
     "requires_vendor": "amd",
     "check": "[ \"$(cat /sys/devices/system/cpu/amd_pstate/status 2>/dev/null)\" = \"active\" ]",
-    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q amd_pstate=active",
+    "check_pending": "{KARGS_CHECK:amd_pstate=active}",
     "apply": [
-      "grubby --update-kernel=ALL --args=\"amd_pstate=active\""
+      "{KARGS_ADD:amd_pstate=active}"
     ],
     "undo": [
-      "grubby --update-kernel=ALL --remove-args=\"amd_pstate=active\""
+      "{KARGS_DEL:amd_pstate=active}"
     ]
   },
   "DellBatteryThreshold": {
@@ -1001,7 +999,7 @@
     "risk": "safe",
     "check": "command -v smbios-battery-ctl >/dev/null 2>&1",
     "apply": [
-      "dnf install -y libsmbios"
+      "{PKG_INSTALL:libsmbios}"
     ],
     "undo": [
       "dnf remove -y libsmbios || true"
@@ -1034,12 +1032,12 @@
     "category": "Performance",
     "risk": "advanced",
     "check": "grep -q 'mitigations=off' /proc/cmdline",
-    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q 'mitigations=off'",
+    "check_pending": "{KARGS_CHECK:mitigations=off}",
     "apply": [
-      "grubby --update-kernel=ALL --args=\"mitigations=off nvme_core.default_ps_max_latency_us=0 pcie_aspm=off amdgpu.ppfeaturemask=0xffffffff iommu=pt zswap.enabled=0\""
+      "{KARGS_ADD:mitigations=off nvme_core.default_ps_max_latency_us=0 pcie_aspm=off amdgpu.ppfeaturemask=0xffffffff iommu=pt zswap.enabled=0}"
     ],
     "undo": [
-      "grubby --update-kernel=ALL --remove-args=\"mitigations=off nvme_core.default_ps_max_latency_us=0 pcie_aspm=off amdgpu.ppfeaturemask=0xffffffff iommu=pt zswap.enabled=0\""
+      "{KARGS_DEL:mitigations=off nvme_core.default_ps_max_latency_us=0 pcie_aspm=off amdgpu.ppfeaturemask=0xffffffff iommu=pt zswap.enabled=0}"
     ]
   },
   "VmWritebackSysctl": {
@@ -1120,7 +1118,7 @@
     "risk": "safe",
     "check": "systemctl is-active ananicy-cpp.service 2>/dev/null | grep -q '^active'",
     "apply": [
-      "rpm -q ananicy-cpp >/dev/null 2>&1 || dnf install -y ananicy-cpp",
+      "{PKG_CHECK:ananicy-cpp} || {PKG_INSTALL:ananicy-cpp}",
       "systemctl enable --now ananicy-cpp.service"
     ],
     "undo": [
@@ -1162,7 +1160,7 @@
       "/etc/gamemode.ini"
     ],
     "apply": [
-      "rpm -q gamemode >/dev/null 2>&1 || dnf install -y gamemode",
+      "{PKG_CHECK:gamemode} || {PKG_INSTALL:gamemode}",
       "printf '%s\\n' '# TuxThrottle: quiet GameMode tuning (no platform_profile / fan changes)' '[general]' 'renice=10' 'ioprio=0' 'softrealtime=auto' 'inhibit_screensaver=1' 'desiredgov=performance' 'defaultgov=schedutil' '' '[cpu]' 'park_cores=no' 'pin_cores=no' > /etc/gamemode.ini"
     ],
     "undo": [
@@ -1182,10 +1180,10 @@
       "/home/{USER}/.local/share/applications/steam.desktop"
     ],
     "apply": [
-      "sudo -u {USER} -H python3 {TOOLKIT_DIR}/tuxthrottle_steamperf.py igpu-on"
+      "sudo -u {USER} -H {TT} steamperf igpu-on"
     ],
     "undo": [
-      "sudo -u {USER} -H python3 {TOOLKIT_DIR}/tuxthrottle_steamperf.py igpu-off"
+      "sudo -u {USER} -H {TT} steamperf igpu-off"
     ]
   },
   "KernelVerboseBoot": {
@@ -1194,12 +1192,12 @@
     "category": "Stability",
     "risk": "safe",
     "check": "grep -qw 'plymouth.enable=0' /proc/cmdline",
-    "check_pending": "grubby --info=DEFAULT 2>/dev/null | grep -q 'plymouth.enable=0'",
+    "check_pending": "{KARGS_CHECK:plymouth.enable=0}",
     "apply": [
-      "grubby --update-kernel=ALL --remove-args=\"quiet splash rhgb\" --args=\"loglevel=7 printk.time=1 systemd.show_status=1 systemd.status_unit_format=combined plymouth.enable=0\""
+      "{KARGS_DEL:quiet splash rhgb} && {KARGS_ADD:loglevel=7 printk.time=1 systemd.show_status=1 systemd.status_unit_format=combined plymouth.enable=0}"
     ],
     "undo": [
-      "grubby --update-kernel=ALL --remove-args=\"loglevel=7 printk.time=1 systemd.show_status=1 systemd.status_unit_format=combined plymouth.enable=0\" --args=\"quiet splash\""
+      "{KARGS_DEL:loglevel=7 printk.time=1 systemd.show_status=1 systemd.status_unit_format=combined plymouth.enable=0} && {KARGS_ADD:quiet splash}"
     ]
   },
   "NtfsForceMount": {
@@ -1212,7 +1210,7 @@
       "/etc/fstab.tuxthrottle-bak"
     ],
     "apply": [
-      "rpm -q ntfs-3g >/dev/null 2>&1 || dnf install -y ntfs-3g",
+      "{PKG_CHECK:ntfs-3g} || {PKG_INSTALL:ntfs-3g}",
       "[ -f /etc/fstab.tuxthrottle-bak ] || cp -a /etc/fstab /etc/fstab.tuxthrottle-bak",
       "sed -i -E '/[[:space:]]ntfs3[[:space:]]/{/[,[:space:]]force[,[:space:]]/!s/([[:space:]]ntfs3[[:space:]]+)/\\1force,/}' /etc/fstab",
       "systemctl daemon-reload",
@@ -1244,14 +1242,14 @@
     "recommended": false
   },
   "SteamShaderCacheSelfHeal": {
-    "Content": "Steam Shader Cache Self-Heal (fixes \u201cdisk write error\u201d)",
-    "Description": "Steam reports \u201cdisk write error\u201d on every shader download when a library's steamapps/shadercache symlink dangles (the shared cache folder was moved, wiped, or lived under /tmp). Installs a cron job for your user that checks every 5 minutes and at boot, and repoints any broken link at the configured shader-cache folder. Does nothing while the links are healthy; safe with Steam running.",
+    "Content": "Steam Shader Cache Self-Heal (fixes “disk write error”)",
+    "Description": "Steam reports “disk write error” on every shader download when a library's steamapps/shadercache symlink dangles (the shared cache folder was moved, wiped, or lived under /tmp). Installs a cron job for your user that checks every 5 minutes and at boot, and repoints any broken link at the configured shader-cache folder. Does nothing while the links are healthy; safe with Steam running.",
     "category": "Gaming",
     "risk": "safe",
     "check": "crontab -u {USER} -l 2>/dev/null | grep -q tuxthrottle-shadercache-heal",
     "apply": [
-      "sudo -u {USER} /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_shadercache.py heal || true",
-      "(crontab -u {USER} -l 2>/dev/null | grep -v tuxthrottle-shadercache-heal; echo '*/5 * * * * /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_shadercache.py heal >/dev/null 2>&1 # tuxthrottle-shadercache-heal'; echo '@reboot sleep 30; /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_shadercache.py heal >/dev/null 2>&1 # tuxthrottle-shadercache-heal') | crontab -u {USER} -"
+      "sudo -u {USER} {TT} shadercache heal || true",
+      "(crontab -u {USER} -l 2>/dev/null | grep -v tuxthrottle-shadercache-heal; echo '*/5 * * * * {TT} shadercache heal >/dev/null 2>&1 # tuxthrottle-shadercache-heal'; echo '@reboot sleep 30; {TT} shadercache heal >/dev/null 2>&1 # tuxthrottle-shadercache-heal') | crontab -u {USER} -"
     ],
     "undo": [
       "crontab -u {USER} -l 2>/dev/null | grep -v tuxthrottle-shadercache-heal | crontab -u {USER} -"
@@ -1260,7 +1258,7 @@
   },
   "FlatpakFullAccess": {
     "Content": "Flatpak Full Storage & Device Access",
-    "Description": "Flathub apps ship a tight sandbox: an emulator pointed at a ROM folder on another drive only sees a /run/user/<uid>/doc/\u2026 portal path (PCSX2, DuckStation, \u2026). Sets a global override for every Flatpak, current and future: the whole host filesystem (home, /mnt, /media, /run/media), read-only host /usr and /etc, and all device nodes. Restart a running Flatpak app to pick it up. Undo resets the global override.",
+    "Description": "Flathub apps ship a tight sandbox: an emulator pointed at a ROM folder on another drive only sees a /run/user/<uid>/doc/… portal path (PCSX2, DuckStation, …). Sets a global override for every Flatpak, current and future: the whole host filesystem (home, /mnt, /media, /run/media), read-only host /usr and /etc, and all device nodes. Restart a running Flatpak app to pick it up. Undo resets the global override.",
     "category": "Gaming",
     "risk": "advanced",
     "check": "{ flatpak override --system --show 2>/dev/null; sudo -u {USER} flatpak override --user --show 2>/dev/null; } | grep -Eq '^filesystems=(.*;)?host;'",
@@ -1280,7 +1278,7 @@
     "risk": "safe",
     "check": "test -f /etc/cron.d/tuxthrottle-drivehealth",
     "apply": [
-      "printf '%s\\n' '# TuxThrottle DriveHealthWatch (managed)' '@reboot root sleep 60; /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_drivehealth.py report --json >/dev/null 2>&1' '17 12 * * * root /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_drivehealth.py check --notify {USER} >/dev/null 2>&1' '43 3 1 * * root /usr/bin/python3 {TOOLKIT_DIR}/tuxthrottle_drivehealth.py scrub-all >/dev/null 2>&1' > /etc/cron.d/tuxthrottle-drivehealth",
+      "printf '%s\\n' '# TuxThrottle DriveHealthWatch (managed)' '@reboot root sleep 60; {TT} drives report --json >/dev/null 2>&1' '17 12 * * * root {TT} drives check --notify {USER} >/dev/null 2>&1' '43 3 1 * * root {TT} drives scrub-all >/dev/null 2>&1' > /etc/cron.d/tuxthrottle-drivehealth",
       "chmod 644 /etc/cron.d/tuxthrottle-drivehealth"
     ],
     "undo": [

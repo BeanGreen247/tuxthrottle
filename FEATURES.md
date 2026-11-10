@@ -157,7 +157,7 @@ board is **65 / 65 / 54 W**. State → `tdp.json`.
 ### Curve Optimizer (Ryzen undervolt)
 
 Shown only when `/proc/cpuinfo` says `AuthenticAMD`. A `0 … −40` all-core
-offset slider. **Apply & stress-test 5 min** runs `tuxthrottle_co_stress.py`
+offset slider. **Apply & stress-test 5 min** runs `tuxthrottlectl co`
 which: snapshots state, writes `co.json`, arms a watchdog, applies the offset
 (`ryzenadj --set-coall`), runs `stress-ng --cpu 0` + a GPU load for N minutes
 while polling `dmesg` for MCE/WHEA/hardware-error lines, and **auto-reverts to
@@ -372,11 +372,11 @@ walkthroughs). Everything here runs as your user.
 
 - **Prefix relocation** - a Proton prefix on an NTFS/exFAT drive can't work
   (`:` in `dosdevices/c:` → `OSError 22`, the game won't start).
-  `tuxthrottle_prefix_relocate.py` moves `compatdata/<appid>` onto the native
+  `tuxthrottlectl prefix` moves `compatdata/<appid>` onto the native
   Steam library and symlinks it back. `--scan` lists all at-risk prefixes;
   `--all` migrates every one. Copy-not-delete; refuses root or a running
   Steam.
-- **Save-game vault** - `tuxthrottle_savevault.py` `list` / `export` /
+- **Save-game vault** - `tuxthrottlectl savevault` `list` / `export` /
   `import` a save vault (a folder on a drive that is **not** the OS
   filesystem, enforced by an `st_dev` check), laid out
   `<vault>/<appid>/{Documents,Saved Games,AppData/…}`. Vault path persists in
@@ -384,7 +384,7 @@ walkthroughs). Everything here runs as your user.
 
 ### Shader / pipeline cache storage
 
-`tuxthrottle_shadercache.py` - one configurable folder for **every**
+`tuxthrottlectl shadercache` - one configurable folder for **every**
 shader/pipeline cache (`mesa-shader-cache` / `dxvk-state-cache` /
 `nv-shader-cache` / `steam-shadercache`). Config
 `~/.config/tuxthrottle/shadercache.json` `{dir, max_size_gb}`.
@@ -397,7 +397,7 @@ shader/pipeline cache (`mesa-shader-cache` / `dxvk-state-cache` /
   into the shared folder and symlinks it back (repairs a broken link).
 - **Check links** - reports each library's link as `ok` / `broken` /
   `unlinked` (auto-runs when the box opens).
-- **Self-heal** - `tuxthrottle_shadercache.py heal` repoints any broken link
+- **Self-heal** - `tuxthrottlectl shadercache heal` repoints any broken link
   at the configured folder (no-op when healthy, safe with Steam running). The
   **Steam Shader Cache Self-Heal** tweak (Gaming) runs it from the user's
   crontab every 5 minutes and at boot, so a dangling link never surfaces as
@@ -429,7 +429,7 @@ game's Steam launch options:
 Launch Options. With **keep per-game custom options** on (default) only games
 that are empty or still on the *default* string - the one most games share -
 are rewritten, so a hand-tuned game (gamescope, anti-cheat, `MANGOHUD=0`)
-keeps its own. **Show custom** (`tuxthrottle_launchopts.py list --custom`)
+keeps its own. **Show custom** (`tuxthrottlectl launchopts list --custom`)
 prints the default and each deviating game with what it adds / drops.
 
 **Lutris: add shader-cache env to every game** writes these into each
@@ -439,7 +439,7 @@ yml), with the cache paths set to that game's own Wine prefix:
 `__GL_SHADER_DISK_CACHE=1`, `__GL_SHADER_DISK_CACHE_PATH`,
 `__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1`. Keys a game already sets are left
 alone, each yml is backed up, and **remove them** drops only values that are
-still the ones it wrote (`tuxthrottle_lutris_env.py list|apply|remove`).
+still the ones it wrote (`tuxthrottlectl lutris-env list|apply|remove`).
 
 Example output:
 
@@ -449,7 +449,7 @@ DXVK_ASYNC=1 MANGOHUD=1 __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nv
 
 ### Drives tab
 
-`tuxthrottle_drivehealth.py` - read-only health report: SMART per drive,
+`tuxthrottlectl drives` - read-only health report: SMART per drive,
 filesystem fullness / read-only remounts / Btrfs error counters + scrub /
 NTFS dirty state, this boot's kernel I/O and filesystem errors, Steam
 libraries. Actions: Btrfs scrub, TRIM, SMART short self-test, NTFS repair
@@ -462,13 +462,13 @@ A backup named `steam.desktop.<suffix>` left in `~/.config/autostart` is run
 by the desktop as a second Steam: the two race and one client segfaults a few
 seconds after login ("steam crashed" in the crash watcher). The
 `SteamAutostartMountWait` tweak used to leave exactly such a backup; it now
-keeps it under `~/.local/share/tuxthrottle`. `tuxthrottle_steamperf.py
+keeps it under `~/.local/share/tuxthrottle`. `tuxthrottlectl steamperf
 sweep-autostart` moves any stray one out, and the crash watcher does that by
 itself when it sees a Steam client crash with a stray backup present.
 
 ### Proton & Runtimes tab
 
-`tuxthrottle_compat_tools.py` - replaces ProtonUp-Qt and ProtonPlus (both
+`tuxthrottlectl compat` - replaces ProtonUp-Qt and ProtonPlus (both
 removed from the app catalog). Also installs Wine-GE / Lutris-Wine, DXVK and
 vkd3d-proton for Heroic / Lutris / Bottles, and has a read-only **Verify
 everything** check (layout, executability, Steam install state, drive /
@@ -491,14 +491,14 @@ MangoHud is opt-in per game; nothing enables it session-wide (the
   only loads the overlay for AppIDs flagged in
   `~/.config/tuxthrottle/mangohud-games/`, so switches apply at the next
   launch with Steam open; plus a one-time **Add the hook to every game**.
-- **Other launchers** (`tuxthrottle_mangohud_launchers.py`) - installed
+- **Other launchers** (`tuxthrottlectl mangohud-games`) - installed
   Heroic (Epic / GOG / Amazon / sideload) and Lutris games are listed too;
   their switch flips the launcher's own per-game MangoHud setting.
 - **Anti-cheat lock** - an offline scan of each game folder (EasyAntiCheat,
   BattlEye, Vanguard, GameGuard, XIGNCODE3, PunkBuster, EQU8, Denuvo
   Anti-Cheat; cached per folder mtime) greys out the switch of an anti-cheat
   game; **force on** overrides it.
-- **Per-game MangoHud** (`tuxthrottle_mangohud_games.py`) - a switch per
+- **Per-game MangoHud** (`tuxthrottlectl mangohud-games`) - a switch per
   installed game, a collapsible **Settings ▾** panel (position / detail /
   font size / FPS limit → `~/.config/MangoHud/tuxthrottle-<appid>.conf`), and
   one **Apply changes (N)** button that sends every pending change as a
@@ -608,7 +608,7 @@ live component. **Model-agnostic** - all pure KWin/Plasma config.
 
 ## System tray
 
-An always-on **PySide6** tray icon (`tray_monitor.py`, unprivileged;
+An always-on **PySide6** tray icon (`tuxthrottle-tray`, unprivileged;
 `/usr/local/bin/tuxthrottle-tray`):
 
 - **Left-click** → opens the main TuxThrottle window (via `kstart`, so
@@ -634,7 +634,7 @@ button.
 
 ## tuxthrottled (background daemon)
 
-`tuxthrottle_powerd.py`, installed by the **FanCurveDaemon** tweak. One poll
+`tuxthrottlectl daemon`, installed by the **FanCurveDaemon** tweak. One poll
 loop:
 
 1. **Closed-loop fan curve** - `interp()` maps temp through

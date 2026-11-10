@@ -1,0 +1,109 @@
+{
+  "host": [
+    "Linux 7.2.3-200.nobara.fc44.x86_64",
+    " AMD Ryzen 7 5800H with Radeon Graphics"
+  ],
+  "first_frame_s": {
+    "python": {
+      "median": 0.84,
+      "min": 0.83,
+      "max": 0.85,
+      "runs": [
+        0.85,
+        0.84,
+        0.84,
+        0.84,
+        0.84,
+        0.85,
+        0.83
+      ]
+    },
+    "cpp": {
+      "median": 0.162,
+      "min": 0.158,
+      "max": 0.174,
+      "runs": [
+        0.168,
+        0.16,
+        0.16,
+        0.164,
+        0.158,
+        0.162,
+        0.174
+      ]
+    }
+  },
+  "idle": {
+    "python": {
+      "rss_mb": 74.0234375,
+      "pss_mb": 51.59375,
+      "anon_mb": 43.05859375,
+      "processes": 1,
+      "threads": 2,
+      "cpu_pct": 2.4322187148732004,
+      "mapped_files": 0,
+      "mapped_mb": 0.0
+    },
+    "cpp": {
+      "rss_mb": 101.984375,
+      "pss_mb": 39.994140625,
+      "anon_mb": 26.44140625,
+      "processes": 1,
+      "threads": 14,
+      "cpu_pct": 1.3993454958560654,
+      "mapped_files": 0,
+      "mapped_mb": 0.0
+    }
+  },
+  "cli": {
+    "status --json": {
+      "python": {
+        "wall_s": 0.26,
+        "peak_rss_mb": 23.23828125
+      },
+      "cpp": {
+        "wall_s": 0.26,
+        "peak_rss_mb": 22.94921875
+      }
+    },
+    "status report (146 checks)": {
+      "python": {
+        "wall_s": 0.79,
+        "peak_rss_mb": 50.1015625
+      },
+      "cpp": {
+        "wall_s": 0.65,
+        "peak_rss_mb": 33.66796875
+      }
+    }
+  },
+  "footprint": {
+    "python_source_mb": 1.1482954025268555,
+    "python_imported_modules": 277,
+    "python_imported_files_mb": 5.82102108001709,
+    "cpp_binaries_mb": {
+      "tuxthrottle": 2.4060134887695312,
+      "tuxthrottlectl": 2.3874893188476562,
+      "tuxthrottled": 0.5007553100585938,
+      "tuxthrottle-tray": 0.6537551879882812
+    },
+    "python_loc": 27418,
+    "cpp_loc": 25647,
+    "python_tests": 359,
+    "cpp_checks": 620
+  },
+  "resident": {
+    "tray": {
+      "python_pss_mb": 38.341796875,
+      "cpp_pss_mb": 1.7626953125
+    },
+    "power daemon": {
+      "python_pss_mb": 12.7705078125,
+      "cpp_pss_mb": 0.9619140625
+    },
+    "G-key listener": {
+      "python_pss_mb": 14.9970703125,
+      "cpp_pss_mb": 1.7744140625
+    }
+  }
+}

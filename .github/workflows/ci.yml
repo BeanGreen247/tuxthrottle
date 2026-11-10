@@ -16,24 +16,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install deps
-        run: pip install pytest pytest-asyncio ruff textual rich
-
-      - name: Byte-compile every module
-        run: python -m compileall -q *.py tests/*.py
-
-      - name: ruff
-        run: ruff check --output-format=github .
-
       - name: Validate JSON config
         run: |
           for f in config/*.json; do python -c "import json,sys; json.load(open('$f')); print('ok', '$f')"; done
 
       - name: Shell syntax
-        run: bash -n install.sh uninstall.sh verify-install.sh purge-legacy-dellg15.sh
+        run: bash -n install.sh uninstall.sh verify-install.sh purge-legacy-dellg15.sh cpp/install.sh
 
       - name: Client scripts compile
-        run: python -m py_compile clients/waybar/tuxthrottle-waybar clients/mangohud/tuxthrottle-mangohud
+        run: sh -n clients/waybar/tuxthrottle-waybar clients/mangohud/tuxthrottle-mangohud
 
       - name: Validate model profiles
         run: |
@@ -44,95 +35,13 @@ jobs:
           sudo dnf -y install rpm-build rpmlint >/dev/null 2>&1 || sudo apt-get install -y rpm >/dev/null 2>&1 || true
           rpmspec -P packaging/tuxthrottle.spec --define "_version 0.1.0" >/dev/null && echo "spec parses" || echo "rpmspec not available - skipped"
 
+  cpp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build deps
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq meson ninja-build g++ libsdl2-dev libfreetype-dev libfontconfig-dev
+      - name: Build
+        run: meson setup cpp/build-ci cpp && ninja -C cpp/build-ci
       - name: Unit tests
-        run: python -m pytest tests/ -q
-
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install mypy
-      - name: mypy (core stdlib modules - gating)
-        run: |
-          mypy --ignore-missing-imports --no-error-summary \
-            --disable-error-code=annotation-unchecked \
-            sensors.py tuxthrottle_control.py tuxthrottle_modelgen.py \
-            tuxthrottlectl.py tuxthrottle_profiles.py tuxthrottle_powerd.py \
-            tuxthrottle_btrfs.py tuxthrottle_watchdog.py tuxthrottle_fixlog.py \
-            tuxthrottle_crashwatch.py tuxthrottle_protondb.py \
-            tuxthrottle_mangohud_status.py tuxthrottle_launchopts.py \
-            tuxthrottle_steamperf.py tuxthrottle_tui.py tuxthrottle_items.py \
-            tuxthrottle_diag.py
-
-  gui-smoke:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: System deps for headless Tk
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb python3-tk
-      - name: Python deps
-        run: pip install ttkbootstrap
-      - name: Build the GUI headless
-        run: |
-          xvfb-run -a python - <<'PY'
-          import time
-          import tuxthrottle as t
-          t.self_elevate = lambda: None
-          import ttkbootstrap as tb
-          r = tb.Window(themename="darkly")
-          a = t.ToolkitApp(r)
-          for _ in range(12):
-              r.update(); time.sleep(0.05)
-          pages = [x for x, f, b in a.notebook._pages]
-          assert pages, "no nav pages built"
-          assert pages[-1] == "Report a Bug", pages[-1]
-          # Phase 1: only Dashboard is built at startup; the rest are lazy.
-          for text, frame, _b in a.notebook._pages:
-              n = len(frame.winfo_children())
-              if text == "Dashboard":
-                  assert n > 0, "Dashboard not built eagerly"
-              else:
-                  assert n == 0, f"{text!r} built at startup (should be lazy)"
-          # ...but every tab must still construct cleanly when selected.
-          for _text, frame, _b in list(a.notebook._pages):
-              a.notebook.select(frame)
-              r.update()
-          for text, frame, _b in a.notebook._pages:
-              assert len(frame.winfo_children()) > 0, f"{text!r} built empty"
-          print(f"GUI built OK - {len(pages)} nav pages, last = {pages[-1]!r}, all lazy-build clean")
-          r.destroy()
-          PY
-
-  tui-smoke:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Python deps
-        run: pip install textual rich
-      - name: Build the TUI headless (Textual's own test harness - no tty needed)
-        run: |
-          python - <<'PY'
-          import asyncio
-          import tuxthrottle_tui as tt
-
-          async def main():
-              app = tt.TuxThrottleTUI()
-              async with app.run_test() as pilot:
-                  await pilot.pause()
-                  for box in (app.cpu_box, app.igpu_box, app.dgpu_box, app.gamemode_box):
-                      assert box.value, f"{box.id} never populated"
-                  await pilot.click("#btn_fan_0")
-                  await pilot.pause()
-              print("TUI built OK - stat boxes populated, a button click round-tripped")
-
-          asyncio.run(main())
-          PY
+        run: meson test -C cpp/build-ci core --print-errorlogs
