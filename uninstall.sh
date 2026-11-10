@@ -57,28 +57,15 @@ c_info "Uninstalling TuxThrottle${U:+ (user: $U)}$([[ $DO_PURGE -eq 1 ]] && echo
 echo
 
 # ---- stop anything the tool has running --------------------------------
-# Exact matches only, never `pkill -f <substring>`: a substring also hits an
-# editor, a terminal or a browser tab that merely has the file name in its
-# command line. A process is ours when it is python3 running one of these
-# scripts by its absolute installed path.
-kill_script() {   # $1 = absolute script path, $2 = optional argument that must be present
-    local p pid a
+# Exact process-name matches only (never `pkill -f <substring>`): a substring also
+# hits an editor or a terminal that merely has the name in its command line.
+for name in tuxthrottle tuxthrottle-tray; do
     for p in /proc/[0-9]*; do
         pid="${p#/proc/}"
         [[ "$pid" == "$$" ]] && continue
-        mapfile -d '' -t a < "$p/cmdline" 2>/dev/null || continue
-        [[ "${a[0]##*/}" == python3* && "${a[1]:-}" == "$1" ]] || continue
-        if [[ -n "${2:-}" ]]; then
-            [[ " ${a[*]:2} " == *"$2"* ]] || continue
-        fi
-        kill "$pid" 2>/dev/null || true
+        [[ "$(cat "$p/comm" 2>/dev/null)" == "$name" ]] && kill "$pid" 2>/dev/null || true
     done
-}
-for s in tuxthrottle.py tray_monitor.py tuxthrottle_powerd.py; do
-    kill_script "/opt/tuxthrottle/$s"
 done
-# legacy: pre-single-zone versions ran software keyboard-wave daemons
-kill_script "/opt/tuxthrottle/tuxthrottle_kbd.py" "-wave"
 [[ -n "$UHOME" && -f "$UHOME/.config/tuxthrottle/fx.pid" ]] && \
     kill "$(cat "$UHOME/.config/tuxthrottle/fx.pid" 2>/dev/null)" 2>/dev/null || true
 
@@ -87,7 +74,7 @@ if [[ -x "$SRC/install.sh" ]]; then
     "$SRC/install.sh" --uninstall || true
 else
     rm -rf /opt/tuxthrottle /usr/local/bin/tuxthrottle /usr/local/bin/tuxthrottlectl \
-           /usr/local/bin/tuxthrottle-tray \
+           /usr/local/bin/tuxthrottle-tray /usr/local/bin/tuxthrottled \
            /usr/share/applications/tuxthrottle.desktop
     for s in 16 24 32 48 64 128 256 512; do
         rm -f "/usr/share/icons/hicolor/${s}x${s}/apps/tuxthrottle.png"
@@ -138,7 +125,7 @@ rm -f /etc/systemd/system/tuxthrottle-kbd.service \
 rm -f /usr/local/bin/tuxthrottle-kbd \
       /usr/local/bin/tuxthrottle-automount \
       /usr/local/bin/tuxthrottle-cpu-perf \
-      /usr/local/bin/tuxthrottle-hotkey-listener.py \
+      /usr/local/bin/tuxthrottle-hotkey-listener.py /usr/local/bin/tuxthrottle-hotkey-listener \
       /usr/local/bin/gaming-performance /usr/local/bin/gaming-balanced \
       /usr/local/bin/amdgpu-perf-high /usr/local/bin/amdgpu-perf-auto \
       /usr/local/bin/nvidia-max-perf \

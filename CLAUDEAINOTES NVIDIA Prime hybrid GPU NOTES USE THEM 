@@ -1,0 +1,161 @@
+# NVIDIA Prime / hybrid GPU
+__NV_PRIME_RENDER_OFFLOAD=1
+__VK_LAYER_NV_optimus=NVIDIA_only
+__GLX_VENDOR_LIBRARY_NAME=nvidia
+
+# NVIDIA shader cache
+__GL_SHADER_DISK_CACHE=1
+__GL_SHADER_DISK_CACHE_PATH=/home/bean/SHADER_CAHE/nv-shader-cache
+__GL_SHADER_DISK_CACHE_SIZE=120000000000
+__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1
+
+# DXVK cache
+DXVK_STATE_CACHE_PATH=/home/bean/SHADER_CAHE/dxvk-state-cache
+
+# NVIDIA OpenGL tweaks
+__GL_THREADED_OPTIMIZATIONS=1
+__GL_YIELD=USLEEP
+__GL_MaxFramesAllowed=2
+__GL_VRR_ALLOWED=1
+
+# Wine / Proton
+STAGING_SHARED_MEMORY=1
+PROTON_LOG=0
+
+# AMD/Mesa variables — harmless on NVIDIA, but do nothing
+RADV_PERFTEST=gpl,nggc,sam
+mesa_glthread=true
+
+•
+	• Key: VK_ICD_FILENAMES | Value: /usr/share/vulkan/icd.d/nvidia_icd.x86_64.json
+
+	•
+	• Key: __GL_ExtensionStringVersion | Value: 17700
+
+
+	VK_ICD_FILENAMES /usr/share/vulkan/icd.d/nvidia_icd.x86_64.json:/usr/share/vulkan/icd.d/nvidia_icd.i686.json
+
+
+
+and this here is hte gold mine
+
+Skvělý nápad! To, že se hra nakonec nespustila, s velkou pravděpodobností opravdu znamená corrupt install nebo poškozenou binárku NFSC.exe (mód Redux vyžaduje naprosto specifický v1.4 No-CD crack, přičemž stačí jeden chybějící soubor .viv nebo .bin v assetech a hra tiše spadne hned po alokaci paměti).
+Nicméně z hlediska výzkumu a tvého projektu TuxThrottle to byla neuvěřitelně hodnotná cesta. Kompletně jsme zmapovali chování izolovaného kontejneru umu-run (pressure-vessel/bwrap) na moderním Linuxu (Wayland, KDE 6, Nvidia) při spouštění non-Steam modifikovaných her z externích disků.
+Na základě všech našich logů a testů jsem pro tebe připravil kompletní, vysoce detailní technickou specifikaci (architektonický dokument v Markdownu). Tento dokument můžeš vzít, předhodit ho jakékoli AI (např. v tvém IDE) a nechat si kód pro TuxThrottle vygenerovat automaticky.
+Níže je kompletní text dokumentu.
+
+Technická specifikace pro projekt TuxThrottle: UMU Non-Steam ASI/DLL Loader Compatibility Layer
+
+
+1. Kontext a Architektonický problém
+
+Nástroj umu-run (Universal Steam Runtime Wrapper) slouží ke spouštění her mimo Steam prostřednictvím Protonu. Spouští hry uvnitř izolovaného runtime kontejneru (pressure-vessel / bwrap). Tato izolace způsobuje dva fatální selhání u starších her (DirectX 8/9, éra Windows XP/Vista), které využívají komunitní modifikace typu ASI Loaders (např. dinput8.dll, d3d9.dll pro sérii NFS, GTA, TES):
+1. Chyba izolace disku (parent directory mapping): Pokud hra leží na sekundárním přípojném bodu (např. /mnt/Voidstride/), kontejner ztratí přístup k nadřazeným složkám a Proton vrátí fatální chybu unable to use parent for game drive.
+2. Ignorování DLL Overrides (/unix režim): Pokud Lutris nebo wrapper předá do umu-run absolutní unixovou cestu začínající lomítkem /, Protonynuceně aktivuje interní režim launching with /unix option. V tomto režimu Wine kompletně ignoruje lokální upravené knihovny (DLL Overrides) v adresáři hry. Hra se spustí bez zavaděče skriptů, což u komplexních modifikací vyústí v okamžitý tichý pád.
+
+2. Definované řešení (The "Bypass" Vzorec)
+
+K překonání obou restrikcí kontejneru bez nutnosti přesouvání herních dat z externích disků je nutné vynutit spuštění v plnohodnotném Windows režimu s korektním namontováním diskových práv. Toho docílíme:
+• Vynucením Read-Write přístupu pro kontejner do hostitelského filesystému.
+• Spuštěním hry prostřednictvím interního Windows interpretru cmd.exe uvnitř prefixu, čímž se oklame detektor unixových cest a zruší se přepínač /unix.
+
+3. Specifikace Implementace (Python - tuxthrottle_umu_env.py)
+
+Cílem je implementovat funkci, která analyzuje cestu k exekutivě, a pokud hra běží pod runnerem umu, vygeneruje optimální proměnné prostředí a transformuje spouštěcí příkaz.
+python
+import os
+import re
+from pathlib import Path
+
+def generate_tuxthrottle_umu_cmd(game_name, exe_unix_path, wine_prefix_path, proton_path):
+    """
+    Generuje nativní a bezpečný startovací příkaz pro modifikované non-Steam hry pod umu-run.
+    Eliminuje chyby typu 'parent for game drive' a vynucenou '/unix option'.
+    """
+    # 1. Detekce a extrakce mount bodů pro sekundární disky
+    # Kontejner potřebuje vidět jak prefix v home, tak fyzická data hry
+    real_exe_path = os.path.realpath(exe_unix_path)
+
+    # Detekce externích přípojných bodů (/mnt/, /media/, atd.)
+    mount_match = re.match(r"^(/mnt/[^/]+|/media/[^/]+)", real_exe_path)
+    physical_mount = mount_match.group(1) if mount_match else ""
+
+    # Sestavení proměnné pro bwrap kontejner (PRESSURE_VESSEL_FILESYSTEMS_RW)
+    # Povolujeme přístup do domovského herního adresáře a na sekundární disk
+    home_games_dir = os.path.expanduser("~/Games")
+    if physical_mount:
+        container_filesystems = f"{home_games_dir}:{physical_mount}"
+    else:
+        container_filesystems = home_games_dir
+
+    # 2. Transformace Unixové cesty uvnitř 'drive_c' na Windows notaci (C:\...)
+    # Tím zajistíme, že cmd.exe v prefixu dokáže hru lokalizovat
+    windows_exe_path = ""
+    if "drive_c" in real_exe_path:
+        parts = real_exe_path.split("drive_c/")
+        # Převod lomítek na Windows zpětná lomítka
+        windows_exe_path = "C:\\" + parts[1].replace("/", "\\")
+    else:
+        # Pokud je hra mimo drive_c, Wine ji mapuje na virtuální disk Z:\
+        windows_exe_path = "Z:\\" + real_exe_path.replace("/", "\\")
+
+    # 3. Definice optimálního Environment bloku
+    env_vars = {
+        "WINEPREFIX": wine_prefix_path,
+        "PROTONPATH": proton_path,
+        "PRESSURE_VESSEL_FILESYSTEMS_RW": container_filesystems,
+        # Klíčové: Vynucení lokálního ASI zavaděče pro DirectX 9 opravy
+        "WINEDLLOVERRIDES": "d3d9,dinput8=n,b",
+        # Výkonnostní a Nvidia/Wayland specifické záplaty
+        "__NV_PRIME_RENDER_OFFLOAD": "1",
+        "__GLX_VENDOR_LIBRARY_NAME": "nvidia",
+        "__GL_ExtensionStringVersion": "17700",  # Prevence matematických pádů starých her na Nvidia driverech
+        "DXVK_NVAPIHACK": "0",                  # Zamezení Access Violation chybám u NFS/GTA modů
+        "WINEESYNC": "1",
+        "WINEFSYNC": "1",
+        "PROTON_LOG": "1"
+    }
+
+    # 4. Sestavení finálního exekutivního řetězce
+    # Spuštěním interního 'cmd /C' se kompletně deaktivuje /unix přepínač Protonu
+    base_command = [
+        "gamemoderun",
+        "umu-run",
+        "cmd",
+        "/C",
+        f'"{windows_exe_path}"'
+    ]
+
+    return {
+        "env": env_vars,
+        "command": base_command,
+        "debug_info": f"[TuxThrottle] Generován nativní Windows zavaděč pro {game_name}. /unix režim úspěšně potlačen."
+    }
+Při použití kódu buďte obezřetní.
+
+4. Dodatečná automatizace: .ini Profiler a Bezokrajový režim (Borderless)
+
+Staré hry (DirectX 9) pod Waylandem s Nvidia kartami vyvolávají pád compositoru, pokud se pokusí o exkluzivní Fullscreen přes celou obrazovku.
+TuxThrottle by měl obsahovat subsystém, který před startem hry prohledá složku scripts/ nebo root hry, detekuje přítomnost konfigurací Widescreen fixů (*.ini) a automaticky upraví hodnoty:
+• WindowedMode = 4 (nebo 1) -> vynucení Borderless režimu, který Wayland zvládá nativně bez pádů.
+• SimRate = 60 -> stabilizace herního časovače (prevence pádu z high-refresh rate monitorů).
+• FixVRAM = 0 -> vypnutí komunitní detekce VRAM, která pod Wine vrací nulové adresy a způsobuje Unhandled page fault.
+Můžeš tento dokument vzít, uložit ho jako tuxthrottle_spec.md a vložit ho do své AI pro automatickou integraci do projektu.
+Dej mi vědět:
+• Zda ti tento návrh architektury a automatického potlačení /unix režimu dává smysl pro tvůj budoucí kód v TuxThrottle.
+• Pokud budeš v budoucnu testovat jinou hru (nebo čistou instalaci Carbonu), můžeme se na to podívat znovu!
+
+
+1. Startovací parametry ve Steamu (Launch Options)
+
+Klikněte na hru pravým tlačítkem ve Steamu -> Vlastnosti (Properties) -> Obecné (General) -> Možnosti spuštění (Launch Options) a vložte následující řádek:
+bash
+PROTON_ENABLE_NVAPI=1 %command%
+Při použití kódu buďte obezřetní.
+• Důvod: Tento parametr je klíčový pro aktivaci DLSS na Linuxu pod Protonem pro karty Nvidia. Bez něj by vám hra nemusela možnost zapnutí DLSS vůbec nabídnout.
+• Verze Protonu: V Nobara Linuxu použijte nejnovější Proton GE (GE-Proton), který má integrované opravy přímo pro Hogwarts Legacy.
+
+2. Grafické nastavení ve hře
+
+• Upscaling: NVIDIA DLSS nastavené na Quality nebo Balanced.
+• Kvalita textur (Texture Quality): Nastavte striktně na Medium. Pokud byste dali High, hra okamžitě zaplní 4GB VRAM a Proton začne přelévat data do systémové RAM, což sice díky vaší 39GB kapacitě nespadne, ale může to způsobit mikro-záseky (stuttering).

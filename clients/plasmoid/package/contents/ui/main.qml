@@ -18,7 +18,7 @@ import org.kde.kirigami 2.20 as Kirigami
 PlasmoidItem {
     id: root
 
-    readonly property string ctl: "/opt/tuxthrottle/tuxthrottlectl.py"
+    readonly property string ctl: "/usr/local/bin/tuxthrottlectl"
     property var st: ({})
     property bool reachable: false
 
@@ -57,7 +57,7 @@ PlasmoidItem {
         running: true
         repeat: true
         triggeredOnStart: true
-        onTriggered: exec.run("python3 " + root.ctl + " status --json")
+        onTriggered: exec.run(root.ctl + " status --json")
     }
 
     function setProfile(p) {

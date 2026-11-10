@@ -38,22 +38,22 @@
         "title": "5 · Install the latest GE-Proton",
         "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. Restart Steam afterwards so it shows up under Compatibility.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
+        "run": "su - {USER} -c '{TT} compat install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
         "desc": "If GTA V lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
-        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
-        "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
+        "check": "su - {USER} -c '{TT} prefix {APPID} --check'",
+        "show_if": "su - {USER} -c '{TT} prefix {APPID} --relevant'",
+        "run": "su - {USER} -c '{TT} prefix {APPID}'"
       },
       {
         "id": "battleye",
         "title": "6 · Install the Proton BattlEye Runtime",
         "desc": "GTA Online's BattlEye only loads if this Steam tool (app 1161040) is present. This triggers the install; Steam will open. If it doesn't take, install “Proton BattlEye Runtime” from your Steam Library → Tools list by hand.",
         "check": "test -d \"/home/{USER}/.steam/steam/steamapps/common/Proton BattlEye Runtime\" -o -d \"/home/{USER}/.local/share/Steam/steamapps/common/Proton BattlEye Runtime\"",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py steam-install 1161040'"
+        "run": "su - {USER} -c '{TT} compat steam-install 1161040'"
       },
       {
         "id": "behosts",
@@ -73,7 +73,7 @@
         "id": "nettweaks",
         "title": "8 · Apply the network-latency tweaks",
         "desc": "GTA Online is sensitive to Wi-Fi latency spikes. Applies WifiPowersaveOff (kills the Wi-Fi power-save that causes stutter), NetLatencySysctl (TCP/qdisc tuning) and GamingResourceLimits (higher file-descriptor / RT limits) via apply_tweak.py.",
-        "run": "for t in WifiPowersaveOff NetLatencySysctl GamingResourceLimits; do echo \"### apply_tweak $t\"; python3 {TOOLKIT_DIR}/apply_tweak.py \"$t\" || true; done"
+        "run": "for t in WifiPowersaveOff NetLatencySysctl GamingResourceLimits; do echo \"### apply_tweak $t\"; {TT} apply-tweak \"$t\" || true; done"
       },
       {
         "id": "steamplay",
@@ -148,15 +148,15 @@
         "title": "5 · Install the latest GE-Proton",
         "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. The Definitive Editions boot through the Rockstar Games Launcher and need a recent GE-Proton, same as GTA V Enhanced. Restart Steam afterwards so it shows up under Compatibility.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
+        "run": "su - {USER} -c '{TT} compat install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
         "desc": "If GTA III Definitive lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
-        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
-        "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
+        "check": "su - {USER} -c '{TT} prefix {APPID} --check'",
+        "show_if": "su - {USER} -c '{TT} prefix {APPID} --relevant'",
+        "run": "su - {USER} -c '{TT} prefix {APPID}'"
       },
       {
         "id": "steamplay",
@@ -231,15 +231,15 @@
         "title": "5 · Install the latest GE-Proton",
         "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. The Definitive Editions boot through the Rockstar Games Launcher and need a recent GE-Proton, same as GTA V Enhanced. Restart Steam afterwards so it shows up under Compatibility.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
+        "run": "su - {USER} -c '{TT} compat install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
         "desc": "If GTA Vice City Definitive lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
-        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
-        "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
+        "check": "su - {USER} -c '{TT} prefix {APPID} --check'",
+        "show_if": "su - {USER} -c '{TT} prefix {APPID} --relevant'",
+        "run": "su - {USER} -c '{TT} prefix {APPID}'"
       },
       {
         "id": "steamplay",
@@ -314,15 +314,15 @@
         "title": "5 · Install the latest GE-Proton",
         "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. The Definitive Editions boot through the Rockstar Games Launcher and need a recent GE-Proton, same as GTA V Enhanced. Restart Steam afterwards so it shows up under Compatibility.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
+        "run": "su - {USER} -c '{TT} compat install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
         "desc": "If GTA San Andreas Definitive lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
-        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
-        "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
+        "check": "su - {USER} -c '{TT} prefix {APPID} --check'",
+        "show_if": "su - {USER} -c '{TT} prefix {APPID} --relevant'",
+        "run": "su - {USER} -c '{TT} prefix {APPID}'"
       },
       {
         "id": "steamplay",
@@ -397,15 +397,15 @@
         "title": "5 · Install the latest GE-Proton",
         "desc": "Downloads the newest GloriousEggroll GE-Proton release straight from GitHub, checks it against the release's sha512sum and unpacks it into Steam's compatibilitytools.d for {USER}. Restart Steam afterwards so it shows up under Compatibility. If the newest GE-Proton doesn't get this game running, use ProtonUp-Qt (step 4) to also grab an older GE-Proton or plain Proton 7-8 - this title is old enough that a slightly older Proton sometimes behaves better than the newest one.",
         "check": "ls -d /home/{USER}/.steam/root/compatibilitytools.d/GE-Proton* >/dev/null 2>&1 || ls -d /home/{USER}/.local/share/Steam/compatibilitytools.d/GE-Proton* >/dev/null 2>&1",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py install GE-Proton --target Steam'"
+        "run": "su - {USER} -c '{TT} compat install GE-Proton --target Steam'"
       },
       {
         "id": "prefixfs",
         "title": "5b · Keep the Proton prefix off NTFS / exFAT",
         "desc": "If Star Wars Battlefront II lives on an NTFS or exFAT drive (common for a shared Windows game library), Proton can't build its prefix there - creating the drive-letter links dies with 'OSError: [Errno 22] … dosdevices/s:' because those filesystems reject ':' in a filename (ntfs3 'windows_names'), so the game never starts. Run step keeps the game where it is but moves just AppID {APPID}'s prefix onto your Linux drive and symlinks it back. Close Steam / the game first, then re-launch to rebuild the prefix cleanly. No-op if the game is already on a Linux filesystem.",
-        "check": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --check'",
-        "show_if": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID} --relevant'",
-        "run": "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_prefix_relocate.py {APPID}'"
+        "check": "su - {USER} -c '{TT} prefix {APPID} --check'",
+        "show_if": "su - {USER} -c '{TT} prefix {APPID} --relevant'",
+        "run": "su - {USER} -c '{TT} prefix {APPID}'"
       },
       {
         "id": "steamplay",
@@ -494,7 +494,7 @@
         "title": "3 · Low-latency launcher config (dGPU, shader cache, audio, no overlay)",
         "desc": "Writes the launcher config: USE_DGPU=yes (NVIDIA PRIME offload), SHADER_CACHE_DIR = TuxThrottle's shader-cache folder (Game Tools → Shader cache), LOW_LATENCY_AUDIO=yes with AUDIO_QUANTUM=256 (drop to 128 for less, raise to 512 if audio crackles) and PW_ALSA_TUNE=yes (pipewire-alsa buffer cut to 2 x 128 frames, per ppy/osu-framework#6647), SHOW_MANGOHUD=no (MangoHud stays off for osu!), FLAT_MOUSE=yes, PERFORMANCE_PROFILE=yes, DISABLE_DRIVER_VSYNC=yes. Edit ~/.config/osu-lazer-launcher/config to change any of them later.",
         "check": "su - {USER} -c 'grep -q \"^USE_DGPU=yes\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^SHADER_CACHE_DIR=\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^LOW_LATENCY_AUDIO=yes\" $HOME/.config/osu-lazer-launcher/config && grep -q \"^SHOW_MANGOHUD=no\" $HOME/.config/osu-lazer-launcher/config'",
-        "run": "su - {USER} -c 'set -e; c=$HOME/.config/osu-lazer-launcher/config; sc=$(cd {TOOLKIT_DIR} && python3 -c \"import tuxthrottle_shadercache as s; print(s.cache_dir())\"); for kv in USE_DGPU=yes \"SHADER_CACHE_DIR=\\\"$sc\\\"\" LOW_LATENCY_AUDIO=yes AUDIO_QUANTUM=256 PW_ALSA_TUNE=yes ALSA_PERIOD_FRAMES=128 ALSA_PERIODS=2 SHOW_MANGOHUD=no FLAT_MOUSE=yes PERFORMANCE_PROFILE=yes DISABLE_DRIVER_VSYNC=yes; do k=${kv%%=*}; if grep -q \"^$k=\" \"$c\"; then sed -i \"s|^$k=.*|$kv|\" \"$c\"; else echo \"$kv\" >> \"$c\"; fi; done; ~/.local/bin/osu-lazer-launcher doctor'"
+        "run": "su - {USER} -c 'set -e; c=$HOME/.config/osu-lazer-launcher/config; sc=$({TT} shadercache dir); for kv in USE_DGPU=yes \"SHADER_CACHE_DIR=\\\"$sc\\\"\" LOW_LATENCY_AUDIO=yes AUDIO_QUANTUM=256 PW_ALSA_TUNE=yes ALSA_PERIOD_FRAMES=128 ALSA_PERIODS=2 SHOW_MANGOHUD=no FLAT_MOUSE=yes PERFORMANCE_PROFILE=yes DISABLE_DRIVER_VSYNC=yes; do k=${kv%%=*}; if grep -q \"^$k=\" \"$c\"; then sed -i \"s|^$k=.*|$kv|\" \"$c\"; else echo \"$kv\" >> \"$c\"; fi; done; ~/.local/bin/osu-lazer-launcher doctor'"
       },
       {
         "id": "tearing",

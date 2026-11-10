@@ -1,0 +1,341 @@
+{
+ "_doc": "Logical package name -> per-family real name. null = not in that family's repos (falls back to the flatpak id when one is given). Unlisted names pass through unchanged.",
+ "steam": {
+  "fedora": "steam",
+  "debian": "steam-installer",
+  "arch": "steam",
+  "gentoo": "games-util/steam-launcher",
+  "suse": "steam",
+  "flatpak": "com.valvesoftware.Steam"
+ },
+ "lutris": {
+  "fedora": "lutris",
+  "debian": "lutris",
+  "arch": "lutris",
+  "gentoo": "games-util/lutris",
+  "suse": "lutris"
+ },
+ "gamemode": {
+  "fedora": "gamemode",
+  "debian": "gamemode",
+  "arch": "gamemode",
+  "gentoo": "games-utils/gamemode",
+  "suse": "gamemode"
+ },
+ "mangohud": {
+  "fedora": "mangohud",
+  "debian": "mangohud",
+  "arch": "mangohud",
+  "gentoo": "games-util/mangohud",
+  "suse": "mangohud"
+ },
+ "gamescope": {
+  "fedora": "gamescope",
+  "debian": "gamescope",
+  "arch": "gamescope",
+  "gentoo": "gui-wm/gamescope",
+  "suse": "gamescope"
+ },
+ "goverlay": {
+  "fedora": "goverlay",
+  "debian": null,
+  "arch": "goverlay",
+  "gentoo": null,
+  "suse": "goverlay",
+  "flatpak": "io.github.benjamimgois.goverlay"
+ },
+ "heroic-games-launcher": {
+  "fedora": "heroic-games-launcher",
+  "debian": null,
+  "arch": null,
+  "gentoo": null,
+  "suse": null,
+  "flatpak": "com.heroicgameslauncher.hgl"
+ },
+ "corectrl": {
+  "fedora": "corectrl",
+  "debian": "corectrl",
+  "arch": "corectrl",
+  "gentoo": null,
+  "suse": "corectrl"
+ },
+ "openrgb": {
+  "fedora": "openrgb",
+  "debian": "openrgb",
+  "arch": "openrgb",
+  "gentoo": "app-misc/openrgb",
+  "suse": "openrgb"
+ },
+ "btop": {
+  "fedora": "btop",
+  "debian": "btop",
+  "arch": "btop",
+  "gentoo": "sys-process/btop",
+  "suse": "btop"
+ },
+ "nvtop": {
+  "fedora": "nvtop",
+  "debian": "nvtop",
+  "arch": "nvtop",
+  "gentoo": "sys-process/nvtop",
+  "suse": "nvtop"
+ },
+ "fastfetch": {
+  "fedora": "fastfetch",
+  "debian": "fastfetch",
+  "arch": "fastfetch",
+  "gentoo": "app-misc/fastfetch",
+  "suse": "fastfetch"
+ },
+ "discord": {
+  "fedora": "discord",
+  "debian": null,
+  "arch": "discord",
+  "gentoo": null,
+  "suse": null,
+  "flatpak": "com.discordapp.Discord"
+ },
+ "obs-studio": {
+  "fedora": "obs-studio",
+  "debian": "obs-studio",
+  "arch": "obs-studio",
+  "gentoo": "media-video/obs-studio",
+  "suse": "obs-studio"
+ },
+ "sunshine": {
+  "fedora": "sunshine",
+  "debian": null,
+  "arch": null,
+  "gentoo": null,
+  "suse": null,
+  "flatpak": "dev.lizardbyte.app.Sunshine"
+ },
+ "protontricks": {
+  "fedora": "protontricks",
+  "debian": "protontricks",
+  "arch": "protontricks",
+  "gentoo": null,
+  "suse": null,
+  "flatpak": "com.github.Matoking.protontricks"
+ },
+ "bottles": {
+  "fedora": "bottles",
+  "debian": null,
+  "arch": null,
+  "gentoo": null,
+  "suse": null,
+  "flatpak": "com.usebottles.bottles"
+ },
+ "vkBasalt": {
+  "fedora": "vkBasalt",
+  "debian": "vkbasalt",
+  "arch": "vkbasalt",
+  "gentoo": "media-libs/vkbasalt",
+  "suse": "vkbasalt"
+ },
+ "prismlauncher": {
+  "fedora": "prismlauncher",
+  "debian": null,
+  "arch": "prismlauncher",
+  "gentoo": null,
+  "suse": null,
+  "flatpak": "org.prismlauncher.PrismLauncher"
+ },
+ "minigalaxy": {
+  "fedora": "minigalaxy",
+  "debian": "minigalaxy",
+  "arch": "minigalaxy",
+  "gentoo": null,
+  "suse": null,
+  "flatpak": "io.github.sharkwouter.Minigalaxy"
+ },
+ "flatpak": {
+  "fedora": "flatpak",
+  "debian": "flatpak",
+  "arch": "flatpak",
+  "gentoo": "sys-apps/flatpak",
+  "suse": "flatpak"
+ },
+ "lm_sensors": {
+  "fedora": "lm_sensors",
+  "debian": "lm-sensors",
+  "arch": "lm_sensors",
+  "gentoo": "sys-apps/lm-sensors",
+  "suse": "sensors"
+ },
+ "libsmbios": {
+  "fedora": "libsmbios",
+  "debian": "smbios-utils",
+  "arch": "libsmbios",
+  "gentoo": "sys-libs/libsmbios",
+  "suse": "libsmbios"
+ },
+ "evtest": {
+  "fedora": "evtest",
+  "debian": "evtest",
+  "arch": "evtest",
+  "gentoo": "dev-util/evtest",
+  "suse": "evtest"
+ },
+ "pciutils": {
+  "fedora": "pciutils",
+  "debian": "pciutils",
+  "arch": "pciutils",
+  "gentoo": "sys-apps/pciutils",
+  "suse": "pciutils"
+ },
+ "usbutils": {
+  "fedora": "usbutils",
+  "debian": "usbutils",
+  "arch": "usbutils",
+  "gentoo": "sys-apps/usbutils",
+  "suse": "usbutils"
+ },
+ "dmidecode": {
+  "fedora": "dmidecode",
+  "debian": "dmidecode",
+  "arch": "dmidecode",
+  "gentoo": "sys-apps/dmidecode",
+  "suse": "dmidecode"
+ },
+ "acpica-tools": {
+  "fedora": "acpica-tools",
+  "debian": "acpica-tools",
+  "arch": "acpica",
+  "gentoo": "sys-power/iasl",
+  "suse": "acpica"
+ },
+ "nvme-cli": {
+  "fedora": "nvme-cli",
+  "debian": "nvme-cli",
+  "arch": "nvme-cli",
+  "gentoo": "sys-apps/nvme-cli",
+  "suse": "nvme-cli"
+ },
+ "smartmontools": {
+  "fedora": "smartmontools",
+  "debian": "smartmontools",
+  "arch": "smartmontools",
+  "gentoo": "sys-apps/smartmontools",
+  "suse": "smartmontools"
+ },
+ "power-profiles-daemon": {
+  "fedora": "power-profiles-daemon",
+  "debian": "power-profiles-daemon",
+  "arch": "power-profiles-daemon",
+  "gentoo": "sys-power/power-profiles-daemon",
+  "suse": "power-profiles-daemon"
+ },
+ "earlyoom": {
+  "fedora": "earlyoom",
+  "debian": "earlyoom",
+  "arch": "earlyoom",
+  "gentoo": "sys-apps/earlyoom",
+  "suse": "earlyoom"
+ },
+ "vulkan-tools": {
+  "fedora": "vulkan-tools",
+  "debian": "vulkan-tools",
+  "arch": "vulkan-tools",
+  "gentoo": "dev-util/vulkan-tools",
+  "suse": "vulkan-tools"
+ },
+ "mesa-demos": {
+  "fedora": "mesa-demos",
+  "debian": "mesa-utils",
+  "arch": "mesa-demos",
+  "gentoo": "x11-apps/mesa-progs",
+  "suse": "Mesa-demo-x"
+ },
+ "cmake": {
+  "fedora": "cmake",
+  "debian": "cmake",
+  "arch": "cmake",
+  "gentoo": "dev-build/cmake",
+  "suse": "cmake"
+ },
+ "gcc": {
+  "fedora": "gcc",
+  "debian": "gcc",
+  "arch": "gcc",
+  "gentoo": "sys-devel/gcc",
+  "suse": "gcc"
+ },
+ "gcc-c++": {
+  "fedora": "gcc-c++",
+  "debian": "g++",
+  "arch": "gcc",
+  "gentoo": "sys-devel/gcc",
+  "suse": "gcc-c++"
+ },
+ "make": {
+  "fedora": "make",
+  "debian": "make",
+  "arch": "make",
+  "gentoo": "dev-build/make",
+  "suse": "make"
+ },
+ "git": {
+  "fedora": "git",
+  "debian": "git",
+  "arch": "git",
+  "gentoo": "dev-vcs/git",
+  "suse": "git"
+ },
+ "pciutils-devel": {
+  "fedora": "pciutils-devel",
+  "debian": "libpci-dev",
+  "arch": "pciutils",
+  "gentoo": "sys-apps/pciutils",
+  "suse": "pciutils-devel"
+ },
+ "python3-evdev": {
+  "fedora": "python3-evdev",
+  "debian": "python3-evdev",
+  "arch": "python-evdev",
+  "gentoo": "dev-python/evdev",
+  "suse": "python3-evdev"
+ },
+ "tlp": {
+  "fedora": "tlp",
+  "debian": "tlp",
+  "arch": "tlp",
+  "gentoo": "sys-power/tlp",
+  "suse": "tlp"
+ },
+ "tlp-rdw": {
+  "fedora": "tlp-rdw",
+  "debian": "tlp-rdw",
+  "arch": "tlp-rdw",
+  "gentoo": "sys-power/tlp",
+  "suse": "tlp-rdw"
+ },
+ "ntfs-3g": {
+  "fedora": "ntfs-3g",
+  "debian": "ntfs-3g",
+  "arch": "ntfs-3g",
+  "gentoo": "sys-fs/ntfs3g",
+  "suse": "ntfs-3g"
+ },
+ "ananicy-cpp": {
+  "fedora": "ananicy-cpp",
+  "debian": null,
+  "arch": "ananicy-cpp",
+  "gentoo": null,
+  "suse": null
+ },
+ "scx-scheds": {
+  "fedora": "scx-scheds",
+  "debian": null,
+  "arch": "scx-scheds",
+  "gentoo": null,
+  "suse": null
+ },
+ "switcheroo-control": {
+  "fedora": "switcheroo-control",
+  "debian": "switcheroo-control",
+  "arch": "switcheroo-control",
+  "gentoo": "sys-apps/switcheroo-control",
+  "suse": "switcheroo-control"
+ }
+}

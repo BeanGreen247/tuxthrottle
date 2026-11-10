@@ -1,8 +1,9 @@
 %global appdir  /opt/tuxthrottle
+%global _vpath_srcdir cpp
 %global gittag   %{?_gittag}%{!?_gittag:main}
 
 Name:           tuxthrottle
-Version:        %{?_version}%{!?_version:26.10.23}
+Version:        %{?_version}%{!?_version:26.10.25}
 Release:        %{?_release}%{!?_release:1}%{?dist}
 Summary:        Gaming, power and thermal control panel for the Dell G15 5515 (Ryzen) on Nobara/KDE
 
@@ -10,30 +11,32 @@ License:        MIT
 URL:            https://github.com/BeanGreen247/tuxthrottle
 Source0:        %{url}/archive/%{gittag}/%{name}-%{gittag}.tar.gz
 
-BuildArch:      noarch
+BuildRequires:  gcc-c++
+BuildRequires:  meson
+BuildRequires:  ninja-build
+BuildRequires:  pkgconfig(sdl2)
+BuildRequires:  pkgconfig(freetype2)
+BuildRequires:  pkgconfig(fontconfig)
 
-# GUI + core
-Requires:       python3
-Requires:       python3-tkinter
-Requires:       (python3-ttkbootstrap or python3-pip)
+Requires:       SDL2
+Requires:       freetype
+Requires:       fontconfig
+Recommends:     rsms-inter-fonts
 # used by helpers / tweaks at runtime (best-effort; the app degrades without them)
 Recommends:     openrgb
 Recommends:     ryzenadj
 Recommends:     libsmbios
-Recommends:     python3-pyside6
 Recommends:     polkit
 Recommends:     gamemode
-Recommends:     python3-pillow-tk
-Recommends:     google-noto-sans-symbols-2-fonts
 Recommends:     smartmontools
 Recommends:     ntfsprogs
 Recommends:     cronie
 
 # The in-app "tweaks" (systemd units, sudoers, kwriteconfig6 …) stay strictly
-# opt-in and are applied from the GUI / apply_tweak.py - never from %post.
+# opt-in and are applied from the GUI / tuxthrottlectl apply-tweak - never from %post.
 
 %description
-TuxThrottle is a Tk control-panel GUI plus a system-tray monitor, a background
+TuxThrottle is a native (C++, SDL2) control-panel GUI plus a system-tray monitor, a background
 daemon (tuxthrottled) and a G-key listener that apply hardware-specific tweaks,
 drivers and gaming setup to the Dell G15 5515 Ryzen Edition (Ryzen 7 5800H +
 RTX 3050 Ti Mobile) running Nobara Linux on KDE Plasma 6 / Wayland.
@@ -69,26 +72,18 @@ and are never applied from %post.
 %autosetup -n %{name}-%{gittag}
 
 %build
-# nothing to build - pure Python + JSON + shell
+%meson -Doptimization=3 -Db_lto=true
+%meson_build
 
 %install
+%meson_install
 install -d %{buildroot}%{appdir}
-# ship the runnable tree; leave dev-only bits out (mirrors install.sh)
-cp -a *.py tuxthrottle_*.sh config assets osu_lazer_tools %{buildroot}%{appdir}/
-# only the osu! performance setup from the osu_lazer_tools subtree (mirrors install.sh)
+cp -a config models assets clients polkit python/osu_lazer_tools tuxthrottle_*.sh %{buildroot}%{appdir}/
+# only the osu! performance setup from the osu_lazer_tools subtree
 find %{buildroot}%{appdir}/osu_lazer_tools -mindepth 1 -maxdepth 1 ! -name osu-lazer-launcher.sh \
     ! -name osu_lazer_diag.py ! -name osu_lazer_settings.py ! -name LICENSE -exec rm -rf {} +
-install -m 0644 README.md CLAUDE.md LICENSE %{buildroot}%{appdir}/ 2>/dev/null || :
+install -m 0644 README.md LICENSE %{buildroot}%{appdir}/ 2>/dev/null || :
 printf '%%s\n' "%{version}-%{release}" > %{buildroot}%{appdir}/.version
-
-# launcher + CLI
-install -d %{buildroot}%{_bindir}
-cat > %{buildroot}%{_bindir}/tuxthrottle <<'EOF'
-#!/usr/bin/env bash
-exec /usr/bin/python3 /opt/tuxthrottle/tuxthrottle.py "$@"
-EOF
-chmod 0755 %{buildroot}%{_bindir}/tuxthrottle
-ln -s %{appdir}/tuxthrottlectl.py %{buildroot}%{_bindir}/tuxthrottlectl
 
 # desktop entry + icons
 install -d %{buildroot}%{_datadir}/applications
@@ -109,6 +104,8 @@ install -Dm0644 assets/icon.svg \
 %{appdir}
 %{_bindir}/tuxthrottle
 %{_bindir}/tuxthrottlectl
+%{_bindir}/tuxthrottle-tray
+%{_bindir}/tuxthrottled
 %{_datadir}/applications/tuxthrottle.desktop
 %{_datadir}/icons/hicolor/*/apps/tuxthrottle.*
 

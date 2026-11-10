@@ -61,9 +61,8 @@ same underlying idea, this repo is the maintained one.
 **Package-name check**: every `dnf` package name referenced in `config/*.json`
 was cross-checked against Fedora's dist-git (`src.fedoraproject.org`) to
 confirm it actually exists before being trusted - this caught one real
-error: `ttkbootstrap` is **not** packaged in Fedora/Nobara at all (404 on
-dist-git), `pip install --user ttkbootstrap` is the only install path,
-fixed in `tuxthrottle.py`'s own error message. `akmod-nvidia` lives in
+error: `ttkbootstrap` (the old Python GUI toolkit) was **not** packaged in
+Fedora/Nobara at all, which is one of the reasons the program is now C++. `akmod-nvidia` lives in
 RPM Fusion's separate dist-git (unreachable from this check, but its name
 is standard/well-documented) rather than Fedora's own.
 
@@ -76,7 +75,7 @@ verify (kernel-cmdline ones) are still best-effort - see "Known limitations".
 ## Tested hardware
 
 Every check/apply command in `config/*.json`, the sensor probes in
-`sensors.py`, and the dedicated-key capture were written against the single
+the sensor code, and the dedicated-key capture were written against the single
 machine below, and **the toolkit is developed and tested on it live** - running
 Nobara Linux, `sudo ./install.sh`, the GUI, `tuxthrottlectl`, the daemon and
 its control socket, and the module self-tests (`verify-install.sh`: 27 passed).
@@ -123,8 +122,9 @@ Installs to `/opt/tuxthrottle`, a launcher at
 `/usr/local/bin/tuxthrottle`, the Tux throttle-gauge icon into the hicolor
 theme, and a `.desktop` entry in `/usr/share/applications` - so **every user**
 on the machine can find "TuxThrottle" in the KDE launcher / KRunner
-search. It pulls the deps too (`python3-tkinter`, `ttkbootstrap` via pip
-system-wide, and - best effort - `python3-pyside6` and `python3-evdev`).
+search. It builds the C++ sources (`cpp/`) first and installs the build
+dependencies for your distro (g++, meson, ninja, SDL2, FreeType, fontconfig);
+there is no Python runtime dependency.
 
 **Uninstalling:**
 
@@ -141,17 +141,14 @@ system-wide, and - best effort - `python3-pyside6` and `python3-evdev`).
 ## Running it from the source tree
 
 ```bash
-cd tuxthrottle
-pip install --user ttkbootstrap   # one-time; dark theme + round-toggle switches + gauges
-python3 tuxthrottle.py
+meson setup cpp/build cpp --buildtype=release -Doptimization=3
+ninja -C cpp/build
+cpp/build/tuxthrottle
 ```
 
 It self-elevates via `pkexec` (falls back to `sudo`) since tweaks touch the
-kernel cmdline, udev rules, sysctl, and `dnf`. The `--user` pip install lands
-in your home dir, which root normally can't see after elevation - the script
-carries that path through on `PYTHONPATH` when it re-execs, so the `--user`
-install is enough. (A system-wide `sudo pip install --break-system-packages
-ttkbootstrap` also works if you prefer.)
+kernel cmdline, udev rules, sysctl and the package manager. See `cpp/README.md`
+for the layout, the unit tests and the development helpers.
 
 ## Layout
 
@@ -175,7 +172,7 @@ A live "system info" view like DAMX's monitoring dashboard. Eight ring
 gauges in a 2×4 grid - **CPU** temp / clock / power, **iGPU** clock,
 **dGPU** temp / clock / util / power - plus iGPU/dGPU details as text and a
 big round-toggle for Game Mode (same effect as the G-key or the tray icon).
-All of it shares one source of truth (`sensors.py`). The dGPU reads skip
+All of it shares one source of truth (`cpp/src/sensors.cpp`). The dGPU reads skip
 `nvidia-smi` while the card is runtime-suspended so polling doesn't wake it.
 
 ## The Fans tab
@@ -201,7 +198,7 @@ DAMX's fan-control equivalent for this board:
   with a live curve preview, driven from CPU / GPU / hotter-of-both, with a
   cool-down hysteresis, **Silent / Balanced / Aggressive** presets and a
   **Linear fill** button (place the two endpoints, it interpolates the rest).
-  A background daemon (`tuxthrottle_powerd.py`,
+  A background daemon (`tuxthrottlectl daemon`,
   enabled by the **Fan-curve + AC-switch daemon** tweak) applies it and
   restores automatic control when stopped. It only ever *adds* boost. Old
   5-point configs load and are resampled to 10 on open.
@@ -242,7 +239,7 @@ ThrottleStop / the ASUS Armoury sliders:
   lack the sysfs attribute.
 - **AC / battery auto-switch** - pick a bundle (profile + TDP preset), and
   optionally a refresh rate, to apply automatically when the charger is
-  plugged or pulled; handled by the same `tuxthrottle_powerd.py` daemon.
+  plugged or pulled; handled by the same `tuxthrottlectl daemon` daemon.
 - **Thermal-event alerts** - with the daemon running, sustained Tjmax, a
   stalled fan while hot, or Performance-on-low-battery raise a desktop
   notification plus a `journalctl -u tuxthrottle-powerd` line (config block
@@ -335,7 +332,7 @@ back.
   its own, even if the change froze the GUI or the whole session. See
   "Safety net" below.
 - **Per-game auto-profiles** - map an executable name (for Proton games, the
-  Windows `.exe`) to a profile; the `tuxthrottle_powerd.py` daemon snapshots
+  Windows `.exe`) to a profile; the `tuxthrottlectl daemon` daemon snapshots
   and applies it while the game runs, and restores it on exit. `*` matches
   any Feral GameMode session.
 - **Time schedule** - apply a preset (Quiet / Balanced / Performance) or a
@@ -362,7 +359,7 @@ squarely at the class of failure that can't just be undone by reapplying a
 JSON state - a kernel/boot-config change gone wrong, or a live change that
 locks the machine up before you get to click anything:
 
-- **Btrfs filesystem snapshot before a risky batch** (`tuxthrottle_btrfs.py`)
+- **Btrfs filesystem snapshot before a risky batch** (`tuxthrottlectl btrfs-snapshot`)
   - if `/` is Btrfs and `snapper` is configured (config `root`), every
   "Apply Selected" / preset / recommended-set run also takes a read-only
   `snapper` snapshot, tagged `tuxthrottle: <label>`, before touching
@@ -372,7 +369,7 @@ locks the machine up before you get to click anything:
   reboot) if you ever need it. On any other filesystem, or without
   `snapper`, it's a silent no-op - nothing else about the apply flow
   changes. CLI: `tuxthrottlectl btrfs-snapshot {available|create [desc]|list}`.
-- **Confirm-or-auto-revert watchdog** (`tuxthrottle_watchdog.py`) - the
+- **Confirm-or-auto-revert watchdog** (`tuxthrottlectl watchdog`) - the
   pattern Windows/NVIDIA display-settings dialogs use: whenever a batch
   includes an ADVANCED-tagged tweak, a transient systemd timer is armed
   alongside a Keep / Revert Now countdown dialog. Click Keep and it's
@@ -486,7 +483,7 @@ The card installs `osu-lazer-launcher` as a thin wrapper around `/opt/tuxthrottl
 TuxThrottle update reaches it with no re-install. To update the module from its repo:
 `git subtree pull --prefix=osu_lazer_tools https://github.com/BeanGreen247/osu-lazer-tools.git main --squash`.
 If the card ever needs another file from the module, add it to the keep-list in both `install.sh` and
-`packaging/tuxthrottle.spec` (`tests/test_games_catalog.py` checks this).
+`packaging/tuxthrottle.spec` (`python/tests/test_games_catalog.py` checks this).
 
 ## The Game Tools tab
 
@@ -507,7 +504,7 @@ behind when a prefix used to redirect there). It pulls the symlinked ones
 back into the prefix automatically; for the loose folders you give it the
 game's AppID and it copies them in. Nothing is deleted - the off-drive
 copies stay put until you've confirmed the saves work. Backed by
-`tuxthrottle_prefix_relocate.py` (`--scan` / `--all` / `--saves-scan` /
+`tuxthrottlectl prefix` (`--scan` / `--all` / `--saves-scan` /
 `--saves` / `--saves-all` / `--saves-import`), also usable standalone.
 
 A **save-game vault** row does bulk backup/restore: point it at a folder on
@@ -515,7 +512,7 @@ a **separate drive** (not the OS/Steam drive - enforced), then **Export
 saves → vault** copies `Documents` / `Saved Games` / `AppData\Roaming` /
 `AppData\LocalLow` out of the prefix into `<vault>/<appid>/…`, and **Import
 saves ← vault** copies them back. Blank AppID field = every prefix at once;
-**List vault** shows what's stored. Backed by `tuxthrottle_savevault.py`
+**List vault** shows what's stored. Backed by `tuxthrottlectl savevault`
 (`list` / `export` / `import`); the vault path is remembered in
 `~/.config/tuxthrottle/saves_vault`.
 
@@ -593,7 +590,7 @@ One extra toggle in the box: **Autostart Steam hidden on login** (default on)
 so Steam comes up on login straight to the tray with no window; Disable removes
 it. If Steam ever looks broken after Enable, first check your Steam-library
 drive is actually mounted - an unmounted library looks identical (no games) -
-then run `tuxthrottle_steamperf.py off` in a terminal.
+then run `tuxthrottlectl steamperf off` in a terminal.
 
 A **launch-options builder** ticks together a Steam/Lutris launch-options
 string: MangoHud (off by default, plus a **Force MangoHud off** `MANGOHUD=0`
@@ -625,7 +622,7 @@ options (Lutris `system.env`), `gamemoderun` / `mangohud` into its GameMode /
 MangoHud toggles, any other wrapper into its wrapper field. Env keys are merged,
 not wiped. Games do **not** inherit the launcher's global environment, which is
 why every game is written individually. Standalone:
-`tuxthrottle_heroicopts.py` and `tuxthrottle_lutrisopts.py` (`set-all`,
+`tuxthrottlectl heroicopts` and `tuxthrottlectl lutrisopts` (`set-all`,
 `remove-token`, `list`, `--dry-run`).
 
 - **Disable Wine Wayland (Heroic).** Heroic's *Enable Wine Wayland* is a
@@ -644,7 +641,7 @@ why every game is written individually. Standalone:
   offload and switches **gamescope off** instead: any Heroic game that gets
   `__NV_PRIME_RENDER_OFFLOAD` through *Apply* has its gamescope toggles turned
   off (Lutris: `system.gamescope: false`), and the **dGPU on + gamescope off
-  (Heroic)** button (`tuxthrottle_heroicopts.py fix`) puts the three PRIME env
+  (Heroic)** button (`tuxthrottlectl heroicopts fix`) puts the three PRIME env
   vars on every game and the global defaults and turns gamescope off
   everywhere. Re-enable gamescope per game in Heroic if you want upscaling
   and are willing to drop PRIME offload for that game. The Steam builder
@@ -667,7 +664,7 @@ A text field with a **Copy** button shows the exact variables for any value to
 paste by hand. libstrangle is not packaged for Fedora, so the **libstrangle**
 app in the Gaming category builds it from source (32-bit glibc headers, and
 `-include cstdio` to compile with GCC 16). Standalone:
-`tuxthrottle_fpslimit.py list | apply | remove | set | unset | env`.
+`tuxthrottlectl fpslimit list | apply | remove | set | unset | env`.
 
 A **MangoHud overlay** box sets the overlay's names, detail and position. It
 shows **one CPU-name field and one GPU-name field per GPU in the machine**
@@ -742,14 +739,14 @@ to a **New hardware support** issue.
 Terminal equivalents:
 
 ```bash
-sudo python3 /opt/tuxthrottle/tuxthrottle.py --debug        # full readable report
-sudo python3 /opt/tuxthrottle/tuxthrottle.py --report       # apply-status table only
-sudo python3 /opt/tuxthrottle/tuxthrottle.py --collect ~    # write the hardware bundle
+sudo tuxthrottle --debug        # full readable report
+sudo tuxthrottle --report       # apply-status table only
+sudo tuxthrottle --collect ~    # write the hardware bundle
 ```
 
 ## `tuxthrottlectl` - headless control
 
-A stdlib CLI over `sensors.py` for scripts, keybinds and `ssh` sessions
+A C++ CLI for scripts, keybinds and `ssh` sessions
 (installed to `/usr/local/bin/tuxthrottlectl`):
 
 ```bash
@@ -799,38 +796,16 @@ no `models` key applies everywhere, which is every entry today. See
 
 ## Files
 
-- `tuxthrottle.py` - the checkbox GUI + in-window Dashboard tab (needs `ttkbootstrap`)
-- `tray_monitor.py` - the system-tray-only equivalent (needs `PySide6`)
-- `hotkey_listener.py` - the G-key → Game Mode binding (needs `python3-evdev`)
-- `sensors.py` - shared sensor reads + Game Mode logic + CPU TDP (ryzenadj), battery, NVIDIA/hybrid-GPU helpers, **no GUI dependency**, used by everything below so they never disagree on state
-- `tuxthrottle_profiles.py` - stdlib: capture / apply / snapshot / rollback of named full-state profiles; used by the Profiles tab, the CLI, the daemon and the `StateResume` tweak
-- `tuxthrottle_btrfs.py` - stdlib: Btrfs/snapper filesystem snapshot-before-apply (create-only, never touches the bootloader); see "Safety net"
-- `tuxthrottle_watchdog.py` - stdlib: confirm-or-auto-revert systemd-timer watchdog for ADVANCED-tagged tweaks; see "Safety net"
-- `tuxthrottle_powerd.py` - stdlib daemon: closed-loop fan curve + AC/battery auto-switch (profile + TDP + panel refresh) + per-game auto-profiles + **time-of-day schedule** + **thermal-event alerts** + the **control socket** (installed by the **Fan-curve + AC-switch daemon** tweak)
-- `tuxthrottle_control.py` - stdlib: the newline-JSON RPC over `/run/tuxthrottle/control.sock` (server in the daemon, client in the GUI / `tuxthrottlectl`)
-- `tuxthrottle_co_stress.py` - stdlib, root: Ryzen Curve Optimizer undervolt with a stress-test-and-auto-revert harness (`apply` / `confirm` / `revert` / `reapply` / `status`)
-- `tuxthrottle_kde_panel.py` - stdlib helper for the panel-applet KDE tweaks (clock seconds, classic menu, panel-flush) - finds applet / panel containment IDs and restarts `plasmashell`
-- `tuxthrottlectl.py` - headless CLI over `sensors.py` + profiles (`status` / `get` / `set {power-profile,tdp,fan-boost,battery,nvpl,gpumode,refresh,gpu-clock}` / `profile` / `snapshot` / `rollback` / `gamemode` / `schedule` / `daemon` / `btrfs-snapshot` / `watchdog`, `--json`), installed as `/usr/local/bin/tuxthrottlectl`
-- `models/` - per-board hardware profiles keyed by DMI (`g15-5515.json` is the reference); `sensors.model_profile()` picks one, and a tweak/app can gate itself with `"models": [ ... ]`
-- `clients/` - optional panel front-ends: a **waybar** module and a **KDE plasmoid**, both over `tuxthrottlectl status --json`
-- `packaging/` - the noarch RPM `.spec` + `.github/workflows/copr.yml` (SRPM on tag → COPR)
-- `tests/` - `pytest` suite for the pure logic (parsers, fan-curve maths, profile engine, control socket, thermal watcher, model profiles); `.github/workflows/ci.yml` runs it on push
-- `tuxthrottle_kbd.py` - AW-ELC RGB keyboard control: a thin `openrgb` CLI
-  wrapper for whole-keyboard solid colour, brightness and the firmware
-  Spectrum Cycle (the 5515 keyboard is a single controllable zone)
-- `install.sh` / `uninstall.sh` - system install; uninstall removes the app
-  (`uninstall.sh --purge` also undoes the tweaks' system bits)
-- `assets/` - `icon.svg` (the head of the real Tux mascot as a portrait inside
-  a redlined throttle gauge with an amber boost flame) and the PNGs rendered
-  from it (`inkscape assets/icon.svg -o assets/icon-<n>.png -w <n> -h <n>`),
-  used as the window icon and tray icon. Tux is by Larry Ewing
-  (lewing@isc.tamu.edu) and The GIMP, SVG by Simon Budig and Garrett LeSage,
-  used with attribution
-  ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Tux.svg)). The
-  **DesktopLauncher** tweak drops a `.desktop` entry into your app menu
-  using `assets/tuxthrottle.desktop` with real paths filled in.
+- `cpp/` - the whole program, C++20: `tuxthrottle` (the window), `tuxthrottlectl` (CLI), `tuxthrottled` (daemon), `tuxthrottle-tray` (tray) and the unit tests; build and layout in `cpp/README.md`
+- `config/` - the data every tool reads: `tweaks.json`, `apps.json`, `presets.json`, `games.json`, `fps_limits.json`, `pkgmap.json`
+- `models/` - per-board hardware profiles keyed by DMI (`g15-5515.json` is the reference); a tweak/app can gate itself with `"models": [ ... ]`
+- `clients/` - optional panel front-ends over `tuxthrottlectl`: a **waybar** module, a **KDE plasmoid** and a **MangoHud** exec line
+- `packaging/` - the RPM `.spec` + `.github/workflows/copr.yml` (SRPM on tag, built with meson)
+- `osu_lazer_tools/` - the osu! performance setup; its settings script is the only Python left
+- `install.sh` / `uninstall.sh` - system install (`cpp/install.sh` does the build + install); uninstall removes the app (`--purge` also undoes the tweaks' system bits)
+- `assets/` - the icons (`icon.svg` and the PNGs rendered from it) and the `.desktop` template. Tux is by Larry Ewing (lewing@isc.tamu.edu) and The GIMP, SVG by Simon Budig and Garrett LeSage, used with attribution ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Tux.svg))
 
-## Tray monitor (`tray_monitor.py`)
+## Tray monitor (`tuxthrottle-tray`)
 
 The DAMX-style live dashboard piece - a system tray icon (unprivileged
 process) showing CPU/iGPU/dGPU clocks and temps, with a checkable "Game Mode"
@@ -845,8 +820,7 @@ user) or the daemon socket. The top of the menu is a "TuxThrottle by
 BeanGreen247" link to the GitHub repo, above "Open TuxThrottle".
 
 ```bash
-# needs PySide6: dnf install python3-pyside6   (or: pip install --user PySide6)
-python3 tray_monitor.py
+tuxthrottle-tray
 ```
 
 The toggle tries passwordless `sudo` first, falling back to a `pkexec` GUI
@@ -855,12 +829,12 @@ Reading clocks/temps needs no privileges at all. Every toggle (tray, G-key,
 or the Dashboard switch) also raises a 10-second desktop notification -
 *Game Mode: ON* / *Game Mode: OFF*.
 
-## Keyboard tab (`tuxthrottle_kbd.py`)
+## Keyboard tab (`tuxthrottlectl kbd`)
 
 The 5515's RGB keyboard is the Alienware **AW-ELC** (USB `187c:0550`) - no
 kernel driver, no `kbd_backlight` LED, and raw HID writes (feature *and*
 interrupt reports) are ACK'd but do nothing. What **does** work, verified on
-real hardware, is **OpenRGB** driving it, so `tuxthrottle_kbd.py` is a thin
+real hardware, is **OpenRGB** driving it, so `tuxthrottlectl kbd` is a thin
 wrapper around the `openrgb` CLI.
 
 Two prerequisites:
@@ -882,9 +856,9 @@ left-to-right travel). It is the only firmware effect that animates on fw
 1.1.12 (Breathing / Flashing just hold a colour; Rainbow Wave is washed-out).
 
 ```bash
-python3 tuxthrottle_kbd.py on --color 00aaff --brightness 80
-python3 tuxthrottle_kbd.py effect spectrum --speed 80   # firmware Spectrum Cycle
-python3 tuxthrottle_kbd.py off
+tuxthrottlectl kbd on --color 00aaff --brightness 80
+tuxthrottlectl kbd effect spectrum --speed 80   # firmware Spectrum Cycle
+tuxthrottlectl kbd off
 ```
 
 **Quirks (learned the hard way):**
@@ -897,7 +871,7 @@ python3 tuxthrottle_kbd.py off
   user via `PKEXEC_UID`/`SUDO_UID` (pkexec sets no `PKEXEC_USER`) so the GUI's
   saves land in your home dir, not `/root`.
 - **"Frozen" backlight** = the OpenRGB SDK server wedged after many changes;
-  the **↻ Reset backlight** button (or `tuxthrottle_kbd.py reset`) restarts it and
+  the **↻ Reset backlight** button (or `tuxthrottlectl kbd reset`) restarts it and
   re-applies the saved state.
 
 ### Dedicated key binding - confirmed working
@@ -912,7 +886,7 @@ on Fn Lock:
 | **Fn Lock OFF** | `KEY_PERFORMANCE` | `KEY_F9` |
 | **Fn Lock ON** | `KEY_F9` (plain F9) | `KEY_PERFORMANCE` |
 
-`hotkey_listener.py` only ever acts on `KEY_PERFORMANCE`, so it can never
+`tuxthrottlectl hotkey` only ever acts on `KEY_PERFORMANCE`, so it can never
 hijack a real F9 press.
 
 **What the key does - same as Windows.** On the G15 the dedicated key
@@ -935,7 +909,7 @@ easy to hit by accident, set `TUXTHROTTLE_HOTKEY_MODE=double` on the service for
 a double-tap trigger (window = `TUXTHROTTLE_HOTKEY_DOUBLE_MS`, default 600 ms).
 
 Install via the Toolkit GUI (Gaming tab):
-- **HotkeyListener** - installs `python3-evdev` and a `systemd --user`
+- **HotkeyListener** - installs a `systemd --user`
   service that listens for the key and calls the same toggle the tray icon
   uses. Install `PowerProfileScripts` / `AmdgpuPerfScripts` / `NvidiaMaxPerf`
   first, or the toggle has nothing to call. Reading the keyboard device
@@ -996,7 +970,7 @@ and stress-tested on demand.
   **RyzenCurveOptimizer** (all-core undervolt with a stress-test/auto-revert
   harness; only re-applies a *confirmed* offset at boot),
   **BatteryChargeLimit** / **DellBatteryThreshold** (libsmbios) for a
-  stop-charging percentage, **FanCurveDaemon** (`tuxthrottle_powerd.py` -
+  stop-charging percentage, **FanCurveDaemon** (`tuxthrottlectl daemon` -
   closed-loop fan curve + AC/battery profile auto-switch + per-game
   auto-profiles + thermal-event alerts + the control socket), **StateResume**
   (re-apply the last profile after suspend/reboot), **GameModeBridge** (wires
@@ -1034,7 +1008,7 @@ and stress-tested on demand.
   the G-key hotkey listener + its passwordless-sudo rule. For Wine/Proton:
   **Protontricks**, **Bottles**, and the Steam **Proton
   BattlEye / EasyAntiCheat Runtime** installers - see "GTA V Online" below.
-- **Keyboard backlight** - `tuxthrottle_kbd.py` + the Keyboard tab, 4-zone
+- **Keyboard backlight** - `tuxthrottlectl kbd` + the Keyboard tab, 4-zone
   colour/brightness via OpenRGB (needs the `OpenRGB` app **and** the
   backlight enabled in BIOS setup). See "Keyboard tab" above.
 - **Game Mode notifications** - pressing the G-key (or toggling from the
@@ -1043,7 +1017,7 @@ and stress-tested on demand.
 
 ## Drives (health checks)
 
-The **Drives** tab (`tuxthrottle_drivehealth.py`, run as root by the GUI)
+The **Drives** tab (`tuxthrottlectl drives`, run as root by the GUI)
 checks, read-only:
 
 - **SMART** per drive - overall verdict, NVMe critical-warning bits, media
@@ -1075,7 +1049,7 @@ scrub.
 
 ## Proton & Runtimes (replaces ProtonUp-Qt)
 
-The **Proton & Runtimes** tab (`tuxthrottle_compat_tools.py`) manages every
+The **Proton & Runtimes** tab (`tuxthrottlectl compat`) manages every
 compatibility tool, so ProtonUp-Qt and ProtonPlus are no longer in the app
 catalog.
 
@@ -1140,7 +1114,7 @@ Everything lives on the **MangoHud** tab:
 
 - **Session-wide overlay** - shows whether an `environment.d` file still
   switches MangoHud on for every game, with a button to remove it
-  (`tuxthrottle_mangohud_games.py global-off`; full effect at next login).
+  (`tuxthrottlectl mangohud-games global-off`; full effect at next login).
 - **Live per-game switch** - installs a small gate at
   `/usr/local/bin/mangohud` (ahead of `/usr/bin` on `PATH`). Every
   `mangohud %command%` launch option lands on it; it reads Steam's
@@ -1153,7 +1127,7 @@ Everything lives on the **MangoHud** tab:
   switch ever needs Steam closed.
 - **Per-game MangoHud** - every installed game with a switch: Steam, plus
   whatever **Heroic** (Epic / GOG / Amazon / sideloaded) and **Lutris** have
-  installed (`tuxthrottle_mangohud_launchers.py`; those two have their own
+  installed (`tuxthrottlectl mangohud-games`; those two have their own
   per-game MangoHud setting, which the switch flips - no hook or gate
   involved). **Anti-cheat lock:** each game's folder is scanned offline for
   EasyAntiCheat, BattlEye, Vanguard, GameGuard, XIGNCODE3, PunkBuster, EQU8
@@ -1277,7 +1251,7 @@ Each has its own **Setup Games** tab (`config/games.json` entries `GTA3DE`
 All three boot through the **Rockstar Games Launcher** (like GTA V
 Enhanced), so the walkthrough mirrors GTA V Online's Route A: native Steam
 + tools, latest **GE-Proton** forced on the title, the Proton prefix kept
-**off NTFS/exFAT** (`tuxthrottle_prefix_relocate.py`), and - only if the
+**off NTFS/exFAT** (`tuxthrottlectl prefix`), and - only if the
 launcher / Social Club sign-in loops or renders black - `vcrun2019` /
 `d3dcompiler_47` / `corefonts` dropped into the prefix via `protontricks`
 plus a flip to **Windows 10** (`protontricks <appid> --gui` → *win10*).
@@ -1308,7 +1282,7 @@ went. Combined, an item reads as one of: **Applied / Not applied / Pending
 reboot / Check error** (the check couldn't even run) / **Reverted** (the tool
 applied it but the check now fails - something undid it) / **Apply failed**
 (the tool's last attempt errored). The footer's **≣ Status report** button
-(or `python3 tuxthrottle.py --report` on the terminal, run with `sudo`
+(or `tuxthrottle --report` on the terminal, run with `sudo`
 for checks that need root) prints a full copyable table: every item, its
 state, the exact check command + exit code, and the toolkit's last action on
 it with a timestamp.
@@ -1361,7 +1335,7 @@ resolved from `PKEXEC_UID`/`SUDO_UID` since the whole app runs elevated.
   board. Whole-keyboard colour + the firmware Spectrum Cycle are what's offered.
 - Fan settings and (currently) the keyboard effect don't persist a reboot
   unless the relevant tweak/service is installed.
-- The `models/` profiles are advisory today - `sensors.py` still hard-codes
+- The `models/` profiles are advisory today - `cpp/src/sensors.cpp` still hard-codes
   the 5515's sysfs paths, so a second board needs code changes, not just a
   new model file (the file + the `models:` gate are the groundwork).
 - The Curve Optimizer offset can't be read back from `ryzenadj`, so its

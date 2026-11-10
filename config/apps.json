@@ -282,7 +282,7 @@
     "manager": "shell",
     "check": "test -d /home/{USER}/.steam/steam/steamapps/common/'Proton BattlEye Runtime' -o -d /home/{USER}/.local/share/Steam/steamapps/common/'Proton BattlEye Runtime'",
     "install": [
-      "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py steam-install 1161040'"
+      "su - {USER} -c '{TT} compat steam-install 1161040'"
     ]
   },
   "ProtonEacRuntime": {
@@ -292,7 +292,7 @@
     "manager": "shell",
     "check": "test -d /home/{USER}/.steam/steam/steamapps/common/'Proton EasyAntiCheat Runtime' -o -d /home/{USER}/.local/share/Steam/steamapps/common/'Proton EasyAntiCheat Runtime'",
     "install": [
-      "su - {USER} -c 'python3 {TOOLKIT_DIR}/tuxthrottle_compat_tools.py steam-install 1826330'"
+      "su - {USER} -c '{TT} compat steam-install 1826330'"
     ]
   },
   "VkBasalt": {
